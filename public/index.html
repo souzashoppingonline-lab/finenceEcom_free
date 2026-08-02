@@ -3,33 +3,51 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FinanceEcom Free — Gestão financeira para vendedores de marketplaces</title>
-  <meta name="description" content="Controle financeiro profissional para vendedores de Mercado Livre, Shopee, Amazon, Magalu e mais. Grátis." />
+  <title>FinanceEcom Free — Controle financeiro para vendedores de marketplaces</title>
+  <meta name="description" content="Saiba se você está realmente lucrando. Controle financeiro profissional e gratuito para vendedores de Mercado Livre, Shopee e Amazon." />
+  <meta property="og:title" content="FinanceEcom Free — Inteligência financeira para vendedores" />
+  <meta property="og:description" content="Transforme os números do seu negócio em decisões. Grátis." />
+  <meta property="og:type" content="website" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <header class="hero">
-    <nav class="nav">
+  <!-- NAV -->
+  <header class="site-header">
+    <nav class="nav container">
       <span class="logo">FinanceEcom <strong>Free</strong></span>
-      <a class="nav-link" href="/admin.html">Painel</a>
+      <div class="nav-actions">
+        <a class="nav-link" href="#como-funciona">Como funciona</a>
+        <a class="nav-link" href="#duvidas">Dúvidas</a>
+        <a class="btn-nav" href="#cadastro">Começar grátis</a>
+      </div>
     </nav>
-    <div class="hero-content">
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container hero-grid">
       <div class="hero-text">
-        <h1>Tenha controle financeiro profissional do seu negócio</h1>
+        <span class="badge">100% gratuito · sem cartão de crédito</span>
+        <h1>Descubra se o seu negócio está <span class="hl">realmente lucrando</span></h1>
         <p class="lead">
-          Para vendedores de Mercado Livre, Shopee, Amazon, Magalu, Shein, TikTok Shop,
-          loja virtual, WhatsApp e Instagram. Transforme números em decisões — de graça.
+          O FinanceEcom Free ajuda vendedores de marketplaces a transformar números em
+          decisões. Saiba quanto pode investir em estoque, se vai bater a meta e se o
+          caixa vai fechar no positivo — tudo em um só lugar.
         </p>
-        <ul class="benefits">
-          <li>Saiba se está realmente lucrando</li>
-          <li>Descubra quanto pode investir em estoque</li>
-          <li>Acompanhe metas e projeção de caixa</li>
+        <div class="hero-cta">
+          <a class="btn-primary" href="#cadastro">Quero controlar minhas finanças</a>
+          <a class="btn-secondary" href="#como-funciona">Ver como funciona</a>
+        </div>
+        <ul class="hero-check">
+          <li>Sem integração com marketplace</li>
+          <li>Sem instalar nada</li>
+          <li>Feito para o vendedor brasileiro</li>
         </ul>
       </div>
 
-      <div class="card form-card">
-        <h2>Comece grátis</h2>
-        <p class="muted">Cadastre-se e receba acesso antecipado.</p>
+      <div class="card form-card" id="cadastro">
+        <h2>Comece grátis agora</h2>
+        <p class="muted">Cadastre-se e receba acesso antecipado à plataforma.</p>
         <form id="signup-form">
           <label>Nome
             <input type="text" name="name" required placeholder="Seu nome" />
@@ -46,12 +64,6 @@
               <option>Mercado Livre</option>
               <option>Shopee</option>
               <option>Amazon</option>
-              <option>Magalu</option>
-              <option>Shein</option>
-              <option>TikTok Shop</option>
-              <option>Loja Virtual</option>
-              <option>WhatsApp</option>
-              <option>Instagram</option>
               <option>Outro</option>
             </select>
           </label>
@@ -64,10 +76,125 @@
         </form>
       </div>
     </div>
-  </header>
+  </section>
+
+  <!-- PROBLEMAS -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Você reconhece alguma dessas dores?</h2>
+      <p class="section-sub">A maioria dos vendedores não sabe responder perguntas simples sobre o próprio negócio.</p>
+      <div class="pain-grid">
+        <div class="pain">“Vendi bastante, mas <strong>cadê o dinheiro?</strong>”</div>
+        <div class="pain">“Não sei se <strong>posso comprar estoque</strong> agora.”</div>
+        <div class="pain">“Será que estou <strong>lucrando de verdade</strong>?”</div>
+        <div class="pain">“Meu <strong>caixa</strong> vai ficar negativo esse mês?”</div>
+        <div class="pain">“Qual das minhas lojas <strong>dá mais lucro</strong>?”</div>
+        <div class="pain">“<strong>Quanto preciso vender</strong> amanhã pra bater a meta?”</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMO FUNCIONA -->
+  <section class="section section-alt" id="como-funciona">
+    <div class="container">
+      <h2 class="section-title">Como funciona</h2>
+      <p class="section-sub">Simples. Você lança os dados, a plataforma faz a inteligência.</p>
+      <div class="steps">
+        <div class="step">
+          <span class="step-num">1</span>
+          <h3>Cadastre-se grátis</h3>
+          <p>Crie sua conta em segundos. Sem cartão, sem burocracia.</p>
+        </div>
+        <div class="step">
+          <span class="step-num">2</span>
+          <h3>Lance suas vendas e custos</h3>
+          <p>Manualmente ou importando uma planilha de Excel. Você no controle.</p>
+        </div>
+        <div class="step">
+          <span class="step-num">3</span>
+          <h3>Tome decisões com clareza</h3>
+          <p>Veja lucro, fluxo de caixa, metas e projeções em indicadores fáceis de entender.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BENEFICIOS -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">O que você ganha</h2>
+      <div class="benefit-grid">
+        <div class="benefit-card">
+          <span class="benefit-ico">📊</span>
+          <h3>Lucro real</h3>
+          <p>Entenda de verdade se cada venda e cada loja estão dando resultado.</p>
+        </div>
+        <div class="benefit-card">
+          <span class="benefit-ico">💰</span>
+          <h3>Fluxo de caixa</h3>
+          <p>Antecipe entradas e saídas e nunca mais seja pego de surpresa.</p>
+        </div>
+        <div class="benefit-card">
+          <span class="benefit-ico">🎯</span>
+          <h3>Metas e projeção</h3>
+          <p>Saiba quanto precisa vender para chegar onde você quer.</p>
+        </div>
+        <div class="benefit-card">
+          <span class="benefit-ico">📦</span>
+          <h3>Decisão de estoque</h3>
+          <p>Descubra o momento certo e o quanto pode investir em novos produtos.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MARKETPLACES -->
+  <section class="section section-alt">
+    <div class="container">
+      <h2 class="section-title">Feito para qualquer vendedor</h2>
+      <p class="section-sub">Não importa onde você vende — o FinanceEcom Free funciona para todos.</p>
+      <div class="mkt-list">
+        <span>Mercado Livre</span><span>Shopee</span><span>Amazon</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section" id="duvidas">
+    <div class="container container-narrow">
+      <h2 class="section-title">Perguntas frequentes</h2>
+      <details class="faq">
+        <summary>O FinanceEcom Free é realmente gratuito?</summary>
+        <p>Sim. A versão Free é gratuita e serve como porta de entrada para o ecossistema FinanceEcom. Não pedimos cartão de crédito.</p>
+      </details>
+      <details class="faq">
+        <summary>Preciso integrar com o Mercado Livre ou Shopee?</summary>
+        <p>Não. Toda informação é lançada manualmente ou importada por Excel. O foco é inteligência financeira, não automação.</p>
+      </details>
+      <details class="faq">
+        <summary>Meus dados estão seguros?</summary>
+        <p>Sim. Seguimos a LGPD, coletamos apenas o necessário e você pode solicitar a exclusão dos seus dados a qualquer momento.</p>
+      </details>
+      <details class="faq">
+        <summary>Serve para quem está começando?</summary>
+        <p>Perfeitamente. A plataforma foi pensada para ensinar gestão baseada em indicadores, mesmo para quem nunca controlou finanças.</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- CTA FINAL -->
+  <section class="cta-final">
+    <div class="container">
+      <h2>Pare de vender no escuro</h2>
+      <p>Comece hoje a tomar decisões com base em números — de graça.</p>
+      <a class="btn-primary btn-lg" href="#cadastro">Criar minha conta grátis</a>
+    </div>
+  </section>
 
   <footer class="footer">
-    <p>© 2026 FinanceEcom Free · <a href="/privacidade.html">Política de Privacidade</a></p>
+    <div class="container">
+      <p>© 2026 FinanceEcom Free · <a href="/privacidade.html">Política de Privacidade</a></p>
+    </div>
   </footer>
 
   <script src="/js/signup.js"></script>
