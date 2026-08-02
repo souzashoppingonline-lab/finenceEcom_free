@@ -1,0 +1,24 @@
+{
+  "name": "financeecom-free",
+  "version": "0.1.0",
+  "description": "FinanceEcom Free - Plataforma de captacao de leads e painel de clientes para vendedores de marketplaces",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "keywords": [
+    "saas",
+    "marketplace",
+    "financeiro",
+    "leads"
+  ],
+  "author": "FinanceEcom",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}

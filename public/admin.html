@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel — FinanceEcom Free</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="admin-body">
+  <header class="admin-header">
+    <span class="logo">FinanceEcom <strong>Free</strong> · Painel</span>
+    <button id="logout" class="btn-ghost" hidden>Sair</button>
+  </header>
+
+  <main class="admin-main">
+    <!-- Login -->
+    <section id="login-view" class="card login-card">
+      <h2>Acesso restrito</h2>
+      <p class="muted">Informe o token de administrador.</p>
+      <label>Token
+        <input type="password" id="token-input" placeholder="Token de admin" />
+      </label>
+      <button id="login-btn">Entrar</button>
+      <p id="login-msg" class="form-msg"></p>
+    </section>
+
+    <!-- Dashboard -->
+    <section id="dashboard-view" hidden>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Total de clientes</span>
+          <span class="stat-value" id="stat-total">—</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Novos (7 dias)</span>
+          <span class="stat-value" id="stat-last7">—</span>
+        </div>
+      </div>
+
+      <div class="table-header">
+        <h3>Clientes cadastrados</h3>
+        <button id="export-btn" class="btn-ghost">Exportar CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table id="leads-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>E-mail</th>
+              <th>WhatsApp</th>
+              <th>Marketplace</th>
+              <th>Cadastro</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>
