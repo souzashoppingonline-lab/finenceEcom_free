@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinanceEcom Free — Gestão financeira para vendedores de marketplaces</title>
+  <meta name="description" content="Controle financeiro profissional para vendedores de Mercado Livre, Shopee, Amazon, Magalu e mais. Grátis." />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="hero">
+    <nav class="nav">
+      <span class="logo">FinanceEcom <strong>Free</strong></span>
+      <a class="nav-link" href="/admin.html">Painel</a>
+    </nav>
+    <div class="hero-content">
+      <div class="hero-text">
+        <h1>Tenha controle financeiro profissional do seu negócio</h1>
+        <p class="lead">
+          Para vendedores de Mercado Livre, Shopee, Amazon, Magalu, Shein, TikTok Shop,
+          loja virtual, WhatsApp e Instagram. Transforme números em decisões — de graça.
+        </p>
+        <ul class="benefits">
+          <li>Saiba se está realmente lucrando</li>
+          <li>Descubra quanto pode investir em estoque</li>
+          <li>Acompanhe metas e projeção de caixa</li>
+        </ul>
+      </div>
+
+      <div class="card form-card">
+        <h2>Comece grátis</h2>
+        <p class="muted">Cadastre-se e receba acesso antecipado.</p>
+        <form id="signup-form">
+          <label>Nome
+            <input type="text" name="name" required placeholder="Seu nome" />
+          </label>
+          <label>E-mail
+            <input type="email" name="email" required placeholder="voce@email.com" />
+          </label>
+          <label>WhatsApp
+            <input type="tel" name="whatsapp" required placeholder="(00) 00000-0000" />
+          </label>
+          <label>Onde você vende?
+            <select name="marketplace">
+              <option value="">Selecione (opcional)</option>
+              <option>Mercado Livre</option>
+              <option>Shopee</option>
+              <option>Amazon</option>
+              <option>Magalu</option>
+              <option>Shein</option>
+              <option>TikTok Shop</option>
+              <option>Loja Virtual</option>
+              <option>WhatsApp</option>
+              <option>Instagram</option>
+              <option>Outro</option>
+            </select>
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" name="consent" required />
+            <span>Li e aceito a <a href="/privacidade.html" target="_blank">Política de Privacidade</a> e autorizo o contato por e-mail e WhatsApp (LGPD).</span>
+          </label>
+          <button type="submit">Quero acesso grátis</button>
+          <p id="form-msg" class="form-msg" role="status"></p>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <footer class="footer">
+    <p>© 2026 FinanceEcom Free · <a href="/privacidade.html">Política de Privacidade</a></p>
+  </footer>
+
+  <script src="/js/signup.js"></script>
+</body>
+</html>
