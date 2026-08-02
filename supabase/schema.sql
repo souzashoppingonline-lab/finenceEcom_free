@@ -38,6 +38,15 @@ create index if not exists idx_page_visits_created_at on public.page_visits (cre
 alter table public.page_visits enable row level security;
 
 -- =====================================================================
+-- Tabela settings - configuracoes chave/valor (ex.: whatsapp de suporte)
+-- =====================================================================
+create table if not exists public.settings (
+  key   text primary key,
+  value text
+);
+alter table public.settings enable row level security;
+
+-- =====================================================================
 -- View de metricas (opcional) - resumo por marketplace
 -- =====================================================================
 create or replace view public.leads_por_marketplace as

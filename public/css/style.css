@@ -153,6 +153,15 @@ button:hover { background: var(--primary-dark); }
 .footer { background: var(--bg); color: #9aa6bd; text-align: center; padding: 22px 0; font-size: 0.85rem; }
 .footer a { color: #c6d0e2; }
 
+/* ---------- Botao flutuante WhatsApp ---------- */
+.wa-float {
+  position: fixed; right: 22px; bottom: 22px; z-index: 60;
+  width: 58px; height: 58px; border-radius: 50%;
+  background: #25d366; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.28); transition: transform .12s;
+}
+.wa-float:hover { transform: scale(1.06); }
+
 /* ---------- Doc pages ---------- */
 .doc-page { max-width: 760px; margin: 0 auto; padding: 40px 24px 80px; }
 .doc-page h1 { margin-top: 8px; }
@@ -170,6 +179,21 @@ button:hover { background: var(--primary-dark); }
 .stat-card { background: #fff; border-radius: var(--radius); padding: 22px; box-shadow: 0 4px 14px rgba(0,0,0,0.06); display: flex; flex-direction: column; gap: 6px; }
 .stat-label { color: var(--muted); font-size: 0.85rem; }
 .stat-value { font-size: 2.2rem; font-weight: 700; color: var(--primary); }
+.chart-card { margin-top: 24px; }
+.chart-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+.chart-head h3 { margin: 0; }
+.chart-legend { display: flex; gap: 16px; font-size: 0.85rem; color: var(--muted); }
+.lg { display: flex; align-items: center; gap: 6px; }
+.lg::before { content: ""; width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.lg-visits::before { background: #9db8e0; }
+.lg-signups::before { background: var(--primary); }
+.chart { width: 100%; overflow-x: auto; }
+.chart-svg { width: 100%; height: auto; min-width: 480px; }
+.chart-svg .grid { stroke: var(--border); stroke-width: 1; }
+.chart-svg .axis-y { fill: var(--muted); font-size: 11px; text-anchor: end; }
+.chart-svg .axis-x { fill: var(--muted); font-size: 10px; text-anchor: middle; }
+.chart-svg .bar-visits { fill: #9db8e0; }
+.chart-svg .bar-signups { fill: var(--primary); }
 .create-card { margin-top: 24px; }
 .create-card h3 { margin: 0 0 14px; }
 .inline-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }

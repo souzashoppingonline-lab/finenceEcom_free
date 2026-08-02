@@ -45,6 +45,29 @@
         </div>
       </div>
 
+      <!-- Grafico -->
+      <div class="card chart-card">
+        <div class="chart-head">
+          <h3>Cadastros e visitas por dia</h3>
+          <div class="chart-legend">
+            <span class="lg lg-visits">Visitas</span>
+            <span class="lg lg-signups">Cadastros</span>
+          </div>
+        </div>
+        <div id="chart" class="chart"></div>
+      </div>
+
+      <!-- WhatsApp de suporte -->
+      <div class="card create-card">
+        <h3>WhatsApp de suporte</h3>
+        <p class="muted">Este número aparece como botão de suporte no site para os clientes.</p>
+        <form id="support-form" class="inline-form">
+          <input type="tel" id="support-input" placeholder="(00) 00000-0000" />
+          <button type="submit" class="btn-inline">Salvar</button>
+        </form>
+        <p id="support-msg" class="form-msg"></p>
+      </div>
+
       <!-- Criar cliente manualmente -->
       <div class="card create-card">
         <h3>Adicionar cliente manualmente</h3>

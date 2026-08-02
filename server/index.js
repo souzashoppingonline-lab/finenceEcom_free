@@ -3,6 +3,7 @@ import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
+import nodemailer from 'nodemailer';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,10 +28,54 @@ if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
   console.warn('[AVISO] SUPABASE_URL / SUPABASE_SERVICE_KEY nao configurados. Rodando em modo memoria (dados nao persistem).');
 }
 
+// ---------------------------------------------------------------------------
+// Notificacao por e-mail (opcional). Configurada via variaveis de ambiente:
+//   SMTP_HOST (default smtp.gmail.com), SMTP_PORT (default 587),
+//   SMTP_USER, SMTP_PASS, NOTIFY_EMAIL (para quem enviar o aviso)
+// Se nao configurado, as notificacoes sao ignoradas silenciosamente.
+// ---------------------------------------------------------------------------
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASS = process.env.SMTP_PASS;
+const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || SMTP_USER;
+
+let mailer = null;
+if (SMTP_USER && SMTP_PASS) {
+  mailer = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: Number(process.env.SMTP_PORT) === 465,
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
+  });
+  console.log('[INFO] Notificacoes por e-mail ativadas.');
+} else {
+  console.warn('[AVISO] SMTP nao configurado. Notificacoes por e-mail desativadas.');
+}
+
+async function notifyNewLead(lead) {
+  if (!mailer || !NOTIFY_EMAIL) return;
+  try {
+    await mailer.sendMail({
+      from: `"FinanceEcom Free" <${SMTP_USER}>`,
+      to: NOTIFY_EMAIL,
+      subject: `Novo cliente: ${lead.name}`,
+      text:
+        `Voce tem um novo cadastro no FinanceEcom Free!\n\n` +
+        `Nome: ${lead.name}\n` +
+        `E-mail: ${lead.email}\n` +
+        `WhatsApp: ${lead.whatsapp || '-'}\n` +
+        `Marketplace: ${lead.marketplace || '-'}\n` +
+        `Data: ${new Date(lead.created_at).toLocaleString('pt-BR')}\n`,
+    });
+  } catch (err) {
+    console.error('Erro ao enviar e-mail de notificacao:', err.message);
+  }
+}
+
 // Fallback em memoria para desenvolvimento sem Supabase
 const memoryStore = [];
 let memoryVisits = 0;
 const memoryVisitDates = [];
+const memorySettings = {};
 
 function makeId() {
   return 'mem-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -90,6 +135,7 @@ app.post('/api/leads', async (req, res) => {
       }
       memoryStore.push({ id: makeId(), ...record });
     }
+    notifyNewLead(record); // nao bloqueia a resposta
     return res.status(201).json({ ok: true, message: 'Cadastro realizado com sucesso!' });
   } catch (err) {
     console.error('Erro ao salvar lead:', err);
@@ -241,6 +287,107 @@ app.delete('/api/leads/:id', requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('Erro ao excluir cliente:', err);
     return res.status(500).json({ error: 'Erro ao excluir cliente.' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/timeseries?days=14  -> cadastros e visitas por dia (protegido)
+// ---------------------------------------------------------------------------
+app.get('/api/timeseries', requireAdmin, async (req, res) => {
+  const days = Math.min(Math.max(parseInt(req.query.days, 10) || 14, 1), 90);
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - (days - 1));
+  const startIso = start.toISOString();
+
+  // Monta os buckets vazios (um por dia)
+  const buckets = {};
+  const labels = [];
+  for (let i = 0; i < days; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    const key = d.toISOString().slice(0, 10);
+    buckets[key] = { date: key, signups: 0, visits: 0 };
+    labels.push(key);
+  }
+
+  const bump = (rows, field) => {
+    for (const r of rows || []) {
+      const key = new Date(r.created_at).toISOString().slice(0, 10);
+      if (buckets[key]) buckets[key][field] += 1;
+    }
+  };
+
+  try {
+    if (supabase) {
+      const { data: leads } = await supabase
+        .from('leads').select('created_at').gte('created_at', startIso).limit(10000);
+      bump(leads, 'signups');
+      const { data: visits } = await supabase
+        .from('page_visits').select('created_at').gte('created_at', startIso).limit(50000);
+      bump(visits, 'visits');
+    } else {
+      bump(memoryStore, 'signups');
+      bump(memoryVisitDates.map((t) => ({ created_at: new Date(t).toISOString() })), 'visits');
+    }
+    return res.json({ series: labels.map((k) => buckets[k]) });
+  } catch (err) {
+    console.error('Erro na timeseries:', err);
+    return res.status(500).json({ error: 'Erro ao gerar grafico.' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/public-settings  -> configuracoes publicas (ex.: whatsapp suporte)
+// ---------------------------------------------------------------------------
+app.get('/api/public-settings', async (req, res) => {
+  try {
+    let support = '';
+    if (supabase) {
+      const { data } = await supabase.from('settings').select('value').eq('key', 'support_whatsapp').maybeSingle();
+      support = data?.value || '';
+    } else {
+      support = memorySettings.support_whatsapp || '';
+    }
+    return res.json({ support_whatsapp: support });
+  } catch (err) {
+    return res.json({ support_whatsapp: '' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/settings  -> le configuracoes (protegido)
+// PUT /api/settings  -> salva o whatsapp de suporte (protegido)
+// ---------------------------------------------------------------------------
+app.get('/api/settings', requireAdmin, async (req, res) => {
+  try {
+    let support = '';
+    if (supabase) {
+      const { data } = await supabase.from('settings').select('value').eq('key', 'support_whatsapp').maybeSingle();
+      support = data?.value || '';
+    } else {
+      support = memorySettings.support_whatsapp || '';
+    }
+    return res.json({ support_whatsapp: support });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao ler configuracoes.' });
+  }
+});
+
+app.put('/api/settings', requireAdmin, async (req, res) => {
+  const raw = (req.body?.support_whatsapp ?? '').toString();
+  const value = raw.replace(/\D/g, ''); // so digitos
+  try {
+    if (supabase) {
+      const { error } = await supabase.from('settings').upsert({ key: 'support_whatsapp', value });
+      if (error) throw error;
+    } else {
+      memorySettings.support_whatsapp = value;
+    }
+    return res.json({ ok: true, support_whatsapp: value });
+  } catch (err) {
+    console.error('Erro ao salvar configuracoes:', err);
+    return res.status(500).json({ error: 'Erro ao salvar configuracoes.' });
   }
 });
 

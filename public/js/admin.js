@@ -66,12 +66,53 @@ function renderTable() {
     </tr>`).join('');
 }
 
+function renderChart(series) {
+  const el = document.getElementById('chart');
+  if (!series || series.length === 0) { el.innerHTML = '<p class="empty">Sem dados ainda.</p>'; return; }
+
+  const W = 720, H = 220, padL = 30, padB = 26, padT = 10, padR = 10;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const max = Math.max(1, ...series.map((d) => Math.max(d.visits, d.signups)));
+  const n = series.length;
+  const slot = plotW / n;
+  const barW = Math.min(14, slot / 3);
+
+  const y = (v) => padT + plotH - (v / max) * plotH;
+  const gridVals = [0, Math.ceil(max / 2), max];
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" class="chart-svg" preserveAspectRatio="xMidYMid meet">`;
+  // grades + eixo Y
+  for (const g of gridVals) {
+    svg += `<line x1="${padL}" y1="${y(g)}" x2="${W - padR}" y2="${y(g)}" class="grid"/>`;
+    svg += `<text x="${padL - 6}" y="${y(g) + 3}" class="axis-y">${g}</text>`;
+  }
+  series.forEach((d, i) => {
+    const cx = padL + slot * i + slot / 2;
+    // visitas (barra clara) e cadastros (barra escura) lado a lado
+    svg += `<rect x="${cx - barW - 1}" y="${y(d.visits)}" width="${barW}" height="${plotH + padT - y(d.visits)}" class="bar-visits"><title>${d.date}: ${d.visits} visitas</title></rect>`;
+    svg += `<rect x="${cx + 1}" y="${y(d.signups)}" width="${barW}" height="${plotH + padT - y(d.signups)}" class="bar-signups"><title>${d.date}: ${d.signups} cadastros</title></rect>`;
+    // rotulo dia (dd/mm) a cada ~n/7
+    if (n <= 14 || i % Math.ceil(n / 10) === 0) {
+      const [ , mm, dd] = d.date.split('-');
+      svg += `<text x="${cx}" y="${H - 8}" class="axis-x">${dd}/${mm}</text>`;
+    }
+  });
+  svg += `</svg>`;
+  el.innerHTML = svg;
+}
+
 async function loadDashboard() {
   const stats = await api('/api/stats');
   document.getElementById('stat-total').textContent = stats.total;
   document.getElementById('stat-last7').textContent = stats.last7days;
   document.getElementById('stat-visits').textContent = stats.visits ?? 0;
   document.getElementById('stat-conversion').textContent = (stats.conversion ?? 0) + '%';
+
+  const { series } = await api('/api/timeseries?days=14');
+  renderChart(series);
+
+  const settings = await api('/api/settings');
+  document.getElementById('support-input').value = formatWhats(settings.support_whatsapp);
 
   const { leads } = await api('/api/leads');
   currentLeads = leads;
@@ -142,6 +183,26 @@ document.querySelector('#leads-table tbody').addEventListener('click', async (e)
     await loadDashboard();
   } catch (err) {
     alert(err.message);
+  }
+});
+
+// Salvar WhatsApp de suporte
+document.getElementById('support-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('support-msg');
+  msg.textContent = '';
+  msg.className = 'form-msg';
+  try {
+    const res = await api('/api/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ support_whatsapp: document.getElementById('support-input').value }),
+    });
+    document.getElementById('support-input').value = formatWhats(res.support_whatsapp);
+    msg.textContent = 'WhatsApp de suporte salvo!';
+    msg.classList.add('ok');
+  } catch (err) {
+    msg.textContent = err.message;
+    msg.classList.add('err');
   }
 });
 
