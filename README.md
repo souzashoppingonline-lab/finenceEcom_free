@@ -75,6 +75,8 @@ Toda a especificação está em [`docs/`](docs/):
 - [05 — LGPD e Privacidade](docs/05-lgpd.md)
 - [06 — Setup e Deploy](docs/06-setup-deploy.md)
 - [07 — Roadmap](docs/07-roadmap.md)
+- [09 — Autenticação + Resend](docs/09-auth-resend.md)
+- [**10 — HANDOFF (estado completo — leia primeiro)**](docs/10-handoff.md)
 
 ## Licença
 
