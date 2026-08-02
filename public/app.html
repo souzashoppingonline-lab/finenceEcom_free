@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minha conta — FinanceEcom Free</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="admin-body">
+  <header class="admin-header">
+    <span class="logo">FinanceEcom <strong>Free</strong></span>
+    <nav class="v-nav">
+      <span id="user-email" class="nav-link"></span>
+      <button id="logout" class="btn-ghost">Sair</button>
+    </nav>
+  </header>
+
+  <main class="admin-main">
+    <section class="card">
+      <h1>Bem-vindo(a), <span id="user-name">vendedor</span>! 👋</h1>
+      <p class="muted">Sua conta está ativa. Comece a organizar suas finanças.</p>
+      <div class="app-shortcuts">
+        <a class="app-tile" href="/vendas.html">
+          <span class="app-ico">📊</span>
+          <b>Vendas &amp; Custos</b>
+          <span class="muted">Lance vendas e veja sua margem real</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:20px">
+      <h3>Segurança da conta</h3>
+      <div id="mfa-area">
+        <p class="muted">Ative a verificação em duas etapas (MFA) com o Google Authenticator para proteger sua conta.</p>
+        <button id="mfa-btn" class="btn-ghost">Ativar 2 etapas (MFA)</button>
+        <div id="mfa-setup" hidden>
+          <p class="muted">Escaneie o QR Code no app Google Authenticator e digite o código gerado.</p>
+          <div id="qr"></div>
+          <form id="mfa-form" class="inline-form">
+            <input type="text" id="mfa-code" inputmode="numeric" maxlength="6" placeholder="Código de 6 dígitos" />
+            <button type="submit" class="btn-inline">Confirmar</button>
+          </form>
+          <p id="mfa-msg" class="form-msg"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/auth-common.js"></script>
+  <script>
+    (async () => {
+      const session = await requireSession();
+      if (!session) return;
+      const user = session.user;
+      const meta = user.user_metadata || {};
+      document.getElementById('user-email').textContent = user.email;
+      document.getElementById('user-name').textContent = (meta.full_name || 'vendedor').split(' ')[0];
+
+      document.getElementById('logout').addEventListener('click', async () => {
+        await sb.auth.signOut();
+        location.href = '/entrar.html';
+      });
+
+      // MFA (TOTP) - Google Authenticator
+      const btn = document.getElementById('mfa-btn');
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp' });
+        if (error) { document.getElementById('mfa-msg').textContent = error.message; btn.disabled = false; return; }
+        document.getElementById('qr').innerHTML = data.totp.qr_code
+          ? `<img src="${data.totp.qr_code}" alt="QR Code MFA" width="180" />`
+          : `<code>${data.totp.secret}</code>`;
+        document.getElementById('mfa-setup').hidden = false;
+        document.getElementById('mfa-form').dataset.factor = data.id;
+      });
+      document.getElementById('mfa-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const factorId = e.target.dataset.factor;
+        const code = document.getElementById('mfa-code').value.trim();
+        const msg = document.getElementById('mfa-msg'); msg.className = 'form-msg';
+        const { data: ch, error: e1 } = await sb.auth.mfa.challenge({ factorId });
+        if (e1) { msg.textContent = e1.message; msg.classList.add('err'); return; }
+        const { error: e2 } = await sb.auth.mfa.verify({ factorId, challengeId: ch.id, code });
+        if (e2) { msg.textContent = 'Código inválido.'; msg.classList.add('err'); return; }
+        msg.textContent = '✔ Verificação em duas etapas ativada!'; msg.classList.add('ok');
+        document.getElementById('mfa-setup').hidden = true;
+      });
+    })();
+  </script>
+</body>
+</html>

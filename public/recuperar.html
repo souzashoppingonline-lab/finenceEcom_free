@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recuperar senha — FinanceEcom Free</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="auth-body">
+  <main class="auth-wrap">
+    <a href="/" class="auth-logo">FinanceEcom <strong>Free</strong></a>
+
+    <section id="step-email" class="card auth-card">
+      <h1>Recuperar senha</h1>
+      <p class="muted">Informe seu e-mail para receber um código de recuperação.</p>
+      <form id="form-email">
+        <label>E-mail<input type="email" name="email" required placeholder="voce@email.com" /></label>
+        <button type="submit">Enviar código</button>
+        <p id="msg-email" class="form-msg"></p>
+      </form>
+      <p class="auth-alt"><a href="/entrar.html">Voltar ao login</a></p>
+    </section>
+
+    <section id="step-reset" class="card auth-card" hidden>
+      <h1>Nova senha</h1>
+      <p class="muted">Digite o código enviado para <b id="email-shown"></b> e sua nova senha.</p>
+      <form id="form-reset">
+        <label>Código<input type="text" name="code" inputmode="numeric" maxlength="6" required placeholder="______" class="code-input" /></label>
+        <label>Nova senha
+          <span class="pw-field">
+            <input type="password" name="password" id="pw" required placeholder="Nova senha" />
+            <button type="button" class="pw-eye" id="eye">👁</button>
+          </span>
+        </label>
+        <div class="pw-bar"><div class="pw-bar-fill" id="pw-bar"></div></div>
+        <ul class="pw-list" id="pw-list"></ul>
+        <button type="submit">Salvar nova senha</button>
+        <p id="msg-reset" class="form-msg"></p>
+      </form>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/auth-common.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let email = '';
+
+    $('form-email').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = $('msg-email'); msg.textContent = ''; msg.className = 'form-msg';
+      email = e.target.email.value.trim().toLowerCase();
+      try {
+        const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+        if (error) throw error;
+        $('email-shown').textContent = email;
+        $('step-email').hidden = true; $('step-reset').hidden = false;
+      } catch (err) {
+        msg.textContent = 'Não foi possível enviar. Verifique o e-mail.'; msg.classList.add('err');
+      }
+    });
+
+    $('pw').addEventListener('input', () => renderStrength($('pw').value, $('pw-bar'), $('pw-list')));
+    $('eye').addEventListener('click', function () { toggleReveal($('pw'), this); });
+
+    $('form-reset').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = $('msg-reset'); msg.textContent = ''; msg.className = 'form-msg';
+      const code = e.target.code.value.trim();
+      if (!passwordChecks($('pw').value).ok) { msg.textContent = 'Senha não atende aos requisitos.'; msg.classList.add('err'); return; }
+      try {
+        const { error: e1 } = await sb.auth.verifyOtp({ email, token: code, type: 'email' });
+        if (e1) throw e1;
+        const { error: e2 } = await sb.auth.updateUser({ password: $('pw').value });
+        if (e2) throw e2;
+        location.href = '/app.html';
+      } catch (err) {
+        msg.textContent = 'Código inválido ou expirado.'; msg.classList.add('err');
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entrar — FinanceEcom Free</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="auth-body">
+  <main class="auth-wrap">
+    <a href="/" class="auth-logo">FinanceEcom <strong>Free</strong></a>
+    <section class="card auth-card">
+      <h1>Entrar</h1>
+      <p class="muted">Acesse sua conta.</p>
+      <form id="form-login">
+        <label>E-mail<input type="email" name="email" required placeholder="voce@email.com" /></label>
+        <label>Senha
+          <span class="pw-field">
+            <input type="password" name="password" id="pw" required placeholder="Sua senha" />
+            <button type="button" class="pw-eye" id="eye">👁</button>
+          </span>
+        </label>
+        <button type="submit">Entrar</button>
+        <p id="msg" class="form-msg"></p>
+      </form>
+      <p class="auth-alt"><a href="/recuperar.html">Esqueci minha senha</a></p>
+      <p class="auth-alt">Não tem conta? <a href="/criar-conta.html">Criar conta grátis</a></p>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/auth-common.js"></script>
+  <script>
+    redirectIfLogged();
+    document.getElementById('eye').addEventListener('click', function () {
+      toggleReveal(document.getElementById('pw'), this);
+    });
+    document.getElementById('form-login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('msg'); msg.textContent = ''; msg.className = 'form-msg';
+      const f = e.target;
+      const btn = f.querySelector('button'); btn.disabled = true; btn.textContent = 'Entrando...';
+      try {
+        const { error } = await sb.auth.signInWithPassword({
+          email: f.email.value.trim().toLowerCase(),
+          password: f.password.value,
+        });
+        if (error) throw error;
+        location.href = '/app.html';
+      } catch (err) {
+        let m = err.message;
+        if (/invalid login/i.test(m)) m = 'E-mail ou senha incorretos.';
+        else if (/email not confirmed/i.test(m)) m = 'Confirme seu e-mail antes de entrar.';
+        else if (/rate limit|too many/i.test(m)) m = 'Muitas tentativas. Aguarde alguns minutos.';
+        msg.textContent = m; msg.classList.add('err');
+        btn.disabled = false; btn.textContent = 'Entrar';
+      }
+    });
+  </script>
+</body>
+</html>

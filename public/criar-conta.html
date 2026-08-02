@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Criar conta — FinanceEcom Free</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="auth-body">
+  <main class="auth-wrap">
+    <a href="/" class="auth-logo">FinanceEcom <strong>Free</strong></a>
+
+    <!-- ETAPA 1: dados -->
+    <section id="step-data" class="card auth-card">
+      <h1>Criar sua conta</h1>
+      <p class="muted">Comece grátis. Leva menos de 1 minuto.</p>
+      <form id="form-data">
+        <label>Nome completo<input type="text" name="full_name" required placeholder="Seu nome" /></label>
+        <label>Empresa (opcional)<input type="text" name="company" placeholder="Nome da sua loja/empresa" /></label>
+        <label>E-mail<input type="email" name="email" required placeholder="voce@email.com" /></label>
+        <label>Telefone (opcional)<input type="tel" name="phone" placeholder="(00) 00000-0000" /></label>
+        <label class="checkbox"><input type="checkbox" name="terms" required />
+          <span>Li e aceito os <a href="/termos.html" target="_blank">Termos de Uso</a> e a <a href="/privacidade.html" target="_blank">Política de Privacidade</a>.</span>
+        </label>
+        <button type="submit">Continuar</button>
+        <p id="msg-data" class="form-msg"></p>
+      </form>
+      <p class="auth-alt">Já tem conta? <a href="/entrar.html">Entrar</a></p>
+    </section>
+
+    <!-- ETAPA 2: codigo -->
+    <section id="step-code" class="card auth-card" hidden>
+      <h1>Verifique seu e-mail</h1>
+      <p class="muted">Enviamos um código de 6 dígitos para <b id="email-shown"></b>.</p>
+      <form id="form-code">
+        <label>Código<input type="text" name="code" inputmode="numeric" maxlength="6" required placeholder="______" class="code-input" /></label>
+        <button type="submit">Verificar</button>
+        <p id="msg-code" class="form-msg"></p>
+      </form>
+      <p class="auth-alt"><a href="#" id="resend">Reenviar código</a></p>
+    </section>
+
+    <!-- ETAPA 3: senha -->
+    <section id="step-pass" class="card auth-card" hidden>
+      <h1>Defina sua senha</h1>
+      <form id="form-pass">
+        <label>E-mail<input type="email" id="email-ro" readonly /></label>
+        <label>Senha
+          <span class="pw-field">
+            <input type="password" name="password" id="pw" required placeholder="Crie uma senha" />
+            <button type="button" class="pw-eye" id="eye1">👁</button>
+          </span>
+        </label>
+        <div class="pw-bar"><div class="pw-bar-fill" id="pw-bar"></div></div>
+        <span class="muted" id="pw-strength">Muito fraca</span>
+        <ul class="pw-list" id="pw-list"></ul>
+        <label>Confirmar senha
+          <span class="pw-field">
+            <input type="password" name="confirm" id="pw2" required placeholder="Repita a senha" />
+            <button type="button" class="pw-eye" id="eye2">👁</button>
+          </span>
+        </label>
+        <p id="pw-match" class="form-msg"></p>
+        <button type="submit">Criar conta</button>
+        <p id="msg-pass" class="form-msg"></p>
+      </form>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/auth-common.js"></script>
+  <script src="/js/criar-conta.js"></script>
+</body>
+</html>
