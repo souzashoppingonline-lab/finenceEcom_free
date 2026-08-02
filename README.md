@@ -75,6 +75,7 @@ Toda a especificação está em [`docs/`](docs/):
 - [05 — LGPD e Privacidade](docs/05-lgpd.md)
 - [06 — Setup e Deploy](docs/06-setup-deploy.md)
 - [07 — Roadmap](docs/07-roadmap.md)
+- [08 — Deploy (Render + Cloudflare)](docs/08-deploy-render-cloudflare.md)
 
 ## Licença
 

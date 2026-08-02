@@ -1,0 +1,18 @@
+# Blueprint de deploy do FinanceEcom Free no Render.
+# No Render: New > Blueprint > conecte este repositorio.
+# Depois preencha as variaveis marcadas com sync:false.
+services:
+  - type: web
+    name: financeecom-free
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: SUPABASE_URL
+        sync: false          # https://mremizvqbqzfcukfbbqo.supabase.co
+      - key: SUPABASE_SERVICE_KEY
+        sync: false          # service_role (secreta) - preencha no painel do Render
+      - key: ADMIN_TOKEN
+        generateValue: true  # o Render gera um token forte automaticamente
