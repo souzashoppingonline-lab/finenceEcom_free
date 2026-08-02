@@ -211,6 +211,56 @@ th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--bo
 th { background: #f7f9fc; color: var(--muted); font-weight: 600; }
 tbody tr:hover { background: #f7f9fc; }
 
+/* ---------- Vendas & Custos ---------- */
+.v-nav { display: flex; align-items: center; gap: 16px; }
+.v-controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; margin-bottom: 20px; }
+.v-ctrl { display: flex; flex-direction: column; gap: 4px; }
+.v-ctrl label { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+.v-ctrl input, .v-ctrl select { width: auto; margin-top: 0; }
+.v-ctrl-actions { flex-direction: row; gap: 8px; }
+.v-section-title { margin: 34px 0 14px; }
+.sales-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.sales-grid label { margin-top: 0; }
+.margin-preview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 16px; padding: 16px; border-radius: 10px; border: 1px solid var(--border); }
+.margin-preview div { display: flex; flex-direction: column; }
+.mp-label { font-size: 0.8rem; color: var(--muted); }
+.mp-val { font-size: 1.3rem; font-weight: 700; }
+.margin-preview.c-ok { background: #eafaf3; border-color: #b6ebd4; }
+.margin-preview.c-warn { background: #fff7e8; border-color: #f5dca6; }
+.margin-preview.c-danger { background: #fdecec; border-color: #f3b6b6; }
+.form-row-btns { display: flex; gap: 10px; margin-top: 8px; }
+.form-row-btns button { width: auto; }
+.c-ok { color: #17915f; } .c-warn { color: #b7791f; } .c-danger { color: var(--danger); }
+.pos { color: #17915f; } .neg { color: var(--danger); }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+
+.stores-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.store-chip { display: flex; align-items: center; gap: 8px; background: #f4f7fb; border: 1px solid var(--border); border-radius: 999px; padding: 5px 8px 5px 5px; }
+.store-chip input[type="color"] { width: 26px; height: 26px; padding: 0; border: none; border-radius: 50%; margin: 0; cursor: pointer; }
+
+.goal-card, .goal-empty { margin-bottom: 8px; }
+.goal-head { display: flex; justify-content: space-between; align-items: center; }
+.goal-status { font-size: 0.9rem; margin-left: 8px; }
+.goal-card .stats-grid { margin-bottom: 14px; }
+.goal-bar { position: relative; height: 22px; background: #eef1f7; border-radius: 999px; overflow: hidden; margin-top: 6px; }
+.goal-bar-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 999px; }
+.goal-bar-ghost { position: absolute; top: 0; left: 0; height: 100%; border-radius: 999px; background: repeating-linear-gradient(45deg, rgba(29,122,95,0.18), rgba(29,122,95,0.18) 6px, transparent 6px, transparent 12px); }
+.bar-ok { background: #2bb37e; } .bar-warn { background: #e0a52e; } .bar-danger { background: #d9645f; }
+
+.reports-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.report-card h4 { margin: 0 0 12px; }
+.report-kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+.report-kpis div { display: flex; flex-direction: column; }
+.report-kpis b { font-size: 1.05rem; }
+.comp-row { display: grid; grid-template-columns: 60px 1fr 90px; align-items: center; gap: 8px; font-size: 0.82rem; margin: 4px 0; color: var(--muted); }
+.comp-bar { background: #eef1f7; height: 8px; border-radius: 4px; overflow: hidden; }
+.comp-bar div { height: 100%; background: var(--primary); }
+
+.row-passou { background: #f0fbf6; box-shadow: inset 3px 0 0 #2bb37e; }
+.row-faltou { background: #fdf2f2; box-shadow: inset 3px 0 0 #d9645f; }
+
+@media (max-width: 720px) { .sales-grid { grid-template-columns: repeat(2, 1fr); } }
+
 /* ---------- Responsivo ---------- */
 @media (max-width: 860px) {
   .hero-grid { grid-template-columns: 1fr; }

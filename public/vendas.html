@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendas & Custos — FinanceEcom Free</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="admin-body">
+  <header class="admin-header">
+    <span class="logo">FinanceEcom <strong>Free</strong> · Vendas</span>
+    <nav class="v-nav">
+      <a href="/admin.html" class="nav-link">Painel</a>
+      <button id="logout" class="btn-ghost" hidden>Sair</button>
+    </nav>
+  </header>
+
+  <main class="admin-main">
+    <!-- Login -->
+    <section id="login-view" class="card login-card">
+      <h2>Acesso restrito</h2>
+      <p class="muted">Informe o token de administrador.</p>
+      <label>Token<input type="password" id="token-input" placeholder="Token de admin" /></label>
+      <button id="login-btn">Entrar</button>
+      <p id="login-msg" class="form-msg"></p>
+    </section>
+
+    <section id="app-view" hidden>
+      <!-- Controles -->
+      <div class="v-controls">
+        <div class="v-ctrl">
+          <label>Mês</label>
+          <input type="month" id="month-sel" />
+        </div>
+        <div class="v-ctrl">
+          <label>Loja</label>
+          <select id="store-filter"><option value="">Todas as lojas</option></select>
+        </div>
+        <div class="v-ctrl v-ctrl-actions">
+          <button id="manage-stores" class="btn-ghost">Gerenciar lojas</button>
+          <button id="export-csv" class="btn-ghost">Exportar CSV</button>
+        </div>
+      </div>
+
+      <!-- Gerenciar lojas (colapsavel) -->
+      <div id="stores-panel" class="card" hidden>
+        <h3>Lojas</h3>
+        <form id="store-form" class="inline-form">
+          <input type="text" id="store-name" placeholder="Nome da loja" required />
+          <input type="color" id="store-color" value="#1d7a5f" title="Cor" />
+          <button type="submit" class="btn-inline">Adicionar loja</button>
+        </form>
+        <div id="stores-list" class="stores-list"></div>
+        <p id="store-msg" class="form-msg"></p>
+      </div>
+
+      <!-- Formulario de lancamento -->
+      <div class="card">
+        <h3 id="form-title">Lançar dia de venda</h3>
+        <form id="sales-form">
+          <div class="sales-grid">
+            <label>Data<input type="date" name="date" required /></label>
+            <label>Loja
+              <select name="store_id" required><option value="">Selecione</option></select>
+            </label>
+            <label>Qtd. Vendas<input type="number" name="qty" min="0" step="1" placeholder="0" /></label>
+            <label>Receita Bruta (R$)<input type="number" name="revenue" min="0" step="0.01" placeholder="0,00" /></label>
+            <label>Taxas Marketplace (R$)<input type="number" name="fee_mp" min="0" step="0.01" placeholder="0,00" /></label>
+            <label>Frete Subsidiado (R$)<input type="number" name="freight" min="0" step="0.01" placeholder="0,00" /></label>
+            <label>CMV — Custo Mercadoria (R$)<input type="number" name="cmv" min="0" step="0.01" placeholder="0,00" /></label>
+            <label>Ads Mercado Livre (R$)<input type="number" name="ads_ml" min="0" step="0.01" placeholder="0,00" /></label>
+            <label>Ads Externos (R$)<input type="number" name="ads_ext" min="0" step="0.01" placeholder="0,00" /></label>
+            <label>Imposto (R$)<input type="number" name="tax" min="0" step="0.01" placeholder="0,00" /></label>
+          </div>
+          <div id="margin-preview" class="margin-preview" hidden></div>
+          <div class="form-row-btns">
+            <button type="submit" id="save-sale">Salvar lançamento</button>
+            <button type="button" id="cancel-edit" class="btn-ghost" hidden>Cancelar</button>
+          </div>
+          <p id="sales-msg" class="form-msg"></p>
+        </form>
+      </div>
+
+      <!-- Meta mensal -->
+      <div id="goal-section"></div>
+
+      <!-- Totais do periodo -->
+      <h3 class="v-section-title">Indicadores do período</h3>
+      <div id="totals" class="stats-grid"></div>
+
+      <!-- Relatorios por loja -->
+      <h3 class="v-section-title">Relatórios por loja</h3>
+      <div id="store-reports" class="reports-grid"></div>
+
+      <!-- Comparativos -->
+      <h3 class="v-section-title">Comparativo: mesmo dia vs mês anterior</h3>
+      <div id="sameday" class="stats-grid"></div>
+
+      <!-- Tabela de lancamentos -->
+      <h3 class="v-section-title">Lançamentos do mês</h3>
+      <div class="table-wrap">
+        <table id="sales-table">
+          <thead><tr>
+            <th>Data</th><th>Loja</th><th>Qtd</th><th>Receita</th><th>Custos</th>
+            <th>Margem R$</th><th>Margem %</th><th></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <!-- Meta diaria -->
+      <h3 class="v-section-title">Acompanhamento diário da meta</h3>
+      <div class="table-wrap">
+        <table id="daily-table">
+          <thead><tr>
+            <th>Dia</th><th>Semana</th><th>Faturamento</th><th>Meta do Dia</th>
+            <th>Status</th><th>Diferença</th><th>Acumulado</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/vendas.js"></script>
+</body>
+</html>

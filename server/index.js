@@ -76,6 +76,9 @@ const memoryStore = [];
 let memoryVisits = 0;
 const memoryVisitDates = [];
 const memorySettings = {};
+const memStores = [];
+const memSales = [];
+const memGoals = [];
 
 function makeId() {
   return 'mem-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -389,6 +392,190 @@ app.put('/api/settings', requireAdmin, async (req, res) => {
     console.error('Erro ao salvar configuracoes:', err);
     return res.status(500).json({ error: 'Erro ao salvar configuracoes.' });
   }
+});
+
+// ===========================================================================
+// FASE 2 - VENDAS & CUSTOS (protegido por admin token)
+// ===========================================================================
+
+// ---------- LOJAS ----------
+app.get('/api/stores', requireAdmin, async (req, res) => {
+  try {
+    if (supabase) {
+      const { data, error } = await supabase.from('stores').select('*').order('created_at');
+      if (error) throw error;
+      return res.json({ stores: data });
+    }
+    return res.json({ stores: memStores });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao listar lojas.' }); }
+});
+
+app.post('/api/stores', requireAdmin, async (req, res) => {
+  const name = (req.body?.name || '').trim();
+  const color = (req.body?.color || '#1d7a5f').trim();
+  if (!name) return res.status(400).json({ error: 'Nome da loja e obrigatorio.' });
+  try {
+    if (supabase) {
+      const { data, error } = await supabase.from('stores').insert({ name, color }).select().single();
+      if (error) throw error;
+      return res.status(201).json({ store: data });
+    }
+    const store = { id: makeId(), name, color, created_at: new Date().toISOString() };
+    memStores.push(store);
+    return res.status(201).json({ store });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao criar loja.' }); }
+});
+
+app.put('/api/stores/:id', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const patch = {};
+  if (req.body?.name != null) patch.name = String(req.body.name).trim();
+  if (req.body?.color != null) patch.color = String(req.body.color).trim();
+  try {
+    if (supabase) {
+      const { error } = await supabase.from('stores').update(patch).eq('id', id);
+      if (error) throw error;
+    } else {
+      const s = memStores.find((x) => x.id === id);
+      if (s) Object.assign(s, patch);
+    }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao atualizar loja.' }); }
+});
+
+app.delete('/api/stores/:id', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    if (supabase) {
+      const { error } = await supabase.from('stores').delete().eq('id', id);
+      if (error) throw error;
+    } else {
+      const i = memStores.findIndex((x) => x.id === id);
+      if (i >= 0) memStores.splice(i, 1);
+      for (let j = memSales.length - 1; j >= 0; j--) if (memSales[j].store_id === id) memSales.splice(j, 1);
+    }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao excluir loja.' }); }
+});
+
+// ---------- VENDAS ----------
+const SALE_FIELDS = ['qty', 'revenue', 'fee_mp', 'freight', 'cmv', 'ads_ml', 'ads_ext', 'tax'];
+
+function normalizeSale(body) {
+  const rec = { date: body.date, store_id: body.store_id };
+  for (const f of SALE_FIELDS) rec[f] = Number(body[f]) || 0;
+  return rec;
+}
+
+app.get('/api/sales', requireAdmin, async (req, res) => {
+  const month = req.query.month; // 'YYYY-MM'
+  const store = req.query.store;  // opcional
+  try {
+    if (supabase) {
+      let q = supabase.from('sales').select('*').order('date', { ascending: true });
+      if (month) q = q.gte('date', `${month}-01`).lte('date', `${month}-31`);
+      if (store) q = q.eq('store_id', store);
+      const { data, error } = await q;
+      if (error) throw error;
+      return res.json({ sales: data });
+    }
+    let list = memSales.slice();
+    if (month) list = list.filter((s) => s.date.startsWith(month));
+    if (store) list = list.filter((s) => s.store_id === store);
+    list.sort((a, b) => a.date.localeCompare(b.date));
+    return res.json({ sales: list });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao listar vendas.' }); }
+});
+
+app.post('/api/sales', requireAdmin, async (req, res) => {
+  const rec = normalizeSale(req.body || {});
+  if (!rec.date || !rec.store_id) return res.status(400).json({ error: 'Data e loja sao obrigatorias.' });
+  try {
+    if (supabase) {
+      const { data, error } = await supabase.from('sales').insert(rec).select().single();
+      if (error) {
+        if (error.code === '23505') return res.status(409).json({ error: 'Ja existe um lancamento para esta data e loja. Edite o registro existente ou escolha outra data.' });
+        throw error;
+      }
+      return res.status(201).json({ sale: data });
+    }
+    if (memSales.some((s) => s.date === rec.date && s.store_id === rec.store_id))
+      return res.status(409).json({ error: 'Ja existe um lancamento para esta data e loja.' });
+    const sale = { id: makeId(), ...rec, created_at: new Date().toISOString() };
+    memSales.push(sale);
+    return res.status(201).json({ sale });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao salvar venda.' }); }
+});
+
+app.put('/api/sales/:id', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const rec = normalizeSale(req.body || {});
+  try {
+    if (supabase) {
+      const { error } = await supabase.from('sales').update(rec).eq('id', id);
+      if (error) {
+        if (error.code === '23505') return res.status(409).json({ error: 'Ja existe um lancamento para esta data e loja.' });
+        throw error;
+      }
+    } else {
+      const s = memSales.find((x) => x.id === id);
+      if (s) Object.assign(s, rec);
+    }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao atualizar venda.' }); }
+});
+
+app.delete('/api/sales/:id', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    if (supabase) {
+      const { error } = await supabase.from('sales').delete().eq('id', id);
+      if (error) throw error;
+    } else {
+      const i = memSales.findIndex((x) => x.id === id);
+      if (i >= 0) memSales.splice(i, 1);
+    }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao excluir venda.' }); }
+});
+
+// ---------- METAS ----------
+app.get('/api/goals', requireAdmin, async (req, res) => {
+  const month = req.query.month;
+  try {
+    if (supabase) {
+      let q = supabase.from('goals').select('*');
+      if (month) q = q.eq('month', month);
+      const { data, error } = await q;
+      if (error) throw error;
+      return res.json({ goals: data });
+    }
+    return res.json({ goals: memGoals.filter((g) => !month || g.month === month) });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao listar metas.' }); }
+});
+
+app.put('/api/goals', requireAdmin, async (req, res) => {
+  const month = (req.body?.month || '').trim();
+  const store_id = req.body?.store_id || null;
+  const amount = Number(req.body?.amount) || 0;
+  if (!month) return res.status(400).json({ error: 'Mes e obrigatorio.' });
+  try {
+    if (supabase) {
+      // upsert manual (delete + insert) para respeitar o indice com coalesce
+      let del = supabase.from('goals').delete().eq('month', month);
+      del = store_id ? del.eq('store_id', store_id) : del.is('store_id', null);
+      await del;
+      if (amount > 0) {
+        const { error } = await supabase.from('goals').insert({ month, store_id, amount });
+        if (error) throw error;
+      }
+    } else {
+      const i = memGoals.findIndex((g) => g.month === month && (g.store_id || null) === store_id);
+      if (i >= 0) memGoals.splice(i, 1);
+      if (amount > 0) memGoals.push({ id: makeId(), month, store_id, amount });
+    }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao salvar meta.' }); }
 });
 
 app.get('/health', (req, res) => res.json({ ok: true }));
