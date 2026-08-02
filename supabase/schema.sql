@@ -28,6 +28,16 @@ alter table public.leads enable row level security;
 -- (Nenhuma policy publica: apenas a service_role acessa.)
 
 -- =====================================================================
+-- Tabela page_visits - conta visitas na pagina de cadastro
+-- =====================================================================
+create table if not exists public.page_visits (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_page_visits_created_at on public.page_visits (created_at desc);
+alter table public.page_visits enable row level security;
+
+-- =====================================================================
 -- View de metricas (opcional) - resumo por marketplace
 -- =====================================================================
 create or replace view public.leads_por_marketplace as

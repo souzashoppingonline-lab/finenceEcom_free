@@ -35,11 +35,41 @@
           <span class="stat-label">Novos (7 dias)</span>
           <span class="stat-value" id="stat-last7">—</span>
         </div>
+        <div class="stat-card">
+          <span class="stat-label">Visitas na página</span>
+          <span class="stat-value" id="stat-visits">—</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Taxa de conversão</span>
+          <span class="stat-value" id="stat-conversion">—</span>
+        </div>
+      </div>
+
+      <!-- Criar cliente manualmente -->
+      <div class="card create-card">
+        <h3>Adicionar cliente manualmente</h3>
+        <form id="create-form" class="inline-form">
+          <input type="text" name="name" placeholder="Nome" required />
+          <input type="email" name="email" placeholder="E-mail" required />
+          <input type="tel" name="whatsapp" placeholder="WhatsApp (opcional)" />
+          <select name="marketplace">
+            <option value="">Marketplace</option>
+            <option>Mercado Livre</option>
+            <option>Shopee</option>
+            <option>Amazon</option>
+            <option>Outro</option>
+          </select>
+          <button type="submit" class="btn-inline">Adicionar</button>
+        </form>
+        <p id="create-msg" class="form-msg"></p>
       </div>
 
       <div class="table-header">
         <h3>Clientes cadastrados</h3>
-        <button id="export-btn" class="btn-ghost">Exportar CSV</button>
+        <div class="table-actions">
+          <input type="search" id="search-input" placeholder="Buscar nome ou e-mail..." class="search-input" />
+          <button id="export-btn" class="btn-ghost">Exportar CSV</button>
+        </div>
       </div>
       <div class="table-wrap">
         <table id="leads-table">
@@ -50,6 +80,7 @@
               <th>WhatsApp</th>
               <th>Marketplace</th>
               <th>Cadastro</th>
+              <th></th>
             </tr>
           </thead>
           <tbody></tbody>

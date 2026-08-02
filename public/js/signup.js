@@ -1,3 +1,9 @@
+// Registra uma visita na pagina de cadastro (1x por sessao para nao inflar)
+if (!sessionStorage.getItem('visit_sent')) {
+  sessionStorage.setItem('visit_sent', '1');
+  fetch('/api/visit', { method: 'POST' }).catch(() => {});
+}
+
 const form = document.getElementById('signup-form');
 const msg = document.getElementById('form-msg');
 
