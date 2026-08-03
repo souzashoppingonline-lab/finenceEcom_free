@@ -368,6 +368,17 @@ tbody tr:hover { background: #f7f9fc; }
 .emp-tag { font-weight: 700; margin-right: 10px; }
 .receb-footer { display: flex; gap: 28px; justify-content: flex-end; padding: 16px 4px; font-size: 0.95rem; }
 
+/* ---------- Gráficos (donut / tendência) ---------- */
+.donut-wrap { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+.donut-svg { width: 160px; height: 160px; flex: 0 0 160px; }
+.donut-c1 { fill: var(--muted); font-size: 9px; }
+.donut-c2 { fill: var(--text); font-size: 12px; font-weight: 700; }
+.donut-legend { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 6px; }
+.lg-item { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; }
+.lg-dot { width: 11px; height: 11px; border-radius: 3px; flex: 0 0 11px; }
+.lg-lbl { flex: 1; }
+.trend-legend { display: flex; gap: 18px; margin-bottom: 8px; font-size: 0.85rem; color: var(--muted); }
+
 /* ---------- Despesas & DRE ---------- */
 .despesas-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
 .despesas-side { position: sticky; top: 20px; }

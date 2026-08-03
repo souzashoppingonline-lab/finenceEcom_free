@@ -27,6 +27,7 @@ async function refresh() {
   curMonthSel = selectedMonth();
   renderExpenses();
   renderMiniDre();
+  renderDonut();
   renderDetail();
   if (!$('be-content').closest('[hidden]')) renderBreakEven();
 }
@@ -68,6 +69,15 @@ $('mini-dre-body').addEventListener('click', (e) => {
   const tr = e.target.closest('[data-month]'); if (!tr) return;
   $('sel-month').value = tr.dataset.month; refresh();
 });
+
+// ---------- Donut de despesas por categoria ----------
+function renderDonut() {
+  const exps = expensesForMonth(curMonthSel);
+  const byCat = {};
+  for (const e of exps) { const k = e.category || 'Sem categoria'; byCat[k] = (byCat[k] || 0) + (+e.value); }
+  const items = Object.entries(byCat).map(([label, value]) => ({ label, value }));
+  donutChart($('exp-donut'), items);
+}
 
 // ---------- DRE detalhada ----------
 function renderDetail() {

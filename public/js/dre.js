@@ -8,8 +8,17 @@ async function refresh() {
   await loadFinance();
   renderGrid();
   renderCards();
+  renderTrend();
   renderReport();
   renderHistory();
+}
+
+function renderTrend() {
+  const rows = annualDRE($('sel-year').value);
+  trendChart($('dre-trend'), [
+    { name: 'Receita', color: '#1e6fff', values: rows.map((r) => r.receita) },
+    { name: 'Lucro', color: '#17915f', values: rows.map((r) => r.resultado) },
+  ], MONTHS);
 }
 
 // ---------- Grade anual ----------
