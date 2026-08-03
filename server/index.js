@@ -98,24 +98,67 @@ function makeId() {
   return 'mem-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+app.set('trust proxy', 1); // atras do Cloudflare/Render — usa X-Forwarded-For
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ---------------------------------------------------------------------------
-// Middleware de autenticacao do painel admin
+// Rate limiting (em memoria) — protege contra brute force / spam
 // ---------------------------------------------------------------------------
+function makeLimiter({ windowMs, max, message }) {
+  const hits = new Map(); // ip -> { count, reset }
+  setInterval(() => { const now = Date.now(); for (const [k, v] of hits) if (now > v.reset) hits.delete(k); }, windowMs).unref?.();
+  return (req, res, next) => {
+    const ip = req.ip || 'unknown';
+    const now = Date.now();
+    let e = hits.get(ip);
+    if (!e || now > e.reset) { e = { count: 0, reset: now + windowMs }; hits.set(ip, e); }
+    e.count++;
+    if (e.count > max) {
+      res.set('Retry-After', String(Math.ceil((e.reset - now) / 1000)));
+      return res.status(429).json({ error: message || 'Muitas requisições. Aguarde alguns instantes.' });
+    }
+    next();
+  };
+}
+
+// Limite geral em todas as APIs (rede de seguranca)
+app.use('/api/', makeLimiter({ windowMs: 5 * 60 * 1000, max: 600 }));
+// Limites mais rigidos para endpoints publicos sensiveis
+const limitLeads = makeLimiter({ windowMs: 60 * 1000, max: 10, message: 'Muitos cadastros. Tente novamente em 1 minuto.' });
+const limitTest = makeLimiter({ windowMs: 60 * 1000, max: 5, message: 'Aguarde antes de enviar outro teste.' });
+
+// ---------------------------------------------------------------------------
+// Middleware de autenticacao do painel admin (com bloqueio anti brute force)
+// 5 tentativas erradas -> bloqueia o IP por 15 minutos.
+// ---------------------------------------------------------------------------
+const adminFails = new Map(); // ip -> { count, reset, blockedUntil }
+setInterval(() => { const now = Date.now(); for (const [k, v] of adminFails) if (!v.blockedUntil && now > v.reset) adminFails.delete(k); }, 15 * 60 * 1000).unref?.();
+
 function requireAdmin(req, res, next) {
+  const ip = req.ip || 'unknown';
+  const now = Date.now();
+  const rec = adminFails.get(ip);
+  if (rec?.blockedUntil && now < rec.blockedUntil) {
+    res.set('Retry-After', String(Math.ceil((rec.blockedUntil - now) / 1000)));
+    return res.status(429).json({ error: 'Muitas tentativas. Tente novamente em alguns minutos.' });
+  }
   const token = req.headers['x-admin-token'] || req.query.token;
   if (token !== ADMIN_TOKEN) {
+    const r = (rec && now <= rec.reset) ? rec : { count: 0, reset: now + 15 * 60 * 1000 };
+    r.count++;
+    if (r.count >= 5) r.blockedUntil = now + 15 * 60 * 1000;
+    adminFails.set(ip, r);
     return res.status(401).json({ error: 'Nao autorizado.' });
   }
+  adminFails.delete(ip); // sucesso limpa o contador
   next();
 }
 
 // ---------------------------------------------------------------------------
 // POST /api/leads  -> cadastro publico (captacao)
 // ---------------------------------------------------------------------------
-app.post('/api/leads', async (req, res) => {
+app.post('/api/leads', limitLeads, async (req, res) => {
   const { name, email, whatsapp, marketplace, consent } = req.body || {};
 
   if (!name || !email || !whatsapp) {
@@ -1300,7 +1343,7 @@ app.put('/api/boleto-alert', requireUser, async (req, res) => {
 });
 
 // Enviar teste agora
-app.post('/api/boleto-alert/test', requireUser, async (req, res) => {
+app.post('/api/boleto-alert/test', limitTest, requireUser, async (req, res) => {
   const email = (req.body?.email || '').trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'E-mail invalido.' });
   const ok = await sendBoletoDigest(req.userId, email);
