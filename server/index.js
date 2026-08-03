@@ -1242,8 +1242,12 @@ function digestHtml(nomeHoje, hoje, amanha, prox7) {
   const totHoje = hoje.reduce((a, b) => a + (+b.value), 0);
   const totAmanha = amanha.reduce((a, b) => a + (+b.value), 0);
   const tot7 = prox7.reduce((a, b) => a + (+b.value), 0);
+  const logoUrl = (process.env.PUBLIC_URL || 'https://app.financeecom.com.br') + '/img/email-logo.png';
   return `<div style="font-family:system-ui,Arial,sans-serif;color:#1c2434;max-width:560px">
-    <h2 style="color:#1d7a5f">FinanceEcom Free — Contas do dia</h2>
+    <div style="background:#0a1428;border-radius:12px;padding:14px;text-align:center;margin-bottom:18px">
+      <img src="${logoUrl}" alt="FinanceEcom Free" width="280" style="max-width:280px;height:auto;display:inline-block" />
+    </div>
+    <h2 style="color:#1e6fff">Contas do dia</h2>
     <p>Olá! Aqui está o resumo das suas contas a pagar.</p>
     <h3>📌 Vencem HOJE (${fmt(nomeHoje)}) — ${money(totHoje)}</h3>${list(hoje)}
     <h3>⏭️ Vencem AMANHÃ — ${money(totAmanha)}</h3>${list(amanha)}
