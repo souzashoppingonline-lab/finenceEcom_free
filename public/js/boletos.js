@@ -282,9 +282,35 @@ exportButtons($('export-box'), () => ({
   rows: boletos.map((b) => [b.due_date, KIND_LABEL[b.kind] || 'Boleto', b.name, b.supplier || '', b.empresa || '', b.numero_nf || '', b.direction, +b.value, b.status]),
 }));
 
+// ---------- Alerta diário por e-mail ----------
+async function loadAlert() {
+  try {
+    const { alert } = await api('/api/boleto-alert');
+    $('alert-email').value = alert.email || '';
+    $('alert-hour').value = alert.hour ?? 8;
+    $('alert-enabled').checked = !!alert.enabled;
+  } catch (_) {}
+}
+$('alert-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = $('alert-msg'); msg.textContent = ''; msg.className = 'form-msg';
+  try {
+    await api('/api/boleto-alert', { method: 'PUT', body: JSON.stringify({ email: $('alert-email').value.trim(), hour: +$('alert-hour').value, enabled: $('alert-enabled').checked }) });
+    msg.textContent = 'Alerta salvo!'; msg.classList.add('ok');
+  } catch (err) { msg.textContent = err.message; msg.classList.add('err'); }
+});
+$('alert-test').addEventListener('click', async () => {
+  const msg = $('alert-msg'); msg.textContent = 'Enviando...'; msg.className = 'form-msg';
+  try {
+    await api('/api/boleto-alert/test', { method: 'POST', body: JSON.stringify({ email: $('alert-email').value.trim() }) });
+    msg.textContent = 'E-mail de teste enviado! Confira a caixa (e o spam).'; msg.classList.add('ok');
+  } catch (err) { msg.textContent = err.message; msg.classList.add('err'); }
+});
+
 (async () => {
   const session = await initShell('boletos');
   if (!session) return;
   $('boleto-form').due_date.value = todayStr();
   await loadAll();
+  loadAlert();
 })();

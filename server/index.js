@@ -86,6 +86,7 @@ const memBoletos = [];
 const memCF = []; // cash_flow_entries
 const memLists = []; // fornecedores, categorias, etc.
 const memExpenses = [];
+const memAlerts = [];
 const memCards = [];
 const memParcelas = [];
 const memFaturaPagtos = [];
@@ -1178,6 +1179,140 @@ app.get('/api/fatura-pagamentos', requireUser, async (req, res) => {
     return res.json({ pagamentos: memFaturaPagtos.filter((p) => p.user_id === req.userId).slice().reverse() });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao listar pagamentos.' }); }
 });
+
+// ===========================================================================
+// ALERTA DIARIO DE BOLETOS POR E-MAIL (Resend)
+// ===========================================================================
+async function resendSend(to, subject, html) {
+  const key = process.env.RESEND_API_KEY;
+  const from = process.env.ALERT_FROM || 'FinanceEcom Free <nao-responda@financeecom.com.br>';
+  if (!key) { console.warn('[AVISO] RESEND_API_KEY nao configurado — alerta de boletos nao enviado.'); return false; }
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to, subject, html }),
+    });
+    if (!res.ok) { console.error('Resend erro:', await res.text()); return false; }
+    return true;
+  } catch (err) { console.error('Resend fetch erro:', err.message); return false; }
+}
+
+// Faturas de cartao pendentes (para incluir no alerta)
+async function getFaturas(userId) {
+  let parcelas, cards;
+  if (supabase) {
+    const [p, c] = await Promise.all([
+      supabase.from('parcelas_cartao').select('*').eq('user_id', userId).eq('status', 'pendente'),
+      supabase.from('cartoes').select('*').eq('user_id', userId),
+    ]);
+    parcelas = p.data || []; cards = c.data || [];
+  } else {
+    parcelas = memParcelas.filter((x) => x.user_id === userId && x.status === 'pendente');
+    cards = memCards.filter((x) => x.user_id === userId);
+  }
+  const cardOf = (id) => cards.find((c) => c.id === id) || {};
+  const groups = {};
+  for (const p of parcelas) {
+    const key = `${p.cartao_id}|${p.fatura_mes}`;
+    if (!groups[key]) { const card = cardOf(p.cartao_id); const dd = Math.min(card.due_day || 10, 28); groups[key] = { name: `Fatura ${card.name || 'Cartão'}`, kind: 'cartao', value: 0, due_date: `${p.fatura_mes}-${String(dd).padStart(2, '0')}` }; }
+    groups[key].value += Number(p.value);
+  }
+  return Object.values(groups);
+}
+
+function digestHtml(nomeHoje, hoje, amanha, prox7) {
+  const money = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const fmt = (iso) => { const [y, m, d] = iso.split('-'); return `${d}/${m}`; };
+  const list = (arr) => arr.length
+    ? '<ul style="margin:6px 0 14px;padding-left:18px">' + arr.map((b) => `<li>${fmt(b.due_date)} — <b>${b.name}</b>${b.empresa ? ' (' + b.empresa + ')' : ''}: ${money(b.value)}</li>`).join('') + '</ul>'
+    : '<p style="color:#6b7686;margin:6px 0 14px">Nada.</p>';
+  const totHoje = hoje.reduce((a, b) => a + (+b.value), 0);
+  const totAmanha = amanha.reduce((a, b) => a + (+b.value), 0);
+  const tot7 = prox7.reduce((a, b) => a + (+b.value), 0);
+  return `<div style="font-family:system-ui,Arial,sans-serif;color:#1c2434;max-width:560px">
+    <h2 style="color:#1d7a5f">FinanceEcom Free — Contas do dia</h2>
+    <p>Olá! Aqui está o resumo das suas contas a pagar.</p>
+    <h3>📌 Vencem HOJE (${fmt(nomeHoje)}) — ${money(totHoje)}</h3>${list(hoje)}
+    <h3>⏭️ Vencem AMANHÃ — ${money(totAmanha)}</h3>${list(amanha)}
+    <h3>📅 Próximos 7 dias — total ${money(tot7)}</h3>${list(prox7)}
+    <hr style="border:none;border-top:1px solid #e2e6ee;margin:18px 0">
+    <p style="color:#6b7686;font-size:13px">Inclui boletos, faturas de cartão e todas as categorias. Enviado automaticamente pelo FinanceEcom Free.</p>
+  </div>`;
+}
+
+async function sendBoletoDigest(userId, email) {
+  const today = new Date().toLocaleDateString('en-CA');
+  const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString('en-CA');
+  const in7 = new Date(Date.now() + 7 * 86400000).toLocaleDateString('en-CA');
+  let boletos;
+  if (supabase) { const { data } = await supabase.from('boletos').select('*').eq('user_id', userId).eq('direction', 'pagar').eq('status', 'pendente'); boletos = data || []; }
+  else boletos = memBoletos.filter((b) => b.user_id === userId && b.direction === 'pagar' && b.status === 'pendente');
+  const faturas = await getFaturas(userId);
+  const all = [...boletos.map((b) => ({ name: b.name, empresa: b.empresa, value: b.value, due_date: b.due_date })), ...faturas];
+  const hoje = all.filter((b) => b.due_date === today);
+  const amanha = all.filter((b) => b.due_date === tomorrow);
+  const prox7 = all.filter((b) => b.due_date >= today && b.due_date <= in7).sort((a, b) => a.due_date.localeCompare(b.due_date));
+  return resendSend(email, 'FinanceEcom Free — Contas do dia', digestHtml(today, hoje, amanha, prox7));
+}
+
+app.get('/api/boleto-alert', requireUser, async (req, res) => {
+  try {
+    let a;
+    if (supabase) { const { data } = await supabase.from('boleto_alerts').select('*').eq('user_id', req.userId).maybeSingle(); a = data; }
+    else a = memAlerts.find((x) => x.user_id === req.userId);
+    return res.json({ alert: a || { email: '', hour: 8, enabled: false } });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao ler alerta.' }); }
+});
+
+app.put('/api/boleto-alert', requireUser, async (req, res) => {
+  const email = (req.body?.email || '').trim();
+  const hour = Math.min(Math.max(Number(req.body?.hour) || 8, 0), 23);
+  const enabled = !!req.body?.enabled;
+  if (enabled && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'E-mail invalido.' });
+  try {
+    if (supabase) {
+      await supabase.from('boleto_alerts').delete().eq('user_id', req.userId);
+      await supabase.from('boleto_alerts').insert({ user_id: req.userId, email, hour, enabled });
+    } else {
+      const i = memAlerts.findIndex((x) => x.user_id === req.userId);
+      if (i >= 0) memAlerts.splice(i, 1);
+      memAlerts.push({ user_id: req.userId, email, hour, enabled });
+    }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao salvar alerta.' }); }
+});
+
+// Enviar teste agora
+app.post('/api/boleto-alert/test', requireUser, async (req, res) => {
+  const email = (req.body?.email || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'E-mail invalido.' });
+  const ok = await sendBoletoDigest(req.userId, email);
+  return ok ? res.json({ ok: true }) : res.status(500).json({ error: 'Falha ao enviar (verifique RESEND_API_KEY no servidor).' });
+});
+
+// Agendador: a cada 10 min verifica se e a hora configurada (horario de Brasilia)
+const alertsSentKey = new Set();
+async function runAlertScheduler() {
+  try {
+    const nowBR = new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit' });
+    // nowBR ex.: "08/03/2026, 14" -> extrai hora e data
+    const hourBR = Number(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hour12: false }).replace(/\D/g, ''));
+    const dateBR = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+    let alerts;
+    if (supabase) { const { data } = await supabase.from('boleto_alerts').select('*').eq('enabled', true); alerts = data || []; }
+    else alerts = memAlerts.filter((a) => a.enabled);
+    for (const a of alerts) {
+      if (Number(a.hour) !== hourBR) continue;
+      const key = `${a.user_id}|${dateBR}|${hourBR}`;
+      if (alertsSentKey.has(key)) continue;
+      alertsSentKey.add(key);
+      await sendBoletoDigest(a.user_id, a.email);
+      console.log(`[ALERTA] Boletos enviados para ${a.email}`);
+    }
+  } catch (err) { console.error('Scheduler erro:', err.message); }
+}
+setInterval(runAlertScheduler, 10 * 60 * 1000);
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 

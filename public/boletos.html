@@ -24,6 +24,20 @@
     <!-- KPIs compactos -->
     <div class="stats-grid" id="boletos-kpis"></div>
 
+    <!-- Alerta diário por e-mail -->
+    <div class="card alert-config">
+      <h3>📧 Alerta diário por e-mail</h3>
+      <p class="muted">Receba todo dia um resumo com boletos de hoje, de amanhã e dos próximos 7 dias (inclui faturas de cartão e todas as categorias).</p>
+      <form id="alert-form" class="inline-form">
+        <input type="email" id="alert-email" placeholder="seu@email.com" />
+        <label class="filt">Horário <input type="number" id="alert-hour" min="0" max="23" value="8" class="filter-inp filter-day" /> h</label>
+        <label class="checkbox" style="margin:0"><input type="checkbox" id="alert-enabled" /> <span>Ativar envio diário</span></label>
+        <button type="submit" class="btn-inline">Salvar</button>
+        <button type="button" id="alert-test" class="btn-ghost">Enviar teste agora</button>
+      </form>
+      <p id="alert-msg" class="form-msg"></p>
+    </div>
+
     <div class="boletos-layout">
       <!-- ============ FORM (ESQUERDA) ============ -->
       <aside class="card debt-form">
