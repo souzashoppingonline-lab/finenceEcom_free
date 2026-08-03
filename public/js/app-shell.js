@@ -4,6 +4,13 @@
 // ===========================================================================
 let _session = null;
 
+function applyCollapsed(collapsed) {
+  document.documentElement.classList.toggle('sidebar-collapsed', collapsed);
+  localStorage.setItem('sidebar_collapsed', collapsed ? '1' : '0');
+  const btn = document.getElementById('side-collapse');
+  if (btn) btn.textContent = collapsed ? '»' : '«';
+}
+
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('theme', theme);
@@ -15,26 +22,33 @@ function renderSidebar(active) {
   const user = _session.user;
   const meta = user.user_metadata || {};
   const first = (meta.full_name || user.email || 'Conta').split(' ')[0];
+  const link = (href, key, icon, label) =>
+    `<a href="${href}" class="side-link ${active === key ? 'is-active' : ''}" title="${label}"><span class="side-ico">${icon}</span><span class="side-txt">${label}</span></a>`;
   const root = document.getElementById('sidebar-root');
   root.innerHTML = `
     <aside class="sidebar">
       <div class="side-top">
-        <span class="side-logo">FinanceEcom <strong>Free</strong></span>
-        <div class="side-user">👤 ${first}</div>
+        <span class="side-logo"><span class="side-txt">FinanceEcom <strong>Free</strong></span><strong class="side-mini">F</strong></span>
+        <button id="side-collapse" class="side-collapse" title="Recolher/expandir menu" aria-label="Recolher menu">«</button>
       </div>
+      <div class="side-user"><span class="side-ico">👤</span><span class="side-txt">${first}</span></div>
       <nav class="side-nav">
-        <a href="/app.html" class="side-link ${active === 'dash' ? 'is-active' : ''}">📊 Dashboard</a>
-        <a href="/vendas.html" class="side-link ${active === 'vendas' ? 'is-active' : ''}">💰 Vendas e Custos</a>
-        <a href="/fluxo.html" class="side-link ${active === 'fluxo' ? 'is-active' : ''}">💵 Fluxo de Caixa</a>
-        <a href="/boletos.html" class="side-link ${active === 'boletos' ? 'is-active' : ''}">📄 Boletos e Dívidas</a>
+        ${link('/app.html', 'dash', '📊', 'Dashboard')}
+        ${link('/vendas.html', 'vendas', '💰', 'Vendas e Custos')}
+        ${link('/fluxo.html', 'fluxo', '💵', 'Fluxo de Caixa')}
+        ${link('/boletos.html', 'boletos', '📄', 'Boletos e Dívidas')}
       </nav>
       <div class="side-bottom">
         <button id="theme-toggle" class="side-link side-btn"></button>
-        <button id="side-logout" class="side-link side-btn">🚪 Sair</button>
+        <button id="side-logout" class="side-link side-btn"><span class="side-ico">🚪</span><span class="side-txt">Sair</span></button>
       </div>
     </aside>
     <button id="side-open" class="side-open" aria-label="Menu">☰</button>`;
 
+  applyCollapsed(localStorage.getItem('sidebar_collapsed') === '1');
+  document.getElementById('side-collapse').addEventListener('click', () => {
+    applyCollapsed(!(localStorage.getItem('sidebar_collapsed') === '1'));
+  });
   applyTheme(localStorage.getItem('theme') || 'light');
   document.getElementById('theme-toggle').addEventListener('click', () => {
     const cur = document.documentElement.getAttribute('data-theme');
