@@ -8,6 +8,13 @@ const todayStr = () => new Date().toLocaleDateString('en-CA');
 
 function selectedMonth() { return `${$('sel-year').value}-${String(+$('sel-month').value).padStart(2, '0')}`; }
 
+// Moeda compacta para a mini-tabela (cabe no sidebar estreito)
+function moneyK(v) {
+  const n = Number(v) || 0, a = Math.abs(n);
+  if (a >= 1000) return (n < 0 ? '-' : '') + 'R$' + (a / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'k';
+  return money(n);
+}
+
 // tabs
 document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
   document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('is-active', x === t));
@@ -47,9 +54,9 @@ function renderMiniDre() {
   $('mini-dre-body').innerHTML = `<tr class="mini-dre-head"><td>Mês</td><td>Entradas</td><td>Custos</td><td>Result.</td></tr>` +
     rows.map((r) => `<tr class="mini-dre-row ${r.month === curMonthSel ? 'is-cur' : ''}" data-month="${r.i + 1}">
       <td>${r.label}</td>
-      <td>${r.hasData ? money(r.receita) : '—'}</td>
-      <td>${r.hasData ? money(r.custosTotais) : '—'}</td>
-      <td class="${r.resultado >= 0 ? 'pos' : 'neg'}">${r.hasData ? (r.resultado >= 0 ? '+' : '') + money(r.resultado) : '—'}</td>
+      <td>${r.hasData ? moneyK(r.receita) : '—'}</td>
+      <td>${r.hasData ? moneyK(r.custosTotais) : '—'}</td>
+      <td class="${r.resultado >= 0 ? 'pos' : 'neg'}">${r.hasData ? (r.resultado >= 0 ? '+' : '') + moneyK(r.resultado) : '—'}</td>
     </tr>`).join('');
   const totE = rows.reduce((a, r) => a + r.receita, 0), totC = rows.reduce((a, r) => a + r.custosTotais, 0), totR = totE - totC;
   $('mini-dre-tot').innerHTML = `
