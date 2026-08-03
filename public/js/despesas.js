@@ -51,7 +51,7 @@ function renderMiniDre() {
   const year = $('sel-year').value;
   $('dre-year-title').textContent = `DRE Resumida — ${year}`;
   const rows = annualDRE(year);
-  $('mini-dre-body').innerHTML = `<tr class="mini-dre-head"><td>Mês</td><td>Entradas</td><td>Custos</td><td>Result.</td></tr>` +
+  $('mini-dre-body').innerHTML = `<tr class="mini-dre-head"><td>Mês</td><td>Entradas</td><td>Custos</td><td>Resultado</td></tr>` +
     rows.map((r) => `<tr class="mini-dre-row ${r.month === curMonthSel ? 'is-cur' : ''}" data-month="${r.i + 1}">
       <td>${r.label}</td>
       <td>${r.hasData ? moneyK(r.receita) : '—'}</td>
