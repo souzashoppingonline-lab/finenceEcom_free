@@ -48,6 +48,7 @@ Deploy Render (free) · DNS/SSL Cloudflare.
 | `schema_lists.sql` | `lists` (fornecedores/categorias) |
 | `schema_empresas.sql` | add `cnpj`,`address`,`marketplace` em stores; add `marketplace` em boletos |
 | `schema_cartao.sql` | `cartoes`, `parcelas_cartao`, `fatura_pagamentos` |
+| `schema_despesas.sql` | `expenses` (custos fixos/operacionais, recorrentes) |
 | **`00_run_all.sql`** | **script único consolidado (roda tudo)** — não inclui cartão ainda; rode `schema_cartao.sql` também |
 
 Colunas extras já adicionadas via ALTER embutidos: `boletos.kind`, `boletos.bank`.
@@ -133,7 +134,7 @@ menu recolhível + tema; deploy Render + domínio Cloudflare.
    `/api/fatura-pagamentos`. Pagar Fatura agrupa parcelas por empresa → 1 lançamento/empresa
    no FC (category 'Cartão de Crédito'). Compra parcelada distribui em faturas por dia de
    fechamento do cartão. Falta (opcional): faturas virtuais dentro da tabela de Boletos.
-4. Exportações XLSX/PDF (hoje só CSV); gráficos ricos (donut, AG Grid); DRE; metas por loja
+4. Exportações XLSX/PDF (hoje só CSV); gráficos ricos (donut, AG Grid); metas por loja
    (StoreGoalCard); comparativos semana/mês nos MonthlyTotals; WeekdayComparison.
 5. Testar entrega do e-mail de notificação de lead.
 
