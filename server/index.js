@@ -84,6 +84,7 @@ const memGoals = [];
 const memImports = [];
 const memBoletos = [];
 const memCF = []; // cash_flow_entries
+const memLists = []; // fornecedores, categorias, etc.
 
 function makeId() {
   return 'mem-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -874,6 +875,46 @@ app.delete('/api/boletos/:id', requireUser, async (req, res) => {
     }
     return res.json({ ok: true });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao excluir boleto.' }); }
+});
+
+// ---------- LISTAS (fornecedores, categorias) ----------
+app.get('/api/lists', requireUser, async (req, res) => {
+  const type = req.query.type;
+  try {
+    if (supabase) {
+      let q = supabase.from('lists').select('*').eq('user_id', req.userId).order('name');
+      if (type) q = q.eq('type', type);
+      const { data, error } = await q;
+      if (error) throw error;
+      return res.json({ items: data });
+    }
+    return res.json({ items: memLists.filter((l) => l.user_id === req.userId && (!type || l.type === type)) });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao listar.' }); }
+});
+
+app.post('/api/lists', requireUser, async (req, res) => {
+  const type = (req.body?.type || '').trim();
+  const name = (req.body?.name || '').trim();
+  if (!type || !name) return res.status(400).json({ error: 'Tipo e nome sao obrigatorios.' });
+  try {
+    if (supabase) {
+      const { data, error } = await supabase.from('lists').insert({ type, name, user_id: req.userId }).select().single();
+      if (error) throw error;
+      return res.status(201).json({ item: data });
+    }
+    const item = { id: makeId(), type, name, user_id: req.userId };
+    memLists.push(item);
+    return res.status(201).json({ item });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao cadastrar.' }); }
+});
+
+app.delete('/api/lists/:id', requireUser, async (req, res) => {
+  const { id } = req.params;
+  try {
+    if (supabase) { const { error } = await supabase.from('lists').delete().eq('id', id).eq('user_id', req.userId); if (error) throw error; }
+    else { const i = memLists.findIndex((l) => l.id === id && l.user_id === req.userId); if (i >= 0) memLists.splice(i, 1); }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao excluir.' }); }
 });
 
 app.get('/health', (req, res) => res.json({ ok: true }));

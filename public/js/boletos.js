@@ -5,6 +5,8 @@ const $ = (id) => document.getElementById(id);
 let boletos = [];
 let cashflow = [];
 let stores = [];
+let suppliers = [];
+let categories = [];
 let editingId = null;
 const filters = { status: '', kind: '', dir: '', empresa: '', nf: '', month: '', dia: '', forn: '', banco: '', cartao: '' };
 
@@ -27,13 +29,27 @@ async function api(path, options = {}) {
 
 // ---------- Carregamento ----------
 async function loadAll() {
-  const [b, cf, st] = await Promise.all([api('/api/boletos'), api('/api/cashflow'), api('/api/stores')]);
+  const [b, cf, st, sup, cat] = await Promise.all([
+    api('/api/boletos'), api('/api/cashflow'), api('/api/stores'),
+    api('/api/lists?type=supplier'), api('/api/lists?type=category'),
+  ]);
   boletos = b.boletos || [];
   cashflow = cf.entries || [];
   stores = st.stores || [];
+  suppliers = (sup.items || []).map((i) => i.name);
+  categories = (cat.items || []).map((i) => i.name);
   renderKPIs();
   renderEmpresaOptions();
+  renderLists();
   renderTable();
+}
+
+function renderLists() {
+  const f = $('boleto-form');
+  const supCur = f.supplier.value, catCur = f.category.value;
+  $('sel-supplier').innerHTML = `<option value="">— Nenhum fornecedor —</option>` + suppliers.map((n) => `<option>${esc(n)}</option>`).join('');
+  $('sel-category').innerHTML = `<option value="">Selecione</option>` + categories.map((n) => `<option>${esc(n)}</option>`).join('');
+  f.supplier.value = supCur; f.category.value = catCur;
 }
 
 function linkedIds() { return new Set(cashflow.filter((e) => e.boleto_id).map((e) => e.boleto_id)); }
@@ -218,6 +234,16 @@ $('b-dia').addEventListener('input', (e) => { filters.dia = e.target.value.trim(
 $('b-forn').addEventListener('change', (e) => { filters.forn = e.target.value; renderTable(); });
 $('b-banco').addEventListener('change', (e) => { filters.banco = e.target.value; renderTable(); });
 $('b-cartao').addEventListener('change', (e) => { filters.cartao = e.target.value; renderTable(); });
+
+// ---------- Cadastrar fornecedor / categoria ----------
+async function addListItem(type, label) {
+  const name = prompt(`Nome do(a) ${label}:`);
+  if (!name || !name.trim()) return;
+  try { await api('/api/lists', { method: 'POST', body: JSON.stringify({ type, name: name.trim() }) }); await loadAll(); }
+  catch (err) { alert(err.message); }
+}
+$('add-fornecedor').addEventListener('click', () => addListItem('supplier', 'fornecedor'));
+$('add-categoria').addEventListener('click', () => addListItem('category', 'categoria'));
 
 // ---------- Init ----------
 (async () => {

@@ -9,9 +9,15 @@
 <body class="app-body">
   <div id="sidebar-root"></div>
   <main class="app-content">
-    <div class="dash-head">
-      <h1>📄 Boletos &amp; Dívidas</h1>
-      <p class="muted">Planeje seus compromissos. Ao marcar como pago, vira lançamento no Fluxo de Caixa.</p>
+    <div class="dash-head dash-head-row">
+      <div>
+        <h1>📄 Boletos &amp; Dívidas</h1>
+        <p class="muted">Planeje seus compromissos. Ao marcar como pago, vira lançamento no Fluxo de Caixa.</p>
+      </div>
+      <div class="head-actions">
+        <button id="add-fornecedor" class="btn-ghost">🚚 Cadastrar Fornecedor</button>
+        <button id="add-categoria" class="btn-ghost">🏷️ Cadastrar Categoria</button>
+      </div>
     </div>
 
     <!-- KPIs compactos -->
@@ -40,16 +46,11 @@
           <div class="two-col">
             <label>Vencimento<input type="date" name="due_date" required /></label>
             <label>Categoria
-              <select name="category">
-                <option value="">Selecione</option>
-                <option>Aluguel</option><option>Fornecedor</option><option>Imposto</option>
-                <option>Energia</option><option>Internet</option><option>Salário</option>
-                <option>Marketing</option><option>Frete</option><option>Outros</option>
-              </select>
+              <select name="category" id="sel-category"><option value="">Selecione</option></select>
             </label>
           </div>
           <label>Fornecedor <span class="muted">(opcional)</span>
-            <input type="text" name="supplier" placeholder="Ex.: Martins Atacado" />
+            <select name="supplier" id="sel-supplier"><option value="">— Nenhum fornecedor —</option></select>
           </label>
           <span class="field-label">Empresa <span class="muted">(opcional)</span></span>
           <div class="empresa-chips" id="empresa-chips"></div>
