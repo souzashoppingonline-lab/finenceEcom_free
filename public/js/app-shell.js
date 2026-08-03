@@ -25,6 +25,8 @@ function renderSidebar(active) {
       <nav class="side-nav">
         <a href="/app.html" class="side-link ${active === 'dash' ? 'is-active' : ''}">📊 Dashboard</a>
         <a href="/vendas.html" class="side-link ${active === 'vendas' ? 'is-active' : ''}">💰 Vendas e Custos</a>
+        <a href="/fluxo.html" class="side-link ${active === 'fluxo' ? 'is-active' : ''}">💵 Fluxo de Caixa</a>
+        <a href="/boletos.html" class="side-link ${active === 'boletos' ? 'is-active' : ''}">📄 Boletos e Dívidas</a>
       </nav>
       <div class="side-bottom">
         <button id="theme-toggle" class="side-link side-btn"></button>

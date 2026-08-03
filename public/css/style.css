@@ -304,6 +304,21 @@ tbody tr:hover { background: #f7f9fc; }
     width: auto; margin: 0; background: var(--bg); color: #fff; border: none; border-radius: 8px; padding: 8px 12px; font-size: 1.2rem; }
 }
 
+/* ---------- Boletos & Fluxo de Caixa ---------- */
+.badge-in, .badge-out, .badge-boleto, .badge-cartao {
+  display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+}
+.badge-in { background: #eafaf3; color: #17915f; }
+.badge-out { background: #fdecec; color: #d64545; }
+.badge-boleto { background: #fff1e0; color: #b7791f; }
+.badge-cartao { background: #efe9fb; color: #6b46c1; }
+.pill { width: auto; margin: 0; padding: 5px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; border: none; cursor: pointer; }
+.pill-pago { background: #eafaf3; color: #17915f; }
+.pill-pend { background: #fff7e8; color: #b7791f; }
+.pill:hover { filter: brightness(0.96); }
+.tag-late { font-size: 0.7rem; color: #d64545; font-weight: 700; }
+.sync-panel { margin-top: 4px; }
+
 /* ---------- Abas (Vendas & Custos) ---------- */
 .tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--border); margin-bottom: 24px; flex-wrap: wrap; }
 .tab {

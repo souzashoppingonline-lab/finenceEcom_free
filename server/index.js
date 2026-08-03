@@ -82,6 +82,8 @@ const memStores = [];
 const memSales = [];
 const memGoals = [];
 const memImports = [];
+const memBoletos = [];
+const memCF = []; // cash_flow_entries
 
 function makeId() {
   return 'mem-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -695,6 +697,181 @@ app.get('/api/health-status', requireAdmin, async (req, res) => {
 
   const allOk = services.every((s) => s.ok);
   res.json({ overall: allOk ? 'ok' : 'degraded', checkedAt: new Date().toISOString(), services });
+});
+
+// ===========================================================================
+// FLUXO DE CAIXA + BOLETOS & DIVIDAS (integrados, por usuario)
+// ===========================================================================
+
+// Sincroniza um boleto com o Fluxo de Caixa (Conexao #1):
+// remove lancamentos vinculados e, se estiver pago, cria a entrada correspondente.
+async function syncBoletoToFC(userId, boleto) {
+  const entry = () => ({
+    user_id: userId,
+    type: boleto.direction === 'receber' ? 'income' : 'expense',
+    date: boleto.due_date,
+    value: Number(boleto.value) || 0,
+    category: boleto.category || (boleto.direction === 'receber' ? 'Recebíveis' : 'Boletos'),
+    reason: `${boleto.name}${boleto.supplier ? ' — ' + boleto.supplier : ''}`,
+    boleto_id: boleto.id,
+    empresa: boleto.empresa || null,
+    nota_fiscal: boleto.numero_nf || null,
+  });
+  if (supabase) {
+    await supabase.from('cash_flow_entries').delete().eq('user_id', userId).eq('boleto_id', boleto.id);
+    if (boleto.status === 'pago') await supabase.from('cash_flow_entries').insert(entry());
+  } else {
+    for (let i = memCF.length - 1; i >= 0; i--) if (memCF[i].boleto_id === boleto.id) memCF.splice(i, 1);
+    if (boleto.status === 'pago') memCF.push({ id: makeId(), ...entry(), created_at: new Date().toISOString() });
+  }
+}
+
+// ---------- FLUXO DE CAIXA ----------
+app.get('/api/cashflow', requireUser, async (req, res) => {
+  const month = req.query.month;
+  try {
+    if (supabase) {
+      let q = supabase.from('cash_flow_entries').select('*').eq('user_id', req.userId).order('date', { ascending: true });
+      if (month) q = q.gte('date', `${month}-01`).lte('date', `${month}-31`);
+      const { data, error } = await q;
+      if (error) throw error;
+      return res.json({ entries: data });
+    }
+    let list = memCF.filter((e) => e.user_id === req.userId);
+    if (month) list = list.filter((e) => (e.date || '').startsWith(month));
+    list.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    return res.json({ entries: list });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao listar fluxo de caixa.' }); }
+});
+
+app.post('/api/cashflow', requireUser, async (req, res) => {
+  const b = req.body || {};
+  const rec = {
+    type: b.type === 'income' ? 'income' : 'expense',
+    date: b.date, value: Number(b.value) || 0,
+    category: (b.category || '').trim() || null,
+    reason: (b.reason || '').trim() || null,
+    empresa: b.empresa || null, boleto_id: null, nota_fiscal: b.nota_fiscal || null,
+  };
+  if (!rec.date) return res.status(400).json({ error: 'Data e obrigatoria.' });
+  try {
+    if (supabase) {
+      const { data, error } = await supabase.from('cash_flow_entries').insert({ ...rec, user_id: req.userId }).select().single();
+      if (error) throw error;
+      return res.status(201).json({ entry: data });
+    }
+    const entry = { id: makeId(), ...rec, user_id: req.userId, created_at: new Date().toISOString() };
+    memCF.push(entry);
+    return res.status(201).json({ entry });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao salvar lancamento.' }); }
+});
+
+app.delete('/api/cashflow/:id', requireUser, async (req, res) => {
+  const { id } = req.params;
+  try {
+    if (supabase) {
+      // nao permite excluir lancamento vinculado a boleto (desincronizaria)
+      const { data } = await supabase.from('cash_flow_entries').select('boleto_id').eq('id', id).eq('user_id', req.userId).maybeSingle();
+      if (data?.boleto_id) return res.status(409).json({ error: 'Este lancamento veio de um boleto. Altere pela pagina de Boletos.' });
+      const { error } = await supabase.from('cash_flow_entries').delete().eq('id', id).eq('user_id', req.userId);
+      if (error) throw error;
+    } else {
+      const e = memCF.find((x) => x.id === id && x.user_id === req.userId);
+      if (e?.boleto_id) return res.status(409).json({ error: 'Este lancamento veio de um boleto.' });
+      const i = memCF.findIndex((x) => x.id === id && x.user_id === req.userId);
+      if (i >= 0) memCF.splice(i, 1);
+    }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao excluir.' }); }
+});
+
+// ---------- BOLETOS & DIVIDAS ----------
+function normBoleto(b) {
+  return {
+    name: (b.name || '').trim(),
+    supplier: (b.supplier || '').trim() || null,
+    value: Number(b.value) || 0,
+    due_date: b.due_date,
+    category: (b.category || '').trim() || null,
+    direction: b.direction === 'receber' ? 'receber' : 'pagar',
+    status: b.status === 'pago' ? 'pago' : 'pendente',
+    empresa: b.empresa || null,
+    numero_nf: (b.numero_nf || '').trim() || null,
+  };
+}
+
+app.get('/api/boletos', requireUser, async (req, res) => {
+  const { month, direction, status } = req.query;
+  try {
+    if (supabase) {
+      let q = supabase.from('boletos').select('*').eq('user_id', req.userId).order('due_date', { ascending: true });
+      if (month) q = q.gte('due_date', `${month}-01`).lte('due_date', `${month}-31`);
+      if (direction) q = q.eq('direction', direction);
+      if (status) q = q.eq('status', status);
+      const { data, error } = await q;
+      if (error) throw error;
+      return res.json({ boletos: data });
+    }
+    let list = memBoletos.filter((x) => x.user_id === req.userId);
+    if (month) list = list.filter((x) => (x.due_date || '').startsWith(month));
+    if (direction) list = list.filter((x) => x.direction === direction);
+    if (status) list = list.filter((x) => x.status === status);
+    list.sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''));
+    return res.json({ boletos: list });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao listar boletos.' }); }
+});
+
+app.post('/api/boletos', requireUser, async (req, res) => {
+  const rec = normBoleto(req.body || {});
+  if (!rec.name || !rec.due_date) return res.status(400).json({ error: 'Nome e vencimento sao obrigatorios.' });
+  try {
+    let saved;
+    if (supabase) {
+      const { data, error } = await supabase.from('boletos').insert({ ...rec, user_id: req.userId }).select().single();
+      if (error) throw error;
+      saved = data;
+    } else {
+      saved = { id: makeId(), ...rec, user_id: req.userId, created_at: new Date().toISOString() };
+      memBoletos.push(saved);
+    }
+    if (saved.status === 'pago') await syncBoletoToFC(req.userId, saved);
+    return res.status(201).json({ boleto: saved });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao salvar boleto.' }); }
+});
+
+app.put('/api/boletos/:id', requireUser, async (req, res) => {
+  const { id } = req.params;
+  const rec = normBoleto(req.body || {});
+  try {
+    let saved;
+    if (supabase) {
+      const { data, error } = await supabase.from('boletos').update(rec).eq('id', id).eq('user_id', req.userId).select().single();
+      if (error) throw error;
+      saved = data;
+    } else {
+      const b = memBoletos.find((x) => x.id === id && x.user_id === req.userId);
+      if (b) Object.assign(b, rec);
+      saved = b;
+    }
+    if (saved) await syncBoletoToFC(req.userId, saved); // ressincroniza (cria/remove no FC)
+    return res.json({ ok: true, boleto: saved });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao atualizar boleto.' }); }
+});
+
+app.delete('/api/boletos/:id', requireUser, async (req, res) => {
+  const { id } = req.params;
+  try {
+    if (supabase) {
+      await supabase.from('cash_flow_entries').delete().eq('user_id', req.userId).eq('boleto_id', id);
+      const { error } = await supabase.from('boletos').delete().eq('id', id).eq('user_id', req.userId);
+      if (error) throw error;
+    } else {
+      for (let i = memCF.length - 1; i >= 0; i--) if (memCF[i].boleto_id === id) memCF.splice(i, 1);
+      const i = memBoletos.findIndex((x) => x.id === id && x.user_id === req.userId);
+      if (i >= 0) memBoletos.splice(i, 1);
+    }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao excluir boleto.' }); }
 });
 
 app.get('/health', (req, res) => res.json({ ok: true }));

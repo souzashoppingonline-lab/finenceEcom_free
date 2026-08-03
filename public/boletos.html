@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Boletos & Dívidas — FinanceEcom Free</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="app-body">
+  <div id="sidebar-root"></div>
+  <main class="app-content">
+    <div class="dash-head">
+      <h1>📄 Boletos &amp; Dívidas</h1>
+      <p class="muted">Planeje seus compromissos. Ao marcar como pago, vira saída no Fluxo de Caixa automaticamente.</p>
+    </div>
+
+    <!-- KPIs -->
+    <div class="stats-grid" id="boletos-kpis"></div>
+
+    <!-- Painel de sincronizacao -->
+    <div class="card sync-panel" id="sync-panel"></div>
+
+    <!-- Formulario -->
+    <div class="card">
+      <h3 id="bform-title">Nova dívida / recebível</h3>
+      <form id="boleto-form">
+        <div class="sales-grid">
+          <label>Tipo
+            <select name="direction">
+              <option value="pagar">A pagar (dívida)</option>
+              <option value="receber">A receber (recebível)</option>
+            </select>
+          </label>
+          <label>Descrição<input type="text" name="name" required placeholder="Ex.: Aluguel galpão" /></label>
+          <label>Fornecedor / Cliente<input type="text" name="supplier" placeholder="Ex.: Imobiliária XYZ" /></label>
+          <label>Valor (R$)<input type="number" name="value" min="0" step="0.01" required placeholder="0,00" /></label>
+          <label>Vencimento<input type="date" name="due_date" required /></label>
+          <label>Categoria
+            <select name="category">
+              <option value="">Selecione</option>
+              <option>Boletos</option><option>Cartão de Crédito</option><option>Imposto</option>
+              <option>Pessoal</option><option>Custo Fixo</option><option>Custo Variável</option><option>Recebíveis</option>
+            </select>
+          </label>
+          <label>Empresa<input type="text" name="empresa" placeholder="Opcional" /></label>
+          <label>Nota Fiscal<input type="text" name="numero_nf" placeholder="Opcional" /></label>
+        </div>
+        <div class="form-row-btns">
+          <button type="submit" id="save-boleto">Salvar</button>
+          <button type="button" id="bcancel" class="btn-ghost" hidden>Cancelar</button>
+        </div>
+        <p id="boleto-msg" class="form-msg"></p>
+      </form>
+    </div>
+
+    <!-- Filtros + tabela -->
+    <div class="v-controls">
+      <div class="v-ctrl"><label>Mês (vencimento)</label><input type="month" id="b-month" /></div>
+      <div class="v-ctrl"><label>Tipo</label>
+        <select id="b-dir"><option value="">Todos</option><option value="pagar">A pagar</option><option value="receber">A receber</option></select>
+      </div>
+      <div class="v-ctrl"><label>Status</label>
+        <select id="b-status"><option value="">Todos</option><option value="pendente">Pendente</option><option value="pago">Pago</option></select>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="boletos-table">
+        <thead><tr>
+          <th>Vencimento</th><th>Descrição</th><th>Fornecedor</th><th>Empresa</th>
+          <th>Tipo</th><th>Valor</th><th>Status</th><th></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/auth-common.js"></script>
+  <script src="/js/app-shell.js"></script>
+  <script src="/js/boletos.js"></script>
+</body>
+</html>
