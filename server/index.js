@@ -79,6 +79,7 @@ const memorySettings = {};
 const memStores = [];
 const memSales = [];
 const memGoals = [];
+const memImports = [];
 
 function makeId() {
   return 'mem-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -593,6 +594,36 @@ app.put('/api/goals', requireUser, async (req, res) => {
     }
     return res.json({ ok: true });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao salvar meta.' }); }
+});
+
+// ---------- HISTORICO DE IMPORTACOES (Mercado Turbo) ----------
+app.get('/api/imports', requireUser, async (req, res) => {
+  try {
+    if (supabase) {
+      const { data, error } = await supabase.from('imports').select('*').eq('user_id', req.userId).order('created_at', { ascending: false }).limit(100);
+      if (error) throw error;
+      return res.json({ imports: data });
+    }
+    return res.json({ imports: memImports.filter((i) => i.user_id === req.userId).slice().reverse() });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao listar importacoes.' }); }
+});
+
+app.post('/api/imports', requireUser, async (req, res) => {
+  const rec = {
+    store_id: req.body?.store_id || null,
+    date: req.body?.date || new Date().toISOString().slice(0, 10),
+    orders: Number(req.body?.orders) || 0,
+    revenue: Number(req.body?.revenue) || 0,
+  };
+  try {
+    if (supabase) {
+      const { error } = await supabase.from('imports').insert({ ...rec, user_id: req.userId });
+      if (error) throw error;
+    } else {
+      memImports.push({ id: makeId(), ...rec, user_id: req.userId, created_at: new Date().toISOString() });
+    }
+    return res.status(201).json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao registrar importacao.' }); }
 });
 
 app.get('/health', (req, res) => res.json({ ok: true }));

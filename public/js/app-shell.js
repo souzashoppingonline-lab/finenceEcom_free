@@ -24,7 +24,9 @@ function renderSidebar(active) {
       </div>
       <nav class="side-nav">
         <a href="/app.html" class="side-link ${active === 'dash' ? 'is-active' : ''}">📊 Dashboard</a>
-        <a href="/vendas.html" class="side-link ${active === 'vendas' ? 'is-active' : ''}">💰 Vendas e Custos</a>
+        <div class="side-group">💰 Lançamentos</div>
+        <a href="/vendas.html" class="side-link side-sub ${active === 'vendas' ? 'is-active' : ''}">✍️ Lançamento Manual</a>
+        <a href="/importar.html" class="side-link side-sub ${active === 'turbo' ? 'is-active' : ''}">⭐ Mercado Turbo</a>
       </nav>
       <div class="side-bottom">
         <button id="theme-toggle" class="side-link side-btn"></button>

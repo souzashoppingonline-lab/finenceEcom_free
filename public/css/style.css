@@ -289,6 +289,54 @@ tbody tr:hover { background: #f7f9fc; }
     width: auto; margin: 0; background: var(--bg); color: #fff; border: none; border-radius: 8px; padding: 8px 12px; font-size: 1.2rem; }
 }
 
+/* ---------- Sidebar: grupo Lançamentos ---------- */
+.side-group { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7686; padding: 14px 14px 4px; }
+.side-sub { padding-left: 22px; font-size: 0.9rem; }
+
+/* ---------- Mercado Turbo (importação) ---------- */
+.turbo-step { display: flex; gap: 18px; margin-bottom: 18px; }
+.step-badge {
+  flex: 0 0 40px; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 1.1rem;
+}
+.step-body { flex: 1; }
+.step-body h3 { margin: 0 0 4px; }
+.turbo-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+.turbo-row select, .turbo-row input { width: auto; margin-top: 0; flex: 1 1 200px; }
+
+.dropzone {
+  margin-top: 14px; border: 2px dashed var(--border); border-radius: 14px;
+  padding: 32px; text-align: center; color: var(--muted); transition: all .15s;
+}
+.dropzone.drag { border-color: var(--accent); background: rgba(53,196,140,0.06); }
+.dropzone.disabled { opacity: 0.55; }
+.dz-ico { font-size: 2.4rem; display: block; margin-bottom: 8px; }
+.dz-name { margin-top: 10px; font-weight: 600; color: var(--primary); }
+
+.turbo-warn {
+  background: #fff7e8; border: 1px solid #f5dca6; color: #8a5a12;
+  padding: 14px 16px; border-radius: 10px; margin-bottom: 14px;
+}
+.warn-check { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: 0.9rem; }
+.warn-check input { width: auto; margin: 0; }
+
+.turbo-summary { display: grid; gap: 2px; margin: 8px 0 16px; }
+.sum-row { display: flex; justify-content: space-between; padding: 11px 4px; border-bottom: 1px solid var(--border); }
+.sum-row span { color: var(--muted); }
+.sum-row b { font-size: 1.05rem; }
+.turbo-ads { max-width: 320px; margin-bottom: 16px; }
+
+.turbo-success { text-align: center; padding: 40px; }
+.ok-check {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 64px; height: 64px; border-radius: 50%; background: #2bb37e; color: #fff;
+  font-size: 2rem; margin-bottom: 12px;
+}
+.turbo-success .turbo-summary { max-width: 360px; margin: 12px auto 20px; text-align: left; }
+.turbo-success .turbo-row { justify-content: center; }
+.badge-ok { background: #eafaf3; color: #17915f; padding: 4px 10px; border-radius: 999px; font-size: 0.82rem; font-weight: 600; }
+
 /* ---------- Vendas & Custos ---------- */
 .v-nav { display: flex; align-items: center; gap: 16px; }
 .v-controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; margin-bottom: 20px; }
