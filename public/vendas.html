@@ -131,7 +131,7 @@
       <div class="v-controls">
         <div class="v-ctrl"><label>Mês</label><input type="month" id="month-sel" /></div>
         <div class="v-ctrl"><label>Empresa</label><select id="store-filter"><option value="">Todas as empresas</option></select></div>
-        <div class="v-ctrl v-ctrl-actions"><button id="export-csv" class="btn-ghost">Exportar CSV</button></div>
+        <div class="v-ctrl v-ctrl-actions"><span class="field-label">Exportar</span><span id="export-box" class="export-group"></span></div>
       </div>
 
       <div id="goal-section"></div>
@@ -172,6 +172,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/js/auth-common.js"></script>
   <script src="/js/app-shell.js"></script>
+  <script src="/js/export-utils.js"></script>
   <script src="/js/vendas.js"></script>
 </body>
 </html>

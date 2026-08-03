@@ -98,6 +98,17 @@ function renderHistory() {
 }
 document.querySelector('#dre-history tbody').addEventListener('click', (e) => { const tr = e.target.closest('[data-month]'); if (!tr) return; $('sel-month').value = tr.dataset.month; refresh(); });
 
+exportButtons($('export-box'), () => {
+  const d = dreForMonth(selMonth());
+  const rows = [['Receita Bruta', '100%', d.receita]];
+  VAR_COSTS.forEach((c) => rows.push([c.label, ((d.custos[c.key] / (d.receita || 1)) * 100).toFixed(1) + '%', -d.custos[c.key]]));
+  rows.push(['= Margem de Contribuição', d.mcPct.toFixed(1) + '%', d.mc]);
+  d.expenses.forEach((e) => rows.push([e.description, ((e.value / (d.receita || 1)) * 100).toFixed(1) + '%', -e.value]));
+  rows.push(['Total Despesas', ((d.despesas / (d.receita || 1)) * 100).toFixed(1) + '%', -d.despesas]);
+  rows.push(['= Lucro Líquido', d.lucroPct.toFixed(1) + '%', d.lucro]);
+  return { filename: `dre-${selMonth()}`, title: `DRE ${selMonth()}`, subtitle: 'FinanceEcom Free — Demonstração de Resultado', headers: ['Linha', '%', 'Valor (R$)'], rows };
+});
+
 $('sel-month').addEventListener('change', refresh);
 $('sel-year').addEventListener('change', refresh);
 

@@ -423,15 +423,14 @@ function renderDailyTable() {
 // ===========================================================================
 // Export CSV
 // ===========================================================================
-function exportCSV() {
-  const header = ['Data', 'Loja', 'Qtd', 'Receita', 'Taxas MP', 'Frete', 'CMV', 'Ads', 'Imposto', 'Margem R$', 'Margem %'];
-  const rows = sales.map((s) => [s.date, storeName(s.store_id), s.qty, s.revenue, s.fee_mp, s.freight, s.cmv, s.ads_ml, s.tax, marginOf(s).toFixed(2), marginPctOf(s).toFixed(1)]);
-  const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `vendas-${state.month}.csv`;
-  a.click();
+function vendasExportData() {
+  return {
+    filename: `vendas-${state.month}`,
+    title: `Vendas ${state.month}`,
+    subtitle: 'FinanceEcom Free — Vendas & Custos',
+    headers: ['Data', 'Empresa', 'Qtd', 'Receita', 'Taxas MP', 'Frete', 'CMV', 'Ads', 'Imposto', 'Margem R$', 'Margem %'],
+    rows: sales.map((s) => [s.date, storeName(s.store_id), s.qty, +s.revenue, +s.fee_mp, +s.freight, +s.cmv, +s.ads_ml, +s.tax, marginOf(s).toFixed(2), marginPctOf(s).toFixed(1)]),
+  };
 }
 
 // ===========================================================================
@@ -440,7 +439,7 @@ function exportCSV() {
 $('month-sel').addEventListener('change', (e) => { state.month = e.target.value; loadAll(); });
 $('store-filter').addEventListener('change', (e) => { state.store = e.target.value; loadAll(); });
 $('manage-stores').addEventListener('click', () => { $('stores-panel').hidden = !$('stores-panel').hidden; });
-$('export-csv').addEventListener('click', exportCSV);
+exportButtons($('export-box'), vendasExportData);
 
 // preview ao vivo
 $('sales-form').addEventListener('input', updatePreview);

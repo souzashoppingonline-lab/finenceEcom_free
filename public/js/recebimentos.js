@@ -135,14 +135,13 @@ $('r-tabs').addEventListener('click', (e) => {
 $('r-empresa').addEventListener('change', (e) => { filters.empresa = e.target.value; render(); });
 $('receb-mkt').addEventListener('change', refreshEmpresasByMkt);
 
-$('export-csv').addEventListener('click', () => {
-  const header = ['Data', 'Empresa', 'Descrição', 'Valor', 'Status'];
-  const rows = items.map((r) => [r.due_date, r.empresa || '', r.name || '', r.value, r.status === 'pago' ? 'Recebido' : 'Pendente']);
-  const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }));
-  a.download = `recebiveis-${todayStr()}.csv`; a.click();
-});
+exportButtons($('export-box'), () => ({
+  filename: `recebiveis-${todayStr()}`,
+  title: 'Recebíveis',
+  subtitle: 'FinanceEcom Free — Recebimentos',
+  headers: ['Data', 'Empresa', 'Marketplace', 'Descrição', 'Valor', 'Status'],
+  rows: items.map((r) => [r.due_date, r.empresa || '', r.marketplace || '', r.name || '', +r.value, r.status === 'pago' ? 'Recebido' : 'Pendente']),
+}));
 
 // ---------- Init ----------
 (async () => {

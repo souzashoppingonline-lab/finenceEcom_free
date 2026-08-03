@@ -274,6 +274,14 @@ $('add-fornecedor').addEventListener('click', () => addListItem('supplier', 'for
 $('add-categoria').addEventListener('click', () => addListItem('category', 'categoria'));
 
 // ---------- Init ----------
+exportButtons($('export-box'), () => ({
+  filename: 'boletos-dividas',
+  title: 'Boletos & Dívidas',
+  subtitle: 'FinanceEcom Free',
+  headers: ['Vencimento', 'Tipo', 'Descrição', 'Fornecedor', 'Empresa', 'NF', 'Direção', 'Valor', 'Status'],
+  rows: boletos.map((b) => [b.due_date, KIND_LABEL[b.kind] || 'Boleto', b.name, b.supplier || '', b.empresa || '', b.numero_nf || '', b.direction, +b.value, b.status]),
+}));
+
 (async () => {
   const session = await initShell('boletos');
   if (!session) return;

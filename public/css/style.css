@@ -426,6 +426,8 @@ tbody tr:hover { background: #f7f9fc; }
 
 /* ---------- Boletos: layout Cadastrar Dívida ---------- */
 .dash-head-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.export-group { display: inline-flex; gap: 6px; }
+.export-group .btn-ghost { padding: 7px 12px; }
 .head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .boletos-layout { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start; }
 .debt-form { position: sticky; top: 20px; }
