@@ -22,6 +22,27 @@
       <div class="stat-card"><span class="stat-label">Meta do dia</span><span class="stat-value" id="k-goal">—</span></div>
     </div>
 
+    <div class="dash-cards">
+      <a href="/recebimentos.html" class="dash-card-link">
+        <span class="dc-ico">📥</span>
+        <span class="stat-label">A receber (pendente)</span>
+        <span class="stat-value pos" id="dc-receb">—</span>
+        <span class="muted" id="dc-receb-count"></span>
+      </a>
+      <a href="/boletos.html" class="dash-card-link">
+        <span class="dc-ico">📄</span>
+        <span class="stat-label">A pagar (pendente)</span>
+        <span class="stat-value neg" id="dc-pagar">—</span>
+        <span class="muted" id="dc-pagar-count"></span>
+      </a>
+      <a href="/empresas.html" class="dash-card-link">
+        <span class="dc-ico">🏢</span>
+        <span class="stat-label">Empresas</span>
+        <span class="stat-value" id="dc-empresas">—</span>
+        <span class="muted">cadastradas</span>
+      </a>
+    </div>
+
     <a href="/vendas.html" class="btn-add-sale">+ Adicionar Venda</a>
 
     <div class="card" id="mfa-card" style="margin-top:26px">
@@ -71,6 +92,22 @@
         document.getElementById('k-profit').textContent = money(profit);
         document.getElementById('k-margin').textContent = margin.toFixed(1) + '%';
         document.getElementById('k-goal').textContent = geral ? money(metaDia) : '—';
+      } catch (_) {}
+
+      // Cards: recebíveis, a pagar, empresas
+      try {
+        const h2 = await authHeader();
+        const [rec, pag, emp] = await Promise.all([
+          fetch('/api/boletos?direction=receber&status=pendente', { headers: h2 }).then((r) => r.json()),
+          fetch('/api/boletos?direction=pagar&status=pendente', { headers: h2 }).then((r) => r.json()),
+          fetch('/api/stores', { headers: h2 }).then((r) => r.json()),
+        ]);
+        const sum = (arr) => (arr || []).reduce((a, b) => a + (+b.value), 0);
+        document.getElementById('dc-receb').textContent = money(sum(rec.boletos));
+        document.getElementById('dc-receb-count').textContent = `${(rec.boletos || []).length} recebível(is)`;
+        document.getElementById('dc-pagar').textContent = money(sum(pag.boletos));
+        document.getElementById('dc-pagar-count').textContent = `${(pag.boletos || []).length} conta(s)`;
+        document.getElementById('dc-empresas').textContent = (emp.stores || []).length;
       } catch (_) {}
 
       // MFA

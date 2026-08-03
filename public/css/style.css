@@ -321,6 +321,33 @@ tbody tr:hover { background: #f7f9fc; }
     width: auto; margin: 0; background: var(--bg); color: #fff; border: none; border-radius: 8px; padding: 8px 12px; font-size: 1.2rem; }
 }
 
+/* ---------- Recebimentos ---------- */
+.req { color: var(--danger); }
+.receb-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.receb-form input, .receb-form select { width: auto; margin: 0; flex: 1 1 140px; }
+.receb-form input[name="name"] { flex: 3 1 240px; }
+.receb-day { background: #fff; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+:root[data-theme="dark"] .receb-day { background: var(--card); }
+.receb-day.is-today { border-color: #b6ebd4; box-shadow: 0 0 0 2px rgba(53,196,140,0.15); }
+.receb-day-head { display: flex; justify-content: space-between; padding: 12px 16px; background: #f7f9fc; font-weight: 600; }
+:root[data-theme="dark"] .receb-day-head { background: #121a28; }
+.receb-day.is-today .receb-day-head { background: #eafaf3; }
+.badge-hoje { background: #2bb37e; color: #fff; font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; font-weight: 700; }
+.receb-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--border); }
+.receb-row input[type="checkbox"] { width: auto; margin: 0; }
+.emp-badge { font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 7px; }
+.receb-desc { flex: 1; color: var(--muted); font-size: 0.9rem; }
+.receb-val { font-weight: 700; }
+.receb-emp-line { padding: 8px 16px; font-size: 0.75rem; color: var(--muted); border-top: 1px dashed var(--border); }
+.emp-tag { font-weight: 700; margin-right: 10px; }
+.receb-footer { display: flex; gap: 28px; justify-content: flex-end; padding: 16px 4px; font-size: 0.95rem; }
+
+/* ---------- Dashboard: cards de atalho ---------- */
+.dash-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 22px; }
+.dash-card-link { display: flex; flex-direction: column; gap: 4px; padding: 20px; border: 1px solid var(--border); border-radius: var(--radius); text-decoration: none; color: var(--text); background: var(--card); transition: transform .1s, box-shadow .15s; }
+.dash-card-link:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+.dc-ico { font-size: 1.5rem; }
+
 /* ---------- Boletos: layout Cadastrar Dívida ---------- */
 .dash-head-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
 .head-actions { display: flex; gap: 8px; flex-wrap: wrap; }

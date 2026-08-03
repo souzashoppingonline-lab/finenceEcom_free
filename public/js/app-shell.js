@@ -34,8 +34,10 @@ function renderSidebar(active) {
       <div class="side-user"><span class="side-ico">👤</span><span class="side-txt">${first}</span></div>
       <nav class="side-nav">
         ${link('/app.html', 'dash', '📊', 'Dashboard')}
+        ${link('/empresas.html', 'empresas', '🏢', 'Empresas')}
         ${link('/vendas.html', 'vendas', '💰', 'Vendas e Custos')}
         ${link('/fluxo.html', 'fluxo', '💵', 'Fluxo de Caixa')}
+        ${link('/recebimentos.html', 'receb', '📥', 'Recebimentos')}
         ${link('/boletos.html', 'boletos', '📄', 'Boletos e Dívidas')}
       </nav>
       <div class="side-bottom">

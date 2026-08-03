@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Empresas — FinanceEcom Free</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="app-body">
+  <div id="sidebar-root"></div>
+  <main class="app-content">
+    <div class="dash-head">
+      <h1>🏢 Empresas</h1>
+      <p class="muted">Cadastre suas empresas e vincule cada uma a um marketplace.</p>
+    </div>
+
+    <div class="boletos-layout">
+      <aside class="card debt-form">
+        <h3 id="emp-form-title">Cadastrar empresa</h3>
+        <form id="empresa-form">
+          <label>Nome da empresa<input type="text" name="name" required placeholder="Ex.: UNIFULL" /></label>
+          <label>CNPJ <span class="req">*</span><input type="text" name="cnpj" required placeholder="00.000.000/0000-00" /></label>
+          <label>Endereço<input type="text" name="address" placeholder="Rua, nº, cidade/UF" /></label>
+          <label>Marketplace<select name="marketplace" id="mkt-sel"><option value="">Selecione</option></select></label>
+          <label>Cor de identificação<input type="color" name="color" value="#1d7a5f" /></label>
+          <button type="submit" id="save-emp" class="btn-cadastrar">+ Cadastrar empresa</button>
+          <button type="button" id="emp-cancel" class="btn-ghost" hidden>Cancelar</button>
+          <p id="emp-msg" class="form-msg"></p>
+        </form>
+      </aside>
+
+      <section class="debt-table">
+        <div class="table-wrap">
+          <table id="empresas-table">
+            <thead><tr><th>Empresa</th><th>CNPJ</th><th>Marketplace</th><th>Endereço</th><th>Ações</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/auth-common.js"></script>
+  <script src="/js/app-shell.js"></script>
+  <script src="/js/marketplaces.js"></script>
+  <script src="/js/empresas.js"></script>
+</body>
+</html>

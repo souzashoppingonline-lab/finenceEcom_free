@@ -434,26 +434,34 @@ app.get('/api/stores', requireUser, async (req, res) => {
 });
 
 app.post('/api/stores', requireUser, async (req, res) => {
-  const name = (req.body?.name || '').trim();
-  const color = (req.body?.color || '#1d7a5f').trim();
-  if (!name) return res.status(400).json({ error: 'Nome da loja e obrigatorio.' });
+  const b = req.body || {};
+  const rec = {
+    name: (b.name || '').trim(),
+    color: (b.color || '#1d7a5f').trim(),
+    cnpj: (b.cnpj || '').trim() || null,
+    address: (b.address || '').trim() || null,
+    marketplace: (b.marketplace || '').trim() || null,
+  };
+  if (!rec.name) return res.status(400).json({ error: 'Nome da empresa e obrigatorio.' });
+  if (!rec.cnpj) return res.status(400).json({ error: 'CNPJ e obrigatorio.' });
   try {
     if (supabase) {
-      const { data, error } = await supabase.from('stores').insert({ name, color, user_id: req.userId }).select().single();
+      const { data, error } = await supabase.from('stores').insert({ ...rec, user_id: req.userId }).select().single();
       if (error) throw error;
       return res.status(201).json({ store: data });
     }
-    const store = { id: makeId(), name, color, user_id: req.userId, created_at: new Date().toISOString() };
+    const store = { id: makeId(), ...rec, user_id: req.userId, created_at: new Date().toISOString() };
     memStores.push(store);
     return res.status(201).json({ store });
-  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao criar loja.' }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao criar empresa.' }); }
 });
 
 app.put('/api/stores/:id', requireUser, async (req, res) => {
   const { id } = req.params;
   const patch = {};
-  if (req.body?.name != null) patch.name = String(req.body.name).trim();
-  if (req.body?.color != null) patch.color = String(req.body.color).trim();
+  ['name', 'color', 'cnpj', 'address', 'marketplace'].forEach((k) => {
+    if (req.body?.[k] != null) patch[k] = String(req.body[k]).trim() || null;
+  });
   try {
     if (supabase) {
       const { error } = await supabase.from('stores').update(patch).eq('id', id).eq('user_id', req.userId);

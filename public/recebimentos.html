@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recebimentos — FinanceEcom Free</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="app-body">
+  <div id="sidebar-root"></div>
+  <main class="app-content">
+    <div class="dash-head dash-head-row">
+      <div>
+        <h1>📥 Recebíveis</h1>
+        <p class="muted">Gerencie entradas previstas e confirmadas.</p>
+      </div>
+      <div class="head-actions">
+        <button id="export-csv" class="btn-ghost">📄 CSV</button>
+        <select id="r-empresa" class="filter-inp"><option value="">Todas Empresas</option></select>
+        <div class="status-tabs" id="r-tabs">
+          <button class="stab is-active" data-s="">Todos <span id="c-all"></span></button>
+          <button class="stab" data-s="pendente">Pendentes <span id="c-pend"></span></button>
+          <button class="stab" data-s="pago">Recebidos <span id="c-rec"></span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form de adição -->
+    <div class="card">
+      <form id="receb-form" class="receb-form">
+        <input type="date" name="due_date" required />
+        <input type="text" name="name" placeholder="Descrição (opcional)" />
+        <select name="empresa" id="receb-empresa"><option value="">Empresa...</option></select>
+        <input type="number" name="value" min="0" step="0.01" placeholder="Valor R$" required />
+        <button type="submit" class="btn-inline">+ Adicionar</button>
+      </form>
+      <p id="receb-msg" class="form-msg"></p>
+    </div>
+
+    <div class="turbo-warn" style="background:#fff7e8;border-color:#f5dca6;color:#8a5a12">
+      ⚠️ <b>Regra de cálculo:</b> apenas recebíveis <b>pendentes</b> entram nos indicadores. Recebidos ficam somente no histórico.
+    </div>
+
+    <!-- Lista agrupada por dia -->
+    <div id="receb-list"></div>
+
+    <!-- Totais -->
+    <div class="receb-footer">
+      <span>Pendente: <b class="pos" id="tot-pend">R$0</b></span>
+      <span>Recebido no mês: <b class="pos" id="tot-rec">R$0</b></span>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/auth-common.js"></script>
+  <script src="/js/app-shell.js"></script>
+  <script src="/js/recebimentos.js"></script>
+</body>
+</html>
