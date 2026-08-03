@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import express from 'express';
 import path from 'node:path';
+import os from 'node:os';
+import { statfs } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
@@ -655,6 +657,41 @@ app.get('/api/health-status', requireAdmin, async (req, res) => {
   services.push(mailer
     ? { name: 'E-mail de notificação (SMTP)', ok: true, status: 'Ativo', detail: 'notificações habilitadas' }
     : { name: 'E-mail de notificação (SMTP)', ok: false, status: 'Desativado', detail: 'SMTP não configurado' });
+
+  // 4. Memoria
+  const totalMem = os.totalmem(), freeMem = os.freemem();
+  const usedMem = totalMem - freeMem;
+  const memPct = Math.round((usedMem / totalMem) * 100);
+  const mb = (b) => Math.round(b / 1048576);
+  services.push({
+    name: 'Memória', ok: memPct < 90, status: memPct + '%',
+    detail: `${mb(usedMem)} MB de ${mb(totalMem)} MB em uso`,
+  });
+
+  // 5. CPU (load average de 1 min / nucleos)
+  const cores = os.cpus().length || 1;
+  const load1 = os.loadavg()[0];
+  const cpuPct = Math.min(Math.round((load1 / cores) * 100), 100);
+  services.push({
+    name: 'CPU', ok: cpuPct < 90, status: cpuPct + '%',
+    detail: `carga ${load1.toFixed(2)} · ${cores} núcleo(s)`,
+  });
+
+  // 6. Espaco em disco
+  try {
+    const fsStat = await statfs('/');
+    const totalDisk = fsStat.blocks * fsStat.bsize;
+    const freeDisk = fsStat.bavail * fsStat.bsize;
+    const usedDisk = totalDisk - freeDisk;
+    const diskPct = Math.round((usedDisk / totalDisk) * 100);
+    const gb = (b) => (b / 1073741824).toFixed(1);
+    services.push({
+      name: 'Espaço em disco', ok: diskPct < 90, status: diskPct + '%',
+      detail: `${gb(usedDisk)} GB de ${gb(totalDisk)} GB em uso`,
+    });
+  } catch (err) {
+    services.push({ name: 'Espaço em disco', ok: true, status: 'N/D', detail: 'não disponível' });
+  }
 
   const allOk = services.every((s) => s.ok);
   res.json({ overall: allOk ? 'ok' : 'degraded', checkedAt: new Date().toISOString(), services });
