@@ -350,7 +350,7 @@ tbody tr:hover { background: #f7f9fc; }
 /* ---------- Despesas & DRE ---------- */
 .despesas-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
 .despesas-side { position: sticky; top: 20px; }
-.mini-dre { width: 100%; border-collapse: collapse; font-size: 0.78rem; table-layout: fixed; }
+.mini-dre { width: 100%; min-width: 0; border-collapse: collapse; font-size: 0.78rem; table-layout: fixed; }
 .mini-dre td { padding: 6px 3px; border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mini-dre td:first-child { width: 34px; }
 .mini-dre td:not(:first-child) { text-align: right; }
