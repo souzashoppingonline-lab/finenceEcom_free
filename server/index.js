@@ -804,6 +804,7 @@ function normBoleto(b) {
     category: (b.category || '').trim() || null,
     kind: (b.kind || 'boleto').trim() || 'boleto',
     bank: (b.bank || '').trim() || null,
+    marketplace: (b.marketplace || '').trim() || null,
     direction: b.direction === 'receber' ? 'receber' : 'pagar',
     status: b.status === 'pago' ? 'pago' : 'pendente',
     empresa: b.empresa || null,

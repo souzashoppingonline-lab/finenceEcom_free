@@ -25,10 +25,23 @@ async function loadAll() {
   const [b, st] = await Promise.all([api('/api/boletos?direction=receber'), api('/api/stores')]);
   items = b.boletos || [];
   stores = st.stores || [];
-  const opts = `<option value="">%LABEL%</option>` + stores.map((s) => `<option>${esc(s.name)}</option>`).join('');
-  $('r-empresa').innerHTML = opts.replace('%LABEL%', 'Todas Empresas');
-  $('receb-empresa').innerHTML = opts.replace('%LABEL%', 'Empresa...');
+  // filtro topo: todas empresas
+  $('r-empresa').innerHTML = `<option value="">Todas Empresas</option>` + stores.map((s) => `<option>${esc(s.name)}</option>`).join('');
+  // marketplaces do form (lista global)
+  $('receb-mkt').innerHTML = `<option value="">Marketplace...</option>` + (window.MARKETPLACES || []).map((m) => `<option>${esc(m)}</option>`).join('');
   render();
+}
+
+// Ao escolher o marketplace, mostra só as empresas atreladas a ele
+function refreshEmpresasByMkt() {
+  const mkt = $('receb-mkt').value;
+  const sel = $('receb-empresa');
+  if (!mkt) { sel.innerHTML = `<option value="">Empresa...</option>`; sel.disabled = true; return; }
+  const empresas = stores.filter((s) => (s.marketplace || '').split(',').map((x) => x.trim()).includes(mkt));
+  sel.disabled = empresas.length === 0;
+  sel.innerHTML = empresas.length
+    ? `<option value="">Empresa...</option>` + empresas.map((s) => `<option>${esc(s.name)}</option>`).join('')
+    : `<option value="">Nenhuma empresa neste marketplace</option>`;
 }
 
 function render() {
@@ -66,6 +79,7 @@ function render() {
         <div class="receb-row">
           <input type="checkbox" data-toggle="${r.id}" ${r.status === 'pago' ? 'checked' : ''} title="Marcar recebido" />
           <span class="emp-badge" style="background:${storeColor(r.empresa)}22;color:${storeColor(r.empresa)}">${esc(r.empresa || '—')}</span>
+          ${r.marketplace ? `<span class="mkt-mini">${esc(r.marketplace)}</span>` : ''}
           <span class="receb-desc">${esc(r.name || 'Recebível')}</span>
           <span class="receb-val ${r.status === 'pago' ? 'pos' : ''}">${money(r.value)}</span>
           <span class="pill ${r.status === 'pago' ? 'pill-pago' : 'pill-pend'}">${r.status === 'pago' ? 'Recebido' : 'Pend.'}</span>
@@ -88,10 +102,12 @@ $('receb-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const msg = $('receb-msg'); msg.textContent = ''; msg.className = 'form-msg';
   const f = e.target;
+  if (!f.marketplace.value) { msg.textContent = 'Selecione o marketplace.'; msg.classList.add('err'); return; }
+  if (!f.empresa.value) { msg.textContent = 'Selecione a empresa.'; msg.classList.add('err'); return; }
   const payload = {
     direction: 'receber', kind: 'recebivel', status: 'pendente',
     name: f.name.value.trim() || 'Recebível', value: Number(f.value.value) || 0,
-    due_date: f.due_date.value, empresa: f.empresa.value, category: 'Recebíveis',
+    due_date: f.due_date.value, empresa: f.empresa.value, marketplace: f.marketplace.value, category: 'Recebíveis',
   };
   try {
     await api('/api/boletos', { method: 'POST', body: JSON.stringify(payload) });
@@ -117,6 +133,7 @@ $('r-tabs').addEventListener('click', (e) => {
   t.classList.add('is-active'); filters.status = t.dataset.s; render();
 });
 $('r-empresa').addEventListener('change', (e) => { filters.empresa = e.target.value; render(); });
+$('receb-mkt').addEventListener('change', refreshEmpresasByMkt);
 
 $('export-csv').addEventListener('click', () => {
   const header = ['Data', 'Empresa', 'Descrição', 'Valor', 'Status'];

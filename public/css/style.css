@@ -323,6 +323,11 @@ tbody tr:hover { background: #f7f9fc; }
 
 /* ---------- Recebimentos ---------- */
 .req { color: var(--danger); }
+.mkt-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.mkt-check { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 400; margin: 0; }
+.mkt-check input { width: auto; margin: 0; }
+.mkt-mini { font-size: 0.7rem; font-weight: 700; color: var(--muted); background: #eef2f8; padding: 2px 7px; border-radius: 6px; }
+:root[data-theme="dark"] .mkt-mini { background: #1a2333; }
 .receb-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .receb-form input, .receb-form select { width: auto; margin: 0; flex: 1 1 140px; }
 .receb-form input[name="name"] { flex: 3 1 240px; }

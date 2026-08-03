@@ -15,7 +15,15 @@ async function api(path, options = {}) {
 }
 
 function renderMktOptions() {
-  $('mkt-sel').innerHTML = `<option value="">Selecione</option>` + (window.MARKETPLACES || []).map((m) => `<option>${esc(m)}</option>`).join('');
+  $('mkt-checks').innerHTML = (window.MARKETPLACES || []).map((m) =>
+    `<label class="mkt-check"><input type="checkbox" value="${esc(m)}" /> ${esc(m)}</label>`).join('');
+}
+function getCheckedMkts() {
+  return [...document.querySelectorAll('#mkt-checks input:checked')].map((c) => c.value).join(', ');
+}
+function setCheckedMkts(str) {
+  const set = new Set((str || '').split(',').map((s) => s.trim()).filter(Boolean));
+  document.querySelectorAll('#mkt-checks input').forEach((c) => { c.checked = set.has(c.value); });
 }
 
 async function loadStores() {
@@ -26,7 +34,7 @@ async function loadStores() {
   tb.innerHTML = stores.map((s) => `<tr>
     <td><span class="dot" style="background:${s.color || '#1d7a5f'}"></span><b>${esc(s.name)}</b></td>
     <td>${esc(s.cnpj || '—')}</td>
-    <td>${s.marketplace ? `<span class="type-badge">${esc(s.marketplace)}</span>` : '—'}</td>
+    <td>${s.marketplace ? s.marketplace.split(',').map((m) => `<span class="type-badge">${esc(m.trim())}</span>`).join(' ') : '—'}</td>
     <td>${esc(s.address || '—')}</td>
     <td>
       <button class="btn-del" data-edit="${s.id}" title="Editar">✏️</button>
@@ -46,7 +54,7 @@ function editStore(id) {
   const s = stores.find((x) => x.id === id); if (!s) return;
   const f = $('empresa-form');
   f.name.value = s.name; f.cnpj.value = s.cnpj || ''; f.address.value = s.address || '';
-  f.marketplace.value = s.marketplace || ''; f.color.value = s.color || '#1d7a5f';
+  setCheckedMkts(s.marketplace || ''); f.color.value = s.color || '#1d7a5f';
   editingId = id;
   $('emp-form-title').textContent = 'Editar empresa';
   $('save-emp').textContent = 'Salvar alterações';
@@ -60,7 +68,7 @@ $('empresa-form').addEventListener('submit', async (e) => {
   const f = e.target;
   const payload = {
     name: f.name.value.trim(), cnpj: f.cnpj.value.trim(), address: f.address.value.trim(),
-    marketplace: f.marketplace.value, color: f.color.value,
+    marketplace: getCheckedMkts(), color: f.color.value,
   };
   if (!payload.cnpj) { msg.textContent = 'CNPJ é obrigatório.'; msg.classList.add('err'); return; }
   try {
