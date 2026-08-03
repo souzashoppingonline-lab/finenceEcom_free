@@ -47,6 +47,8 @@ Deploy Render (free) · DNS/SSL Cloudflare.
 | `schema_financeiro.sql` | `boletos`, `cash_flow_entries` (Fluxo de Caixa) |
 | `schema_lists.sql` | `lists` (fornecedores/categorias) |
 | `schema_empresas.sql` | add `cnpj`,`address`,`marketplace` em stores; add `marketplace` em boletos |
+| `schema_cartao.sql` | `cartoes`, `parcelas_cartao`, `fatura_pagamentos` |
+| **`00_run_all.sql`** | **script único consolidado (roda tudo)** — não inclui cartão ainda; rode `schema_cartao.sql` também |
 
 Colunas extras já adicionadas via ALTER embutidos: `boletos.kind`, `boletos.bank`.
 **RLS habilitado em tudo, sem policies públicas** — acesso só pelo backend (service role),
@@ -126,10 +128,11 @@ menu recolhível + tema; deploy Render + domínio Cloudflare.
 1. **Config manual Supabase** por conta do usuário: rodar todos os SQL de `supabase/`;
    SMTP Resend + templates `{{ .Token }}` (feito) — conferir.
 2. **Atrelar CNPJ nos boletos** (usar a empresa/CNPJ como referência estruturada).
-3. **Módulo de Cartão de Crédito** (spec recebida): tabelas `cartoes`, `parcelas_cartao`,
-   `fatura_pagamentos`; faturas virtuais na tabela de boletos; botão "Pagar Fatura" que
-   agrupa parcelas por empresa → 1 lançamento por empresa no FC (category 'Cartão de Crédito',
-   badge roxo já existe). Ver mensagem/spec do usuário.
+3. ~~Módulo de Cartão de Crédito~~ ✅ FEITO — página `/cartoes.html` (abas Compras/Faturas/
+   Gerenciar). Endpoints `/api/cards`, `/api/parcelas` (+/purchase), `/api/faturas` (+/pay),
+   `/api/fatura-pagamentos`. Pagar Fatura agrupa parcelas por empresa → 1 lançamento/empresa
+   no FC (category 'Cartão de Crédito'). Compra parcelada distribui em faturas por dia de
+   fechamento do cartão. Falta (opcional): faturas virtuais dentro da tabela de Boletos.
 4. Exportações XLSX/PDF (hoje só CSV); gráficos ricos (donut, AG Grid); DRE; metas por loja
    (StoreGoalCard); comparativos semana/mês nos MonthlyTotals; WeekdayComparison.
 5. Testar entrega do e-mail de notificação de lead.
