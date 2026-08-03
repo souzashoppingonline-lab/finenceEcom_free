@@ -1,213 +1,140 @@
 # 10 — HANDOFF (estado completo do projeto)
 
 > Documento de continuidade. Leia isto primeiro para retomar o desenvolvimento.
-> Última atualização: 02/08/2026.
+> Última atualização: 03/08/2026.
 
 ---
 
 ## 1. Visão rápida
 
 **FinanceEcom Free** — SaaS gratuito de inteligência financeira para vendedores de
-marketplaces (Mercado Livre, Shopee, Amazon). Duas frentes:
+marketplaces. Duas frentes:
 
-1. **Marketing/Captação** — landing (`/`) que capta leads (nome, e-mail, WhatsApp) +
-   painel do dono (`/admin.html`) para monitorar leads, visitas, conversão.
-2. **Produto SaaS** — contas de vendedor (Supabase Auth) + módulo **Vendas & Custos**
-   (`/vendas.html`).
+1. **Marketing/Captação** — landing (`/`) capta leads + painel do dono (`/admin.html`).
+2. **Produto SaaS** — contas de vendedor (Supabase Auth), multi-tenant (dados por `user_id`).
 
 **Repositório:** `souzashoppingonline-lab/finenceEcom_free`
-**Branch de trabalho/deploy:** `claude/financeecom-free-design-nf1bd2`
-**Branch principal:** `main`
+**Branch de deploy:** `claude/financeecom-free-design-nf1bd2` (Auto-Deploy no Render)
+**URLs:** produção `https://app.financeecom.com.br` · Render `https://finenceecom-free.onrender.com`
+· Supabase ref `mremizvqbqzfcukfbbqo`
 
----
+## 2. Stack
+Frontend HTML/CSS/JS puro (auth via `@supabase/supabase-js` por CDN) · Backend Node/Express
+(`server/index.js`, ESM) · Banco Supabase/PostgreSQL · Auth Supabase (OTP e-mail + MFA) ·
+E-mail auth via Resend (SMTP no Supabase) · E-mail de lead via Gmail SMTP (nodemailer) ·
+Deploy Render (free) · DNS/SSL Cloudflare.
 
-## 2. Stack e infraestrutura
+## 3. Variáveis de ambiente (Render)
+`SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (secret), `ADMIN_TOKEN` (painel dono),
+`SMTP_USER`/`SMTP_PASS`/`NOTIFY_EMAIL` (aviso de lead, opcional). Sem `SUPABASE_*` = modo memória.
 
-| Camada | Tecnologia |
+## 4. Autenticação (dois mundos)
+- **Dono do negócio:** `/admin.html` protegido por `ADMIN_TOKEN` (header `x-admin-token`).
+- **Vendedores (SaaS):** Supabase Auth. Frontend usa a **publishable key** em
+  `js/auth-common.js`. As chamadas às APIs do produto enviam `Authorization: Bearer <JWT>`;
+  o backend valida via `supabase.auth.getUser(token)` no middleware `requireUser` e escopa
+  tudo por `user_id`. Config do painel Supabase (SMTP Resend + templates com `{{ .Token }}`)
+  em `docs/09-auth-resend.md`.
+
+## 5. Banco de dados — TODAS as tabelas e scripts (rodar no SQL Editor)
+
+| Script | Tabelas / mudanças |
 |---|---|
-| Frontend | HTML5, CSS3, JS puro (sem framework). Auth usa `@supabase/supabase-js` via CDN |
-| Backend | Node.js + Express (ESM) — `server/index.js` |
-| Banco | Supabase (PostgreSQL) — projeto ref `mremizvqbqzfcukfbbqo` |
-| Auth | Supabase Auth (e-mail+senha, OTP por código, MFA/TOTP) |
-| E-mail (auth) | Resend via SMTP customizado no Supabase |
-| E-mail (notificação de lead) | Nodemailer + SMTP (Gmail) no backend |
-| Hospedagem | Render (Web Service, plano free) |
-| DNS/SSL | Cloudflare (nameservers na Hostinger apontando p/ Cloudflare) |
-| Domínio | `financeecom.com.br` (Hostinger) → app em `app.financeecom.com.br` |
+| `schema.sql` | `leads`, `page_visits`, `settings`, view `leads_por_marketplace` |
+| `schema_vendas.sql` | `stores`, `sales`, `goals` |
+| `schema_vendas_multitenant.sql` | add `user_id` em stores/sales/goals + índices |
+| `schema_imports.sql` | `imports` (histórico Mercado Turbo) |
+| `schema_financeiro.sql` | `boletos`, `cash_flow_entries` (Fluxo de Caixa) |
+| `schema_lists.sql` | `lists` (fornecedores/categorias) |
+| `schema_empresas.sql` | add `cnpj`,`address`,`marketplace` em stores; add `marketplace` em boletos |
 
-**URLs:**
-- Produção: `https://app.financeecom.com.br`
-- Render direto: `https://finenceecom-free.onrender.com`
-- Supabase: `https://mremizvqbqzfcukfbbqo.supabase.co`
+Colunas extras já adicionadas via ALTER embutidos: `boletos.kind`, `boletos.bank`.
+**RLS habilitado em tudo, sem policies públicas** — acesso só pelo backend (service role),
+que filtra por `user_id`. Auth em `auth.users` (Supabase).
 
-> ⚠️ Plano free do Render hiberna após ~15 min de inatividade (primeira requisição
-> demora ~50s). Não perde dados (banco é o Supabase).
+### Modelo de dados chave
+- **stores (empresas):** id, user_id, name, color, **cnpj**, address, **marketplace**
+  (lista separada por vírgula — 1 empresa vende em vários marketplaces).
+- **sales:** lançamento diário por (date, store_id) único. Campos: qty, revenue, fee_mp,
+  freight, cmv, ads_ml, ads_ext(0, descontinuado), tax. Margem = revenue − fee_mp − freight
+  − cmv − ads_ml − tax.
+- **goals:** meta por (user_id, month, store_id|null=geral).
+- **boletos:** dívidas E recebíveis. direction 'pagar'|'receber', status 'pendente'|'pago',
+  kind (boleto/cartao/imposto/pessoal/fatura_ml/flex/custo_fixo/custo_variavel/recebivel),
+  name, supplier, value, due_date, category, empresa (texto), numero_nf, bank, **marketplace**
+  (usado só em recebíveis).
+- **cash_flow_entries:** type 'income'|'expense', date, value, category, reason, empresa,
+  nota_fiscal, **boleto_id** (vínculo). Lançamentos manuais têm boleto_id null.
+- **lists:** type 'supplier'|'category', name (por usuário).
+- **imports:** histórico de importações Mercado Turbo (store_id, date, orders, revenue).
 
----
+## 6. Integração Boletos ↔ Fluxo de Caixa (automática)
+Função `syncBoletoToFC` no backend: ao marcar um boleto **pago** cria um
+`cash_flow_entries` (expense se pagar, income se receber) com boleto_id + metadados
+(empresa, NF, fornecedor→reason, categoria). Voltar a pendente remove. Excluir boleto
+remove o lançamento vinculado. Lançamentos vindos de boleto não podem ser excluídos direto
+no Fluxo de Caixa.
 
-## 3. Variáveis de ambiente (Render → Environment)
+## 7. API (server/index.js)
+Públicas: `POST /api/leads`, `POST /api/visit`, `GET /api/public-settings`, `GET /health`.
+Dono (x-admin-token): `GET /api/stats`, `GET/POST/DELETE /api/leads`, `GET/PUT /api/settings`,
+`GET /api/health-status` (app/banco/SMTP/memória/CPU/disco).
+Vendedor (Bearer JWT, `requireUser`, scoped por user_id):
+`/api/stores` (GET/POST/PUT/DELETE), `/api/sales` (GET?month&store/POST/PUT/DELETE),
+`/api/goals` (GET/PUT), `/api/imports` (GET/POST),
+`/api/cashflow` (GET?month/POST/DELETE), `/api/boletos` (GET?month&direction&status/POST/PUT/DELETE),
+`/api/lists` (GET?type/POST/DELETE).
 
-| Variável | Uso | Obrigatória |
+## 8. Páginas (public/)
+| Rota | Descrição | Auth |
 |---|---|---|
-| `SUPABASE_URL` | `https://mremizvqbqzfcukfbbqo.supabase.co` | sim (persistência) |
-| `SUPABASE_SERVICE_KEY` | Secret key do Supabase (`sb_secret_...`) — backend ignora RLS | sim |
-| `ADMIN_TOKEN` | Senha do painel `/admin.html` e API do `/vendas` (single-tenant atual) | sim |
-| `SMTP_USER` | Gmail p/ notificação de novo lead | opcional |
-| `SMTP_PASS` | Senha de app do Gmail (16 díg.) | opcional |
-| `NOTIFY_EMAIL` | Destino do aviso de novo lead | opcional |
-| `PORT` | Injetada pelo Render | — |
+| `/` `index.html` | Landing marketing + captação | — |
+| `/privacidade.html` `/termos.html` | LGPD / Termos | — |
+| `/admin.html` | Painel dono: leads, visitas, gráfico, saúde do servidor, WhatsApp suporte | ADMIN_TOKEN |
+| `/criar-conta.html` `/entrar.html` `/recuperar.html` | Auth (OTP/senha) | Supabase |
+| `/app.html` | Dashboard: KPIs do dia, cards (a receber/a pagar/empresas), MFA | Supabase |
+| `/empresas.html` | Cadastro de empresas (CNPJ obrig., endereço, marketplaces múltiplos) | Supabase |
+| `/vendas.html` | 3 abas: Lançamento Manual · Mercado Turbo (CSV) · Relatórios | Supabase |
+| `/fluxo.html` | Fluxo de Caixa: lançamentos, badges Boleto/Cartão, resumo empresa, previsão | Supabase |
+| `/recebimentos.html` | Recebíveis por marketplace→empresa, agrupados por dia | Supabase |
+| `/boletos.html` | Cadastrar Dívida (form esq. + tabela dir. com filtros) | Supabase |
+| `/importar.html` | redireciona para `/vendas.html` | — |
 
-Sem `SUPABASE_*` o backend roda em **modo memória** (dados não persistem) — útil só p/ dev.
-Sem `SMTP_*` as notificações de lead são desativadas silenciosamente.
+Shell logado: `js/app-shell.js` (sidebar recolhível, tema claro/escuro, sessão, logout,
+helper `authHeader()`). Lista global de marketplaces: `js/marketplaces.js`.
 
-`.env.example` na raiz lista todas.
+## 9. Regras de negócio
+- Classificação de margem (%): <0 Prejuízo, <5 Muito Baixo, <10 Preocupante, <15 Aceitável,
+  <20 Bom, <30 Ótimo, ≥30 Excelente.
+- Meta: run rate = acumulado(D-1)/dias com dado; projeção = runRate × dias do mês;
+  meta do dia = meta restante / dias restantes; status por projeção vs meta.
+- Mercado Turbo: colunas mapeadas por nome (Faturamento ML→receita, Custo(-)→cmv,
+  Imposto(-)→tax, Tarifa de Venda(-)→fee, Frete Vendedor(-)→frete). Ads sempre manual.
+  Import agrega tudo em 1 lançamento (date+store).
+- Recebíveis: escolhe marketplace → empresas atreladas → lança (guarda empresa+marketplace).
+  Boletos ignoram marketplace (só CNPJ+empresa).
 
----
-
-## 4. Banco de dados — tabelas e scripts
-
-Scripts em `supabase/`. Rodar no **SQL Editor** do Supabase (idempotentes).
-
-| Script | Tabelas | Status |
-|---|---|---|
-| `schema.sql` | `leads`, `page_visits`, `settings`, `leads_por_marketplace` (view) | ✅ rodado |
-| `schema_vendas.sql` | `stores`, `sales`, `goals` | ⚠️ **CONFERIR se foi rodado** |
-
-**leads** — id, name, email(unique), whatsapp, marketplace, consent, created_at
-**page_visits** — id, created_at (1 linha por visita na landing)
-**settings** — key(pk), value (ex.: `support_whatsapp`)
-**stores** — id, name, color, created_at
-**sales** — id, date, store_id(fk), qty, revenue, fee_mp, freight, cmv, ads_ml, ads_ext, tax, created_at · UNIQUE(date, store_id)
-**goals** — id, month('YYYY-MM'), store_id(null=geral), amount · unique(month, coalesce(store_id))
-
-RLS está **habilitado** em todas, **sem policies públicas**. O backend acessa via
-**service role** (bypassa RLS). Auth (tabela `auth.users`) é gerenciada pelo Supabase.
-
-> Para multi-tenant (Fase 2.1) será preciso adicionar `user_id` em stores/sales/goals
-> e criar policies RLS por usuário. Ver seção 8.
-
----
-
-## 5. API do backend (`server/index.js`)
-
-Todas as rotas `/api/*` de gestão exigem header `x-admin-token: <ADMIN_TOKEN>`,
-exceto as públicas marcadas.
-
-| Método | Rota | Protegida | Descrição |
-|---|---|---|---|
-| POST | `/api/leads` | pública | cadastro de lead (landing) |
-| POST | `/api/visit` | pública | registra visita na landing |
-| GET | `/api/public-settings` | pública | retorna `support_whatsapp` p/ botão |
-| GET | `/api/stats` | sim | total, last7days, visits, conversion |
-| GET | `/api/leads` | sim | lista de leads |
-| POST | `/api/admin/leads` | sim | cria lead manualmente |
-| DELETE | `/api/leads/:id` | sim | exclui lead (LGPD) |
-| GET/PUT | `/api/settings` | sim | lê/salva support_whatsapp |
-| GET/POST | `/api/stores` | sim | lojas |
-| PUT/DELETE | `/api/stores/:id` | sim | atualiza cor/nome / exclui loja |
-| GET/POST | `/api/sales` | sim | vendas (GET filtra `?month=YYYY-MM&store=`) |
-| PUT/DELETE | `/api/sales/:id` | sim | edita / exclui venda |
-| GET/PUT | `/api/goals` | sim | metas (`?month=`) |
-| GET | `/health` | pública | healthcheck |
-
-Fórmula da margem (usada no front e implícita no back):
-`margem = revenue - fee_mp - freight - cmv - ads_ml - ads_ext - tax`
-`margem% = margem / revenue * 100`
-
----
-
-## 6. Páginas (frontend em `public/`)
-
-| Arquivo | Rota | Descrição | Auth |
-|---|---|---|---|
-| `index.html` | `/` | Landing de marketing + captação de lead | — |
-| `privacidade.html` | `/privacidade.html` | Política de Privacidade (LGPD) | — |
-| `termos.html` | `/termos.html` | Termos de Uso | — |
-| `admin.html` | `/admin.html` | Painel do dono (leads, visitas, gráfico, suporte WhatsApp) | ADMIN_TOKEN |
-| `vendas.html` | `/vendas.html` | Módulo Vendas & Custos | ADMIN_TOKEN (por ora) |
-| `criar-conta.html` | `/criar-conta.html` | Cadastro SaaS (dados→código→senha) | Supabase Auth |
-| `entrar.html` | `/entrar.html` | Login | Supabase Auth |
-| `recuperar.html` | `/recuperar.html` | Recuperação de senha por código | Supabase Auth |
-| `app.html` | `/app.html` | Área logada + MFA | Supabase Auth (protegida) |
-
-JS: `js/signup.js` (landing+visita+botão WhatsApp), `js/admin.js` (painel),
-`js/vendas.js` (módulo vendas), `js/auth-common.js` (config Supabase + senha),
-`js/criar-conta.js`. CSS único: `css/style.css`.
-
-> ⚠️ **Dois sistemas de "login" coexistem hoje:** o painel do dono (`ADMIN_TOKEN`) e as
-> contas de vendedor (Supabase Auth). O módulo `/vendas` ainda usa `ADMIN_TOKEN` —
-> unificar isso é a Fase 2.1.
-
----
-
-## 7. Configuração de Auth + Resend (manual, no painel)
-
-Detalhes em `docs/09-auth-resend.md`. Resumo do que precisa estar feito no Supabase:
-
-1. **SMTP custom** com Resend (host `smtp.resend.com`, port 465, user `resend`,
-   pass = API key Resend, sender de domínio verificado).
-2. **Email Template** (Magic Link) contendo `Seu código: {{ .Token }}` — **crítico**.
-3. **Site URL** = `https://app.financeecom.com.br`.
-4. **Confirm email** habilitado; política de senha min 10.
-5. Domínio `financeecom.com.br` **verificado no Resend** (DKIM/SPF no Cloudflare).
-
-Frontend usa a **publishable key** em `js/auth-common.js` (pública). Fallback: anon key legada.
-
----
-
-## 8. Status: FEITO vs PENDENTE
-
+## 10. FEITO vs PENDENTE
 ### ✅ Feito
-- Landing de marketing + captação de leads (LGPD)
-- Painel do dono: total clientes, novos 7d, visitas, conversão, gráfico por dia,
-  criar/excluir/buscar lead, exportar CSV, WhatsApp de suporte configurável
-- Botão flutuante de WhatsApp na landing
-- Notificação por e-mail de novo lead (SMTP Gmail, se configurado)
-- Módulo Vendas & Custos: lojas (CRUD+cor), lançamentos com todos os custos,
-  preview de margem ao vivo, meta mensal + dashboard KPIs, meta diária, totais,
-  relatórios por loja, comparativo mesmo-dia, export CSV, validação de duplicata
-- Autenticação SaaS (Supabase Auth): criar conta (código), login, recuperação, MFA
-- Deploy Render + domínio Cloudflare + SSL
+Landing+captação; painel dono (leads/visitas/gráfico/saúde servidor/WhatsApp);
+Auth SaaS (OTP+senha+MFA) + Resend; multi-tenant; Dashboard; Empresas (multi-marketplace);
+Vendas & Custos (manual + Mercado Turbo + relatórios); Fluxo de Caixa; Boletos & Dívidas
+(sync automático com FC); Recebimentos por marketplace; listas (fornecedor/categoria);
+menu recolhível + tema; deploy Render + domínio Cloudflare.
 
-### ⚠️ Pendente / próximos passos
-1. **Config manual do Supabase/Resend** (seção 7) — sem isso o código do e-mail não chega.
-2. **Rodar `schema_vendas.sql`** no Supabase se ainda não foi.
-3. **Fase 2.1 — Multi-tenant** (isolar dados por usuário):
-   - Adicionar `user_id uuid references auth.users` em `stores`, `sales`, `goals`.
-   - Criar policies RLS: `user_id = auth.uid()`.
-   - Migrar o `/vendas` para autenticar com o **JWT do Supabase** (não mais ADMIN_TOKEN):
-     ou (a) chamadas diretas client→Supabase com anon key + RLS, ou
-     (b) backend valida o JWT (`Authorization: Bearer`) e injeta `user_id`.
-   - Proteger `/vendas.html` com `requireSession()` (como `app.html`).
-4. **Exportações avançadas** do módulo vendas: XLSX (2 abas) e PDF (hoje só CSV).
-5. **Gráficos ricos** do módulo vendas: comparativo por empresa (barras), donut de
-   composição de custos, AG Grid (spec original) — hoje há cards + barras simples.
-6. **Metas por loja** (StoreGoalCard) e **WeekdayComparison** completos — spec em
-   `docs/07-roadmap.md`/mensagem original; parcialmente cobertos.
-7. Comparativos "vs semana anterior / vs mês anterior" com toggle nos MonthlyTotals.
-8. Verificar entrega do e-mail de notificação de lead (ficou pendente de teste).
+### ⚠️ Pendente
+1. **Config manual Supabase** por conta do usuário: rodar todos os SQL de `supabase/`;
+   SMTP Resend + templates `{{ .Token }}` (feito) — conferir.
+2. **Atrelar CNPJ nos boletos** (usar a empresa/CNPJ como referência estruturada).
+3. **Módulo de Cartão de Crédito** (spec recebida): tabelas `cartoes`, `parcelas_cartao`,
+   `fatura_pagamentos`; faturas virtuais na tabela de boletos; botão "Pagar Fatura" que
+   agrupa parcelas por empresa → 1 lançamento por empresa no FC (category 'Cartão de Crédito',
+   badge roxo já existe). Ver mensagem/spec do usuário.
+4. Exportações XLSX/PDF (hoje só CSV); gráficos ricos (donut, AG Grid); DRE; metas por loja
+   (StoreGoalCard); comparativos semana/mês nos MonthlyTotals; WeekdayComparison.
+5. Testar entrega do e-mail de notificação de lead.
 
----
-
-## 9. Como rodar localmente
-
-```bash
-npm install
-cp .env.example .env   # preencher (ou deixar sem SUPABASE_* p/ modo memoria)
-npm start              # http://localhost:3000
-```
-
-Deploy é automático: **push na branch `claude/financeecom-free-design-nf1bd2`** dispara
-build no Render (Auto-Deploy On Commit).
-
----
-
-## 10. Convenções e observações
-
-- Segredos (service key, ADMIN_TOKEN, SMTP_PASS, Resend key) **nunca** vão ao repo —
-  só em variáveis de ambiente (Render) ou no painel (Supabase). `.env` está no `.gitignore`.
-- Commits em português, com co-autoria. PRs só quando solicitado.
-- O backend tem **fallback em memória** para todas as entidades — facilita testar sem banco.
-- Datas no módulo vendas usam data local (`YYYY-MM-DD`); D-1 = ontem.
-- Classificação de margem (%): <0 Prejuízo, <5 Muito Baixo, <10 Preocupante,
-  <15 Aceitável, <20 Bom, <30 Ótimo, ≥30 Excelente.
+## 11. Rodar local / deploy
+`npm install` → `cp .env.example .env` → `npm start` (porta 3000; sem SUPABASE_* = memória).
+Deploy automático ao dar **push na branch `claude/financeecom-free-design-nf1bd2`**.
+Segredos nunca vão ao repo (só env do Render / painel Supabase). Commits em PT com co-autoria.
