@@ -7,6 +7,7 @@ let cashflow = [];
 let stores = [];
 let suppliers = [];
 let categories = [];
+let faturas = []; // faturas de cartao (virtuais)
 let editingId = null;
 const filters = { status: '', kind: '', dir: '', empresa: '', nf: '', month: '', dia: '', forn: '', banco: '', cartao: '' };
 
@@ -29,15 +30,22 @@ async function api(path, options = {}) {
 
 // ---------- Carregamento ----------
 async function loadAll() {
-  const [b, cf, st, sup, cat] = await Promise.all([
+  const [b, cf, st, sup, cat, ft] = await Promise.all([
     api('/api/boletos'), api('/api/cashflow'), api('/api/stores'),
-    api('/api/lists?type=supplier'), api('/api/lists?type=category'),
+    api('/api/lists?type=supplier'), api('/api/lists?type=category'), api('/api/faturas'),
   ]);
   boletos = b.boletos || [];
   cashflow = cf.entries || [];
   stores = st.stores || [];
   suppliers = (sup.items || []).map((i) => i.name);
   categories = (cat.items || []).map((i) => i.name);
+  // faturas de cartao viram "boletos virtuais" (a pagar, tipo cartao)
+  faturas = (ft.faturas || []).map((f) => ({
+    id: `fatura:${f.cartao_id}:${f.fatura_mes}`, virtual: true,
+    cartao_id: f.cartao_id, fatura_mes: f.fatura_mes, cartao: f.cartao,
+    name: `Fatura ${f.cartao} (${f.count}x)`, supplier: null, empresa: null, numero_nf: null,
+    kind: 'cartao', direction: 'pagar', status: 'pendente', value: f.total, due_date: f.due_date,
+  }));
   renderKPIs();
   renderEmpresaOptions();
   renderLists();
@@ -61,7 +69,8 @@ function saldoCaixa() {
 
 function renderKPIs() {
   const pend = (dir) => boletos.filter((b) => b.direction === dir && b.status === 'pendente').reduce((a, b) => a + (+b.value), 0);
-  const totalPagar = pend('pagar'), totalReceber = pend('receber'), saldo = saldoCaixa();
+  const faturasTotal = faturas.reduce((a, f) => a + (+f.value), 0);
+  const totalPagar = pend('pagar') + faturasTotal, totalReceber = pend('receber'), saldo = saldoCaixa();
   const dividaReal = totalPagar - saldo - totalReceber;
   const kpi = (l, v, cls = '') => `<div class="stat-card"><span class="stat-label">${l}</span><span class="stat-value ${cls}" style="font-size:1.4rem">${v}</span></div>`;
   $('boletos-kpis').innerHTML =
@@ -94,7 +103,7 @@ function statusOf(b) {
 
 function renderTable() {
   const lids = linkedIds();
-  let rows = boletos.filter((b) => {
+  let rows = [...boletos, ...faturas].filter((b) => {
     if (filters.month && !(b.due_date || '').startsWith(filters.month)) return false;
     if (filters.kind && b.kind !== filters.kind) return false;
     if (filters.dir && b.direction !== filters.dir) return false;
@@ -116,6 +125,16 @@ function renderTable() {
   tb.innerHTML = rows.map((b) => {
     const st = statusOf(b);
     const late = st === 'atrasado';
+    if (b.virtual) {
+      return `<tr class="row-fatura">
+        <td class="${late ? 'venc-late' : ''}">${fmtDate(b.due_date)}${late ? ' <span class="tag-late">ATRASADO</span>' : ''}</td>
+        <td><span class="type-badge badge-cartao">💳 Cartão</span></td>
+        <td><b>${esc(b.name)}</b></td>
+        <td>—</td><td>—</td>
+        <td><b>${money(b.value)}</b></td>
+        <td><button class="pill pill-pend" data-payfat="${b.cartao_id}" data-mes="${b.fatura_mes}" data-total="${b.value}" data-card="${esc(b.cartao)}">Pagar Fatura</button></td>
+        <td><a href="/cartoes.html" class="btn-del" title="Ver cartão">🔗</a></td></tr>`;
+    }
     const statusPill = b.status === 'pago'
       ? `<button class="pill pill-pago" data-toggle="${b.id}">Pago</button>`
       : `<button class="pill pill-pend" data-toggle="${b.id}">Pendente</button>`;
@@ -205,6 +224,15 @@ $('bcancel').addEventListener('click', resetForm);
 
 // ---------- Ações da tabela ----------
 document.querySelector('#boletos-table tbody').addEventListener('click', async (e) => {
+  const pf = e.target.closest('[data-payfat]');
+  if (pf) {
+    if (!confirm(`Pagar a fatura do ${pf.dataset.card} (${money(+pf.dataset.total)})?\nAs parcelas serão agrupadas por empresa no Fluxo de Caixa.`)) return;
+    const data = prompt('Data do pagamento (AAAA-MM-DD):', todayStr());
+    if (!data) return;
+    try { await api('/api/faturas/pay', { method: 'POST', body: JSON.stringify({ cartao_id: pf.dataset.payfat, fatura_mes: pf.dataset.mes, data_pagamento: data }) }); await loadAll(); }
+    catch (err) { alert(err.message); }
+    return;
+  }
   const tg = e.target.closest('[data-toggle]'); const ed = e.target.closest('[data-edit]'); const dl = e.target.closest('[data-del]');
   if (ed) return editBoleto(ed.dataset.edit);
   if (dl) { if (!confirm('Excluir esta dívida? (remove o lançamento vinculado no Fluxo de Caixa)')) return; await api(`/api/boletos/${dl.dataset.del}`, { method: 'DELETE' }); return loadAll(); }

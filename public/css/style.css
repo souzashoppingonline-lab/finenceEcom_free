@@ -399,6 +399,8 @@ tbody tr:hover { background: #f7f9fc; }
 .type-badge { display: inline-block; background: #eef2f8; color: #384250; font-size: 0.75rem; font-weight: 700; padding: 3px 9px; border-radius: 7px; }
 .supp { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; }
 .venc-late { color: #d64545; font-weight: 600; }
+.row-fatura { background: #faf8ff; }
+:root[data-theme="dark"] .row-fatura { background: #1a1730; }
 
 @media (max-width: 900px) { .boletos-layout { grid-template-columns: 1fr; } .debt-form { position: static; } }
 

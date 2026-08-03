@@ -1051,14 +1051,22 @@ app.get('/api/faturas', requireUser, async (req, res) => {
       parcelas = memParcelas.filter((x) => x.user_id === req.userId && x.status === 'pendente');
       cards = memCards.filter((x) => x.user_id === req.userId);
     }
-    const cardName = (id) => (cards.find((c) => c.id === id) || {}).name || 'Cartão';
+    const cardOf = (id) => cards.find((c) => c.id === id) || {};
     const groups = {};
     for (const p of parcelas) {
       const key = `${p.cartao_id}|${p.fatura_mes}`;
-      if (!groups[key]) groups[key] = { cartao_id: p.cartao_id, cartao: cardName(p.cartao_id), fatura_mes: p.fatura_mes, total: 0, count: 0 };
+      if (!groups[key]) {
+        const card = cardOf(p.cartao_id);
+        const dueDay = Math.min(card.due_day || 10, 28);
+        groups[key] = {
+          cartao_id: p.cartao_id, cartao: card.name || 'Cartão', fatura_mes: p.fatura_mes,
+          due_day: card.due_day || 10, due_date: `${p.fatura_mes}-${String(dueDay).padStart(2, '0')}`,
+          total: 0, count: 0,
+        };
+      }
       groups[key].total += Number(p.value); groups[key].count += 1;
     }
-    const faturas = Object.values(groups).sort((a, b) => a.fatura_mes.localeCompare(b.fatura_mes));
+    const faturas = Object.values(groups).sort((a, b) => a.due_date.localeCompare(b.due_date));
     return res.json({ faturas });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao gerar faturas.' }); }
 });
