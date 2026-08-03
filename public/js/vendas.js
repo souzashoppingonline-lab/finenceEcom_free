@@ -27,7 +27,7 @@ const money = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency
 const pct = (v) => (Number(v) || 0).toFixed(1) + '%';
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-function costOf(s) { return (+s.fee_mp) + (+s.freight) + (+s.cmv) + (+s.ads_ml) + (+s.ads_ext) + (+s.tax); }
+function costOf(s) { return (+s.fee_mp) + (+s.freight) + (+s.cmv) + (+s.ads_ml) + (+s.tax); }
 function marginOf(s) { return (+s.revenue) - costOf(s); }
 function marginPctOf(s) { return +s.revenue > 0 ? (marginOf(s) / +s.revenue) * 100 : 0; }
 
@@ -102,7 +102,7 @@ function readForm() {
   return {
     date: f.date.value, store_id: f.store_id.value,
     qty: g('qty'), revenue: g('revenue'), fee_mp: g('fee_mp'), freight: g('freight'),
-    cmv: g('cmv'), ads_ml: g('ads_ml'), ads_ext: g('ads_ext'), tax: g('tax'),
+    cmv: g('cmv'), ads_ml: g('ads_ml'), tax: g('tax'),
   };
 }
 
@@ -135,7 +135,7 @@ function editSale(id) {
   if (!s) return;
   const f = $('sales-form');
   f.date.value = s.date; f.store_id.value = s.store_id;
-  ['qty', 'revenue', 'fee_mp', 'freight', 'cmv', 'ads_ml', 'ads_ext', 'tax'].forEach((k) => { f[k].value = s[k]; });
+  ['qty', 'revenue', 'fee_mp', 'freight', 'cmv', 'ads_ml', 'tax'].forEach((k) => { f[k].value = s[k]; });
   editingId = id;
   $('form-title').textContent = 'Editar lançamento';
   $('save-sale').textContent = 'Salvar alterações';
@@ -299,7 +299,7 @@ function renderReports() {
     if (!byStore[k]) byStore[k] = { revenue: 0, margin: 0, qty: 0, cmv: 0, freight: 0, fee_mp: 0, tax: 0, ads: 0 };
     const b = byStore[k];
     b.revenue += +s.revenue; b.margin += marginOf(s); b.qty += +s.qty;
-    b.cmv += +s.cmv; b.freight += +s.freight; b.fee_mp += +s.fee_mp; b.tax += +s.tax; b.ads += (+s.ads_ml) + (+s.ads_ext);
+    b.cmv += +s.cmv; b.freight += +s.freight; b.fee_mp += +s.fee_mp; b.tax += +s.tax; b.ads += (+s.ads_ml);
   }
   const ids = Object.keys(byStore);
   if (ids.length === 0) { el.innerHTML = '<p class="muted">Sem dados no período.</p>'; return; }
@@ -418,8 +418,8 @@ function renderDailyTable() {
 // Export CSV
 // ===========================================================================
 function exportCSV() {
-  const header = ['Data', 'Loja', 'Qtd', 'Receita', 'Taxas MP', 'Frete', 'CMV', 'Ads ML', 'Ads Ext', 'Imposto', 'Margem R$', 'Margem %'];
-  const rows = sales.map((s) => [s.date, storeName(s.store_id), s.qty, s.revenue, s.fee_mp, s.freight, s.cmv, s.ads_ml, s.ads_ext, s.tax, marginOf(s).toFixed(2), marginPctOf(s).toFixed(1)]);
+  const header = ['Data', 'Loja', 'Qtd', 'Receita', 'Taxas MP', 'Frete', 'CMV', 'Ads', 'Imposto', 'Margem R$', 'Margem %'];
+  const rows = sales.map((s) => [s.date, storeName(s.store_id), s.qty, s.revenue, s.fee_mp, s.freight, s.cmv, s.ads_ml, s.tax, marginOf(s).toFixed(2), marginPctOf(s).toFixed(1)]);
   const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');

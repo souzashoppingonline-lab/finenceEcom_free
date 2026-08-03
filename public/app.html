@@ -62,7 +62,7 @@
         ]);
         const todaySales = (salesRes.sales || []).filter((s) => s.date === today);
         const rev = todaySales.reduce((a, s) => a + (+s.revenue), 0);
-        const profit = todaySales.reduce((a, s) => a + ((+s.revenue) - (+s.fee_mp) - (+s.freight) - (+s.cmv) - (+s.ads_ml) - (+s.ads_ext) - (+s.tax)), 0);
+        const profit = todaySales.reduce((a, s) => a + ((+s.revenue) - (+s.fee_mp) - (+s.freight) - (+s.cmv) - (+s.ads_ml) - (+s.tax)), 0);
         const margin = rev > 0 ? (profit / rev) * 100 : 0;
         const geral = (goalsRes.goals || []).find((g) => !g.store_id);
         const dim = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
