@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Projeção de Caixa — FinanceEcom Free</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="app-body">
+  <div id="sidebar-root"></div>
+  <main class="app-content">
+    <div class="dash-head">
+      <h1>🔮 Projeção de Caixa</h1>
+      <p class="muted">Seu saldo projetado dia a dia pelos próximos 90 dias.</p>
+    </div>
+
+    <!-- Alertas -->
+    <div id="alerts"></div>
+
+    <!-- KPIs -->
+    <div class="stats-grid" id="proj-kpis"></div>
+
+    <!-- Periodos -->
+    <h3 class="v-section-title">Caixa projetado por período</h3>
+    <div class="periods-grid" id="periods"></div>
+
+    <!-- Grafico -->
+    <div class="card chart-card">
+      <div class="chart-head">
+        <h3>Evolução do saldo (30 dias)</h3>
+        <div class="chart-legend">
+          <span class="lg lg-signups">Saldo</span>
+          <span class="lg lg-visits">Entradas</span>
+          <span class="lg lg-out">Saídas</span>
+        </div>
+      </div>
+      <div id="proj-chart" class="chart"></div>
+    </div>
+
+    <!-- Tabela diaria -->
+    <div class="dash-head-row" style="margin-top:28px">
+      <h3 style="margin:0">Movimentação diária projetada</h3>
+      <div class="head-actions">
+        <label class="filt">Dias
+          <select id="days-sel" class="filter-inp"><option>15</option><option selected>30</option><option>60</option><option>90</option></select>
+        </label>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="proj-table">
+        <thead><tr><th>Data</th><th>Entradas</th><th>Saídas</th><th>Saldo</th><th>Eventos</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/auth-common.js"></script>
+  <script src="/js/app-shell.js"></script>
+  <script src="/js/projecao.js"></script>
+</body>
+</html>

@@ -37,6 +37,7 @@ function renderSidebar(active) {
         ${link('/empresas.html', 'empresas', '🏢', 'Empresas')}
         ${link('/vendas.html', 'vendas', '💰', 'Vendas e Custos')}
         ${link('/fluxo.html', 'fluxo', '💵', 'Fluxo de Caixa')}
+        ${link('/projecao.html', 'projecao', '🔮', 'Projeção de Caixa')}
         ${link('/recebimentos.html', 'receb', '📥', 'Recebimentos')}
         ${link('/boletos.html', 'boletos', '📄', 'Boletos e Dívidas')}
         ${link('/cartoes.html', 'cartoes', '💳', 'Cartões')}

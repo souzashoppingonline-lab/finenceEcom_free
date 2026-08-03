@@ -347,6 +347,30 @@ tbody tr:hover { background: #f7f9fc; }
 .emp-tag { font-weight: 700; margin-right: 10px; }
 .receb-footer { display: flex; gap: 28px; justify-content: flex-end; padding: 16px 4px; font-size: 0.95rem; }
 
+/* ---------- Projeção de Caixa ---------- */
+.periods-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.period-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px; text-align: center; }
+.period-val { font-size: 1.25rem; font-weight: 700; }
+.chart-svg .lg-out::before { background: #d9645f; }
+.lg-out::before { content: ""; width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.alert { padding: 12px 16px; border-radius: 10px; margin-bottom: 10px; font-size: 0.92rem; font-weight: 500; }
+.alert-danger { background: #fdecec; color: #b53535; border: 1px solid #f3b6b6; }
+.alert-warn { background: #fff7e8; color: #8a5a12; border: 1px solid #f5dca6; }
+.alert-ok { background: #eafaf3; color: #17915f; border: 1px solid #b6ebd4; }
+.mini-badge { font-size: 0.68rem; font-weight: 700; padding: 1px 6px; border-radius: 5px; }
+.mini-badge.proj { background: #fff1e0; color: #b7791f; }
+.mini-badge.real { background: #eafaf3; color: #17915f; }
+.ev { font-size: 0.74rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; cursor: help; }
+.ev-in { background: #eef5ff; color: #2b6cb0; }
+.ev-out { background: #fdecec; color: #c0392b; }
+.ev-proj { background: #f4f7fb; color: var(--muted); }
+.row-today { background: #f0fbf6; }
+.row-neg { background: #fdf2f2; }
+.row-crit { background: #fffaf0; }
+:root[data-theme="dark"] .row-today { background: #10241b; }
+:root[data-theme="dark"] .row-neg { background: #2a1416; }
+:root[data-theme="dark"] .row-crit { background: #2a2412; }
+
 /* ---------- Cartões: faturas ---------- */
 .fatura-card { text-align: center; }
 .fatura-card h4 { margin: 0 0 4px; }
