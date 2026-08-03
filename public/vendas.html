@@ -12,85 +12,161 @@
   <main class="app-content">
     <div class="dash-head">
       <h1>Vendas &amp; Custos</h1>
-      <p class="muted">Registre suas vendas e acompanhe sua margem real.</p>
+      <p class="muted">Lance suas vendas e acompanhe sua margem real.</p>
     </div>
 
-    <!-- Controles -->
-    <div class="v-controls">
-      <div class="v-ctrl"><label>Mês</label><input type="month" id="month-sel" /></div>
-      <div class="v-ctrl"><label>Loja</label><select id="store-filter"><option value="">Todas as lojas</option></select></div>
-      <div class="v-ctrl v-ctrl-actions">
+    <!-- ABAS -->
+    <div class="tabs">
+      <button class="tab is-active" data-tab="manual">✍️ Lançamento Manual</button>
+      <button class="tab" data-tab="turbo">⭐ Lançamento Mercado Turbo</button>
+      <button class="tab" data-tab="reports">📊 Relatórios</button>
+    </div>
+
+    <!-- ===================== ABA MANUAL ===================== -->
+    <section class="tab-panel" data-panel="manual">
+      <div class="panel-toolbar">
         <button id="manage-stores" class="btn-ghost">Gerenciar lojas</button>
-        <button id="export-csv" class="btn-ghost">Exportar CSV</button>
       </div>
-    </div>
 
-    <div id="stores-panel" class="card" hidden>
-      <h3>Lojas</h3>
-      <form id="store-form" class="inline-form">
-        <input type="text" id="store-name" placeholder="Nome da loja" required />
-        <input type="color" id="store-color" value="#1d7a5f" title="Cor" />
-        <button type="submit" class="btn-inline">Adicionar loja</button>
-      </form>
-      <div id="stores-list" class="stores-list"></div>
-      <p id="store-msg" class="form-msg"></p>
-    </div>
+      <div id="stores-panel" class="card" hidden>
+        <h3>Lojas</h3>
+        <form id="store-form" class="inline-form">
+          <input type="text" id="store-name" placeholder="Nome da loja" required />
+          <input type="color" id="store-color" value="#1d7a5f" title="Cor" />
+          <button type="submit" class="btn-inline">Adicionar loja</button>
+        </form>
+        <div id="stores-list" class="stores-list"></div>
+        <p id="store-msg" class="form-msg"></p>
+      </div>
 
-    <div class="card">
-      <h3 id="form-title">Lançar dia de venda</h3>
-      <form id="sales-form">
-        <div class="sales-grid">
-          <label>Data<input type="date" name="date" required /></label>
-          <label>Loja<select name="store_id" required><option value="">Selecione</option></select></label>
-          <label>Qtd. Vendas<input type="number" name="qty" min="0" step="1" placeholder="0" /></label>
-          <label>Receita Bruta (R$)<input type="number" name="revenue" min="0" step="0.01" placeholder="0,00" /></label>
-          <label>Taxas Marketplace (R$)<input type="number" name="fee_mp" min="0" step="0.01" placeholder="0,00" /></label>
-          <label>Frete Subsidiado (R$)<input type="number" name="freight" min="0" step="0.01" placeholder="0,00" /></label>
-          <label>CMV — Custo Mercadoria (R$)<input type="number" name="cmv" min="0" step="0.01" placeholder="0,00" /></label>
-          <label>Ads (R$)<input type="number" name="ads_ml" min="0" step="0.01" placeholder="0,00" /></label>
-          <label>Imposto (R$)<input type="number" name="tax" min="0" step="0.01" placeholder="0,00" /></label>
+      <div class="card">
+        <h3 id="form-title">Lançar dia de venda</h3>
+        <form id="sales-form">
+          <div class="sales-grid">
+            <label>Data<input type="date" name="date" required /></label>
+            <label>Empresa<select name="store_id" required><option value="">Selecione</option></select></label>
+            <label>Qtd. Vendas<input type="number" name="qty" min="0" step="1" placeholder="0" /></label>
+            <label>Receita Bruta (R$)<input type="number" name="revenue" min="0" step="0.01" placeholder="0,00" /></label>
+            <label>Taxas Marketplace (R$)<input type="number" name="fee_mp" min="0" step="0.01" placeholder="0,00" /></label>
+            <label>Frete Subsidiado (R$)<input type="number" name="freight" min="0" step="0.01" placeholder="0,00" /></label>
+            <label>CMV — Custo Mercadoria (R$)<input type="number" name="cmv" min="0" step="0.01" placeholder="0,00" /></label>
+            <label>Ads (R$)<input type="number" name="ads_ml" min="0" step="0.01" placeholder="0,00" /></label>
+            <label>Imposto (R$)<input type="number" name="tax" min="0" step="0.01" placeholder="0,00" /></label>
+          </div>
+          <div id="margin-preview" class="margin-preview" hidden></div>
+          <div class="form-row-btns">
+            <button type="submit" id="save-sale">Salvar lançamento</button>
+            <button type="button" id="cancel-edit" class="btn-ghost" hidden>Cancelar</button>
+          </div>
+          <p id="sales-msg" class="form-msg"></p>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===================== ABA MERCADO TURBO ===================== -->
+    <section class="tab-panel" data-panel="turbo" hidden>
+      <div class="turbo-step card">
+        <div class="step-badge">1</div>
+        <div class="step-body">
+          <h3>Selecione a empresa</h3>
+          <p class="muted">Escolha para qual loja este lançamento será feito.</p>
+          <div class="turbo-row">
+            <select id="imp-store"><option value="">Selecione a empresa</option></select>
+            <input type="date" id="imp-date" title="Data do lançamento" />
+          </div>
         </div>
-        <div id="margin-preview" class="margin-preview" hidden></div>
-        <div class="form-row-btns">
-          <button type="submit" id="save-sale">Salvar lançamento</button>
-          <button type="button" id="cancel-edit" class="btn-ghost" hidden>Cancelar</button>
+      </div>
+
+      <div class="turbo-step card">
+        <div class="step-badge">2</div>
+        <div class="step-body">
+          <h3>Envie a planilha (CSV)</h3>
+          <p class="muted" id="upload-hint">Selecione a empresa antes de importar a planilha.</p>
+          <div id="dropzone" class="dropzone disabled">
+            <span class="dz-ico">📄</span>
+            <p><b>Arraste o arquivo aqui</b> ou</p>
+            <button id="pick-file" class="btn-inline" disabled>Selecionar arquivo</button>
+            <input type="file" id="file-input" accept=".csv,text/csv" hidden />
+            <p class="dz-name" id="file-name"></p>
+          </div>
         </div>
-        <p id="sales-msg" class="form-msg"></p>
-      </form>
-    </div>
+      </div>
 
-    <div id="goal-section"></div>
+      <div class="turbo-step card" id="preview-step" hidden>
+        <div class="step-badge">3</div>
+        <div class="step-body">
+          <h3>Confira o resumo</h3>
+          <div id="account-warn" class="turbo-warn" hidden></div>
+          <div class="turbo-summary" id="summary"></div>
+          <div class="turbo-ads">
+            <label>Ads (informe o valor real investido)
+              <input type="number" id="ads-input" min="0" step="0.01" placeholder="R$ 0,00" />
+            </label>
+          </div>
+          <button id="process-btn" class="btn-add-sale" disabled>Processar Lançamento</button>
+          <p id="process-msg" class="form-msg"></p>
+        </div>
+      </div>
 
-    <h3 class="v-section-title">Indicadores do período</h3>
-    <div id="totals" class="stats-grid"></div>
+      <div class="turbo-success card" id="success-box" hidden>
+        <span class="ok-check">✓</span>
+        <div id="success-body"></div>
+        <div class="turbo-row">
+          <button id="go-reports" class="btn-ghost">Ver nos relatórios</button>
+          <button id="new-import" class="btn-ghost">Nova importação</button>
+        </div>
+      </div>
 
-    <h3 class="v-section-title">Relatórios por loja</h3>
-    <div id="store-reports" class="reports-grid"></div>
+      <h3 class="v-section-title">Histórico de importações</h3>
+      <div class="table-wrap">
+        <table id="history-table">
+          <thead><tr><th>Data</th><th>Empresa</th><th>Pedidos</th><th>Receita</th><th>Status</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
 
-    <h3 class="v-section-title">Comparativo: mesmo dia vs mês anterior</h3>
-    <div id="sameday" class="stats-grid"></div>
+    <!-- ===================== ABA RELATÓRIOS ===================== -->
+    <section class="tab-panel" data-panel="reports" hidden>
+      <div class="v-controls">
+        <div class="v-ctrl"><label>Mês</label><input type="month" id="month-sel" /></div>
+        <div class="v-ctrl"><label>Empresa</label><select id="store-filter"><option value="">Todas as empresas</option></select></div>
+        <div class="v-ctrl v-ctrl-actions"><button id="export-csv" class="btn-ghost">Exportar CSV</button></div>
+      </div>
 
-    <h3 class="v-section-title">Lançamentos do mês</h3>
-    <div class="table-wrap">
-      <table id="sales-table">
-        <thead><tr>
-          <th>Data</th><th>Loja</th><th>Qtd</th><th>Receita</th><th>Custos</th>
-          <th>Margem R$</th><th>Margem %</th><th></th>
-        </tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
+      <div id="goal-section"></div>
 
-    <h3 class="v-section-title">Acompanhamento diário da meta</h3>
-    <div class="table-wrap">
-      <table id="daily-table">
-        <thead><tr>
-          <th>Dia</th><th>Semana</th><th>Faturamento</th><th>Meta do Dia</th>
-          <th>Status</th><th>Diferença</th><th>Acumulado</th>
-        </tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
+      <h3 class="v-section-title">Indicadores do período</h3>
+      <div id="totals" class="stats-grid"></div>
+
+      <h3 class="v-section-title">Relatórios por empresa</h3>
+      <div id="store-reports" class="reports-grid"></div>
+
+      <h3 class="v-section-title">Comparativo: mesmo dia vs mês anterior</h3>
+      <div id="sameday" class="stats-grid"></div>
+
+      <h3 class="v-section-title">Lançamentos do mês</h3>
+      <div class="table-wrap">
+        <table id="sales-table">
+          <thead><tr>
+            <th>Data</th><th>Empresa</th><th>Qtd</th><th>Receita</th><th>Custos</th>
+            <th>Margem R$</th><th>Margem %</th><th></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <h3 class="v-section-title">Acompanhamento diário da meta</h3>
+      <div class="table-wrap">
+        <table id="daily-table">
+          <thead><tr>
+            <th>Dia</th><th>Semana</th><th>Faturamento</th><th>Meta do Dia</th>
+            <th>Status</th><th>Diferença</th><th>Acumulado</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

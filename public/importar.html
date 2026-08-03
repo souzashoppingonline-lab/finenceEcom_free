@@ -2,88 +2,11 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mercado Turbo — FinanceEcom Free</title>
-  <link rel="stylesheet" href="/css/style.css" />
+  <meta http-equiv="refresh" content="0; url=/vendas.html" />
+  <title>Redirecionando…</title>
 </head>
-<body class="app-body">
-  <div id="sidebar-root"></div>
-
-  <main class="app-content">
-    <div class="dash-head">
-      <h1>⭐ Lançamento Mercado Turbo</h1>
-      <p class="muted">Importe o CSV do Mercado Turbo e lance suas vendas em segundos.</p>
-    </div>
-
-    <!-- Passo 1: empresa -->
-    <div class="turbo-step card">
-      <div class="step-badge">1</div>
-      <div class="step-body">
-        <h3>Selecione a empresa</h3>
-        <p class="muted">Escolha para qual loja este lançamento será feito.</p>
-        <div class="turbo-row">
-          <select id="store-sel"><option value="">Selecione a empresa</option></select>
-          <input type="date" id="import-date" title="Data do lançamento" />
-        </div>
-      </div>
-    </div>
-
-    <!-- Passo 2: upload -->
-    <div class="turbo-step card">
-      <div class="step-badge">2</div>
-      <div class="step-body">
-        <h3>Envie a planilha (CSV)</h3>
-        <p class="muted" id="upload-hint">Selecione a empresa antes de importar a planilha.</p>
-        <div id="dropzone" class="dropzone disabled">
-          <span class="dz-ico">📄</span>
-          <p><b>Arraste o arquivo aqui</b> ou</p>
-          <button id="pick-file" class="btn-inline" disabled>Selecionar arquivo</button>
-          <input type="file" id="file-input" accept=".csv,text/csv" hidden />
-          <p class="dz-name" id="file-name"></p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Passo 3: preview -->
-    <div class="turbo-step card" id="preview-step" hidden>
-      <div class="step-badge">3</div>
-      <div class="step-body">
-        <h3>Confira o resumo</h3>
-        <div id="account-warn" class="turbo-warn" hidden></div>
-        <div class="turbo-summary" id="summary"></div>
-        <div class="turbo-ads">
-          <label>Ads (informe o valor real investido)
-            <input type="number" id="ads-input" min="0" step="0.01" placeholder="R$ 0,00" />
-          </label>
-        </div>
-        <button id="process-btn" class="btn-add-sale" disabled>Processar Lançamento</button>
-        <p id="process-msg" class="form-msg"></p>
-      </div>
-    </div>
-
-    <!-- Sucesso -->
-    <div class="turbo-success card" id="success-box" hidden>
-      <span class="ok-check">✓</span>
-      <div id="success-body"></div>
-      <div class="turbo-row">
-        <a href="/vendas.html" class="btn-ghost">Ver nos relatórios</a>
-        <button id="new-import" class="btn-ghost">Nova importação</button>
-      </div>
-    </div>
-
-    <!-- Historico -->
-    <h3 class="v-section-title">Histórico de importações</h3>
-    <div class="table-wrap">
-      <table id="history-table">
-        <thead><tr><th>Data</th><th>Empresa</th><th>Pedidos</th><th>Receita</th><th>Status</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="/js/auth-common.js"></script>
-  <script src="/js/app-shell.js"></script>
-  <script src="/js/importar.js"></script>
+<body>
+  <p>Redirecionando para <a href="/vendas.html">Vendas &amp; Custos</a>…</p>
+  <script>location.replace('/vendas.html');</script>
 </body>
 </html>

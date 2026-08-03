@@ -77,9 +77,15 @@ function renderStoreSelectors() {
   const filter = $('store-filter');
   const formSel = document.querySelector('#sales-form select[name="store_id"]');
   const opts = stores.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
-  filter.innerHTML = `<option value="">Todas as lojas</option>` + opts;
+  filter.innerHTML = `<option value="">Todas as empresas</option>` + opts;
   filter.value = state.store;
   formSel.innerHTML = `<option value="">Selecione</option>` + opts;
+  const impSel = $('imp-store');
+  if (impSel) {
+    const cur = impSel.value;
+    impSel.innerHTML = `<option value="">Selecione a empresa</option>` + opts;
+    impSel.value = cur;
+  }
 }
 
 function renderStoresList() {
@@ -489,6 +495,194 @@ $('stores-list').addEventListener('click', async (e) => {
   await loadAll();
 });
 
+// ===========================================================================
+// Abas
+// ===========================================================================
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('is-active', t.dataset.tab === name));
+  document.querySelectorAll('.tab-panel').forEach((p) => { p.hidden = p.dataset.panel !== name; });
+}
+document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+
+// ===========================================================================
+// Mercado Turbo (importação de CSV)
+// ===========================================================================
+let parsedTurbo = null;
+const normH = (s) => (s || '').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+
+function parseNum(v) {
+  if (v == null) return 0;
+  let s = String(v).replace(/[R$\s]/g, '');
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  const n = parseFloat(s.replace(/[^0-9.\-]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+
+function parseCSV(text) {
+  text = text.replace(/^﻿/, '');
+  const firstLine = text.slice(0, text.indexOf('\n'));
+  const delim = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ',';
+  const rows = []; let row = [], field = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+      else if (c === '"') inQ = false; else field += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === delim) { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else if (c === '\r') { /* skip */ } else field += c;
+    }
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows.filter((r) => r.some((c) => c.trim() !== ''));
+}
+
+function findCol(headers, m) { for (let i = 0; i < headers.length; i++) if (m(normH(headers[i]))) return i; return -1; }
+
+function aggregateTurbo(rows) {
+  const headers = rows[0];
+  const col = {
+    account: findCol(headers, (h) => h.includes('conta')),
+    revenue: findCol(headers, (h) => h.includes('fatur') || h.includes('receita')),
+    cmv: findCol(headers, (h) => h.includes('custo') && !h.includes('frete')),
+    tax: findCol(headers, (h) => h.includes('imposto')),
+    fee: findCol(headers, (h) => h.includes('tarifa') || h.includes('taxa')),
+    freight: findCol(headers, (h) => h.includes('frete') && h.includes('vendedor')),
+    qty: findCol(headers, (h) => h.includes('qtd') || h.includes('quantidade')),
+    order: findCol(headers, (h) => h.includes('id da venda') || h.includes('id do carrinho')),
+  };
+  const body = rows.slice(1);
+  let revenue = 0, cmv = 0, tax = 0, fee = 0, freight = 0, qty = 0;
+  const accounts = {}, orderSet = new Set();
+  for (const r of body) {
+    revenue += col.revenue >= 0 ? parseNum(r[col.revenue]) : 0;
+    cmv += col.cmv >= 0 ? parseNum(r[col.cmv]) : 0;
+    tax += col.tax >= 0 ? parseNum(r[col.tax]) : 0;
+    fee += col.fee >= 0 ? parseNum(r[col.fee]) : 0;
+    freight += col.freight >= 0 ? parseNum(r[col.freight]) : 0;
+    qty += col.qty >= 0 ? parseNum(r[col.qty]) : 0;
+    if (col.account >= 0) { const a = (r[col.account] || '').trim(); if (a) accounts[a] = (accounts[a] || 0) + 1; }
+    if (col.order >= 0) { const o = (r[col.order] || '').trim(); if (o) orderSet.add(o); }
+  }
+  const account = Object.keys(accounts).sort((a, b) => accounts[b] - accounts[a])[0] || '';
+  const orders = orderSet.size || body.length;
+  return { account, orders, revenue, cmv, tax, fee, freight, qty: qty || orders };
+}
+
+function impRefresh() {
+  const hasStore = !!$('imp-store').value;
+  $('pick-file').disabled = !hasStore;
+  $('dropzone').classList.toggle('disabled', !hasStore);
+  $('upload-hint').textContent = hasStore
+    ? 'Arraste o CSV do Mercado Turbo ou clique para selecionar.'
+    : 'Selecione a empresa antes de importar a planilha.';
+}
+
+function impRenderPreview() {
+  const s = parsedTurbo;
+  $('preview-step').hidden = false;
+  const rows = [
+    ['Empresa', storeName($('imp-store').value)],
+    ['Conta na planilha', s.account || '—'],
+    ['Pedidos', s.orders],
+    ['Receita', money(s.revenue)],
+    ['COGS (custo)', money(s.cmv)],
+    ['Imposto', money(s.tax)],
+    ['Taxas', money(s.fee)],
+    ['Frete Subsidiado', money(s.freight)],
+  ];
+  $('summary').innerHTML = rows.map(([k, v]) => `<div class="sum-row"><span>${k}</span><b>${v}</b></div>`).join('');
+  const storeNm = normH(storeName($('imp-store').value));
+  const acc = normH(s.account);
+  const warn = $('account-warn');
+  if (acc && storeNm && !acc.includes(storeNm) && !storeNm.includes(acc)) {
+    warn.hidden = false;
+    warn.innerHTML = `⚠️ A conta da planilha (<b>${esc(s.account)}</b>) parece diferente da empresa selecionada (<b>${esc(storeName($('imp-store').value))}</b>).
+      <label class="warn-check"><input type="checkbox" id="force-account" /> Confirmo que é a empresa correta</label>`;
+    $('force-account').addEventListener('change', impValidate);
+  } else { warn.hidden = true; }
+  impValidate();
+  $('preview-step').scrollIntoView({ behavior: 'smooth' });
+}
+
+function impValidate() {
+  const warn = $('account-warn');
+  const needForce = !warn.hidden;
+  const forced = needForce ? $('force-account')?.checked : true;
+  $('process-btn').disabled = !(parsedTurbo && parsedTurbo.orders > 0 && forced);
+}
+
+async function impHandleFile(file) {
+  if (!file) return;
+  $('file-name').textContent = file.name;
+  const text = await file.text();
+  const rows = parseCSV(text);
+  if (rows.length < 2) { alert('CSV vazio ou inválido.'); return; }
+  parsedTurbo = aggregateTurbo(rows);
+  if (parsedTurbo.revenue <= 0) { alert('Não foi possível ler a receita da planilha. Verifique o arquivo.'); return; }
+  impRenderPreview();
+}
+
+async function impLoadHistory() {
+  try {
+    const { imports } = await api('/api/imports');
+    const tb = document.querySelector('#history-table tbody');
+    if (!imports || imports.length === 0) { tb.innerHTML = `<tr><td colspan="5" class="empty">Nenhuma importação ainda.</td></tr>`; return; }
+    tb.innerHTML = imports.map((i) => {
+      const [y, m, d] = i.date.split('-');
+      return `<tr><td>${d}/${m}/${y}</td><td>${esc(storeName(i.store_id))}</td><td>${i.orders}</td><td>${money(i.revenue)}</td><td><span class="badge-ok">Concluído</span></td></tr>`;
+    }).join('');
+  } catch (_) {}
+}
+
+// eventos import
+$('imp-store').addEventListener('change', impRefresh);
+$('pick-file').addEventListener('click', () => $('file-input').click());
+$('file-input').addEventListener('change', (e) => impHandleFile(e.target.files[0]));
+$('ads-input').addEventListener('input', impValidate);
+const dz = $('dropzone');
+['dragover', 'dragenter'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); if (!dz.classList.contains('disabled')) dz.classList.add('drag'); }));
+['dragleave', 'drop'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('drag'); }));
+dz.addEventListener('drop', (e) => { if (dz.classList.contains('disabled')) return; impHandleFile(e.dataTransfer.files[0]); });
+
+$('process-btn').addEventListener('click', async () => {
+  const msg = $('process-msg'); msg.textContent = ''; msg.className = 'form-msg';
+  const storeId = $('imp-store').value;
+  const date = $('imp-date').value || todayStr();
+  const ads = Number($('ads-input').value) || 0;
+  const payload = {
+    date, store_id: storeId, qty: Math.round(parsedTurbo.qty), revenue: parsedTurbo.revenue,
+    fee_mp: parsedTurbo.fee, freight: parsedTurbo.freight, cmv: parsedTurbo.cmv, ads_ml: ads, tax: parsedTurbo.tax,
+  };
+  $('process-btn').disabled = true;
+  try {
+    await api('/api/sales', { method: 'POST', body: JSON.stringify(payload) });
+    await api('/api/imports', { method: 'POST', body: JSON.stringify({ date, store_id: storeId, orders: parsedTurbo.orders, revenue: parsedTurbo.revenue }) }).catch(() => {});
+    $('preview-step').hidden = true;
+    $('success-box').hidden = false;
+    $('success-body').innerHTML = `<h3>${parsedTurbo.orders} pedidos importados</h3>
+      <div class="turbo-summary">
+        <div class="sum-row"><span>Receita</span><b>${money(parsedTurbo.revenue)}</b></div>
+        <div class="sum-row"><span>Empresa</span><b>${esc(storeName(storeId))}</b></div>
+      </div>`;
+    if (date.slice(0, 7) === state.month) await loadAll();
+    impLoadHistory();
+  } catch (err) {
+    if (/ja existe|já existe/i.test(err.message)) msg.textContent = 'Já existe lançamento para esta data e empresa. Escolha outra data ou edite no Lançamento Manual.';
+    else msg.textContent = err.message;
+    msg.classList.add('err');
+    $('process-btn').disabled = false;
+  }
+});
+$('new-import').addEventListener('click', () => {
+  parsedTurbo = null;
+  $('preview-step').hidden = true; $('success-box').hidden = true;
+  $('file-input').value = ''; $('file-name').textContent = ''; $('ads-input').value = '';
+});
+$('go-reports').addEventListener('click', () => switchTab('reports'));
+
 // Init
 (async () => {
   const session = await initShell('vendas');
@@ -496,5 +690,8 @@ $('stores-list').addEventListener('click', async (e) => {
   state.month = curMonth();
   $('month-sel').value = state.month;
   $('sales-form').date.value = todayStr();
+  $('imp-date').value = todayStr();
   await loadAll();
+  impRefresh();
+  impLoadHistory();
 })();
