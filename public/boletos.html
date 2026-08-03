@@ -11,66 +11,118 @@
   <main class="app-content">
     <div class="dash-head">
       <h1>📄 Boletos &amp; Dívidas</h1>
-      <p class="muted">Planeje seus compromissos. Ao marcar como pago, vira saída no Fluxo de Caixa automaticamente.</p>
+      <p class="muted">Planeje seus compromissos. Ao marcar como pago, vira lançamento no Fluxo de Caixa.</p>
     </div>
 
-    <!-- KPIs -->
+    <!-- KPIs compactos -->
     <div class="stats-grid" id="boletos-kpis"></div>
 
-    <!-- Painel de sincronizacao -->
-    <div class="card sync-panel" id="sync-panel"></div>
+    <div class="boletos-layout">
+      <!-- ============ FORM (ESQUERDA) ============ -->
+      <aside class="card debt-form">
+        <h3>Cadastrar Dívida</h3>
+        <p class="muted">Lançamento de boleto, cartão ou dívida manual.</p>
 
-    <!-- Formulario -->
-    <div class="card">
-      <h3 id="bform-title">Nova dívida / recebível</h3>
-      <form id="boleto-form">
-        <div class="sales-grid">
-          <label>Tipo
-            <select name="direction">
-              <option value="pagar">A pagar (dívida)</option>
-              <option value="receber">A receber (recebível)</option>
-            </select>
+        <span class="field-label">Tipo de dívida</span>
+        <div class="kind-grid" id="kind-grid">
+          <button type="button" class="kind-btn is-active" data-kind="boleto">🧾 Boleto</button>
+          <button type="button" class="kind-btn" data-kind="cartao">💳 Cartão</button>
+          <button type="button" class="kind-btn" data-kind="imposto">📋 Imposto</button>
+          <button type="button" class="kind-btn" data-kind="pessoal">👤 Pessoal</button>
+          <button type="button" class="kind-btn" data-kind="fatura_ml">🛒 Fatura ML</button>
+          <button type="button" class="kind-btn" data-kind="flex">⚡ Flex</button>
+          <button type="button" class="kind-btn" data-kind="custo_fixo">📌 Custo Fixo</button>
+          <button type="button" class="kind-btn" data-kind="custo_variavel">📈 Custo Variável</button>
+        </div>
+
+        <form id="boleto-form">
+          <input type="hidden" name="kind" value="boleto" />
+          <div class="two-col">
+            <label>Vencimento<input type="date" name="due_date" required /></label>
+            <label>Categoria
+              <select name="category">
+                <option value="">Selecione</option>
+                <option>Aluguel</option><option>Fornecedor</option><option>Imposto</option>
+                <option>Energia</option><option>Internet</option><option>Salário</option>
+                <option>Marketing</option><option>Frete</option><option>Outros</option>
+              </select>
+            </label>
+          </div>
+          <label>Fornecedor <span class="muted">(opcional)</span>
+            <input type="text" name="supplier" placeholder="Ex.: Martins Atacado" />
           </label>
-          <label>Descrição<input type="text" name="name" required placeholder="Ex.: Aluguel galpão" /></label>
-          <label>Fornecedor / Cliente<input type="text" name="supplier" placeholder="Ex.: Imobiliária XYZ" /></label>
+          <span class="field-label">Empresa <span class="muted">(opcional)</span></span>
+          <div class="empresa-chips" id="empresa-chips"></div>
+          <input type="hidden" name="empresa" value="" />
+          <label>Número NF <span class="muted">(opcional)</span>
+            <input type="text" name="numero_nf" placeholder="Ex.: 5644560 ou 5569543/5569544" />
+          </label>
+          <label>Nome do boleto<input type="text" name="name" required placeholder="Ex.: Aluguel Galpão, Internet..." /></label>
           <label>Valor (R$)<input type="number" name="value" min="0" step="0.01" required placeholder="0,00" /></label>
-          <label>Vencimento<input type="date" name="due_date" required /></label>
-          <label>Categoria
-            <select name="category">
-              <option value="">Selecione</option>
-              <option>Boletos</option><option>Cartão de Crédito</option><option>Imposto</option>
-              <option>Pessoal</option><option>Custo Fixo</option><option>Custo Variável</option><option>Recebíveis</option>
-            </select>
-          </label>
-          <label>Empresa<input type="text" name="empresa" placeholder="Opcional" /></label>
-          <label>Nota Fiscal<input type="text" name="numero_nf" placeholder="Opcional" /></label>
-        </div>
-        <div class="form-row-btns">
-          <button type="submit" id="save-boleto">Salvar</button>
-          <button type="button" id="bcancel" class="btn-ghost" hidden>Cancelar</button>
-        </div>
-        <p id="boleto-msg" class="form-msg"></p>
-      </form>
-    </div>
+          <input type="hidden" name="direction" value="pagar" />
 
-    <!-- Filtros + tabela -->
-    <div class="v-controls">
-      <div class="v-ctrl"><label>Mês (vencimento)</label><input type="month" id="b-month" /></div>
-      <div class="v-ctrl"><label>Tipo</label>
-        <select id="b-dir"><option value="">Todos</option><option value="pagar">A pagar</option><option value="receber">A receber</option></select>
-      </div>
-      <div class="v-ctrl"><label>Status</label>
-        <select id="b-status"><option value="">Todos</option><option value="pendente">Pendente</option><option value="pago">Pago</option></select>
-      </div>
-    </div>
-    <div class="table-wrap">
-      <table id="boletos-table">
-        <thead><tr>
-          <th>Vencimento</th><th>Descrição</th><th>Fornecedor</th><th>Empresa</th>
-          <th>Tipo</th><th>Valor</th><th>Status</th><th></th>
-        </tr></thead>
-        <tbody></tbody>
-      </table>
+          <span class="field-label">Status</span>
+          <div class="status-select" id="status-select">
+            <button type="button" class="status-btn is-active" data-st="pendente">Pendente</button>
+            <button type="button" class="status-btn" data-st="pago">Pago</button>
+            <button type="button" class="status-btn" data-st="atrasado">Atrasado</button>
+          </div>
+          <input type="hidden" name="status" value="pendente" />
+
+          <button type="submit" id="save-boleto" class="btn-cadastrar">+ Cadastrar dívida</button>
+          <button type="button" id="bcancel" class="btn-ghost" hidden>Cancelar</button>
+          <p id="boleto-msg" class="form-msg"></p>
+        </form>
+      </aside>
+
+      <!-- ============ TABELA (DIREITA) ============ -->
+      <section class="debt-table">
+        <div class="debt-toolbar">
+          <input type="month" id="b-month" class="month-pill" />
+          <div class="status-tabs" id="status-tabs">
+            <button class="stab is-active" data-s="">Todos</button>
+            <button class="stab" data-s="pendente">Pendente</button>
+            <button class="stab" data-s="pago">Pago</button>
+            <button class="stab" data-s="atrasado">Atrasado</button>
+            <button class="stab" data-s="fc">Lançado FC</button>
+          </div>
+          <span class="debt-count" id="debt-count"></span>
+        </div>
+
+        <div class="debt-filters">
+          <label class="filt">📅 Dia <input type="number" id="b-dia" min="1" max="31" placeholder="01-31" class="filter-inp filter-day" /></label>
+          <label class="filt">🚚 Fornecedor <select id="b-forn" class="filter-inp"><option value="">Todos</option></select></label>
+          <label class="filt">💳 Cartão <select id="b-cartao" class="filter-inp"><option value="">Todos</option></select></label>
+          <label class="filt">🏦 Banco <select id="b-banco" class="filter-inp"><option value="">Todos</option></select></label>
+          <label class="filt">🏢 Empresa <select id="b-empresa" class="filter-inp"><option value="">Todas</option></select></label>
+        </div>
+
+        <div class="debt-filters">
+          <label class="filt">🧾 NF <input type="search" id="b-nf" placeholder="Número da NF..." class="filter-inp" /></label>
+          <label class="filt">📄 Direção <select id="b-dir" class="filter-inp"><option value="">Todos</option><option value="pagar">A pagar</option><option value="receber">A receber</option></select></label>
+          <div class="type-tabs" id="type-tabs">
+          <button class="ttab is-active" data-k="">Todos</button>
+          <button class="ttab" data-k="boleto">Boleto</button>
+          <button class="ttab" data-k="cartao">Cartão</button>
+          <button class="ttab" data-k="imposto">Imposto</button>
+          <button class="ttab" data-k="pessoal">Pessoal</button>
+          <button class="ttab" data-k="fatura_ml">Fatura ML</button>
+          <button class="ttab" data-k="flex">Flex</button>
+          <button class="ttab" data-k="custo_fixo">Custo Fixo</button>
+          <button class="ttab" data-k="custo_variavel">Custo Variável</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table id="boletos-table">
+            <thead><tr>
+              <th>Vencimento</th><th>Tipo</th><th>Descrição</th><th>Empresa</th>
+              <th>NF</th><th>Valor</th><th>Status</th><th>Ações</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
     </div>
   </main>
 

@@ -12,6 +12,8 @@ create table if not exists public.boletos (
   value      numeric(14,2) not null default 0,
   due_date   date not null,               -- vencimento
   category   text,
+  kind       text not null default 'boleto',   -- boleto|cartao|imposto|pessoal|fatura_ml|flex|custo_fixo|custo_variavel
+  bank       text,
   direction  text not null default 'pagar',    -- 'pagar' | 'receber'
   status     text not null default 'pendente', -- 'pendente' | 'pago'
   empresa    text,                         -- empresa/loja vinculada (livre)

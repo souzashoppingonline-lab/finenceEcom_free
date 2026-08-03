@@ -304,6 +304,48 @@ tbody tr:hover { background: #f7f9fc; }
     width: auto; margin: 0; background: var(--bg); color: #fff; border: none; border-radius: 8px; padding: 8px 12px; font-size: 1.2rem; }
 }
 
+/* ---------- Boletos: layout Cadastrar Dívida ---------- */
+.boletos-layout { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start; }
+.debt-form { position: sticky; top: 20px; }
+.debt-form h3 { margin: 0 0 2px; }
+.field-label { display: block; font-size: 0.85rem; font-weight: 600; margin-top: 16px; margin-bottom: 6px; }
+.kind-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.kind-btn {
+  width: auto; margin: 0; padding: 9px 6px; font-size: 0.8rem; font-weight: 600;
+  background: #f4f7fb; color: var(--text); border: 1px solid var(--border); border-radius: 9px; cursor: pointer;
+}
+.kind-btn:hover { border-color: var(--primary); background: #f4f7fb; }
+.kind-btn.is-active { background: var(--bg); color: #fff; border-color: var(--bg); }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.empresa-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.empresa-chip {
+  width: auto; margin: 0; padding: 6px 12px; font-size: 0.8rem; border-radius: 999px;
+  background: #fff; color: var(--text); border: 1px solid var(--border); cursor: pointer;
+}
+.empresa-chip.is-active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.status-select { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.status-btn { width: auto; margin: 0; padding: 9px; font-size: 0.85rem; font-weight: 600; background: #f4f7fb; color: var(--muted); border: 1px solid var(--border); border-radius: 9px; cursor: pointer; }
+.status-btn.is-active { background: #fff7e8; color: #b7791f; border-color: #f5dca6; }
+.status-btn[data-st="pago"].is-active { background: #eafaf3; color: #17915f; border-color: #b6ebd4; }
+.btn-cadastrar { margin-top: 18px; }
+
+/* Tabela de dívidas: toolbar e filtros */
+.debt-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.month-pill { width: auto; margin: 0; }
+.status-tabs, .type-tabs { display: inline-flex; gap: 2px; background: #f4f7fb; border-radius: 10px; padding: 3px; flex-wrap: wrap; }
+.stab, .ttab { width: auto; margin: 0; padding: 7px 14px; font-size: 0.85rem; font-weight: 600; background: transparent; color: var(--muted); border: none; border-radius: 8px; cursor: pointer; }
+.stab.is-active, .ttab.is-active { background: var(--bg); color: #fff; }
+.debt-count { margin-left: auto; color: var(--muted); font-size: 0.88rem; }
+.debt-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; }
+.filt { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--muted); font-weight: 600; }
+.filter-inp { width: auto; margin: 0; padding: 7px 10px; font-size: 0.85rem; }
+.filter-day { width: 80px; }
+.type-badge { display: inline-block; background: #eef2f8; color: #384250; font-size: 0.75rem; font-weight: 700; padding: 3px 9px; border-radius: 7px; }
+.supp { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; }
+.venc-late { color: #d64545; font-weight: 600; }
+
+@media (max-width: 900px) { .boletos-layout { grid-template-columns: 1fr; } .debt-form { position: static; } }
+
 /* ---------- Boletos & Fluxo de Caixa ---------- */
 .badge-in, .badge-out, .badge-boleto, .badge-cartao {
   display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px;

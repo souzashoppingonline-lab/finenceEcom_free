@@ -793,6 +793,8 @@ function normBoleto(b) {
     value: Number(b.value) || 0,
     due_date: b.due_date,
     category: (b.category || '').trim() || null,
+    kind: (b.kind || 'boleto').trim() || 'boleto',
+    bank: (b.bank || '').trim() || null,
     direction: b.direction === 'receber' ? 'receber' : 'pagar',
     status: b.status === 'pago' ? 'pago' : 'pendente',
     empresa: b.empresa || null,

@@ -1,14 +1,21 @@
 // ===========================================================================
-// Boletos & Dívidas
+// Boletos & Dívidas (layout Cadastrar Dívida + tabela com filtros)
 // ===========================================================================
 const $ = (id) => document.getElementById(id);
 let boletos = [];
 let cashflow = [];
+let stores = [];
 let editingId = null;
+const filters = { status: '', kind: '', dir: '', empresa: '', nf: '', month: '', dia: '', forn: '', banco: '', cartao: '' };
 
+const KIND_LABEL = {
+  boleto: 'Boleto', cartao: 'Cartão', imposto: 'Imposto', pessoal: 'Pessoal',
+  fatura_ml: 'Fatura ML', flex: 'Flex', custo_fixo: 'Custo Fixo', custo_variavel: 'Custo Variável',
+};
 const money = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const todayStr = () => new Date().toLocaleDateString('en-CA');
+function fmtDate(iso) { const [y, m, d] = (iso || '').split('-'); return `${d}/${m}/${String(y).slice(2)}`; }
 
 async function api(path, options = {}) {
   const h = await authHeader();
@@ -18,32 +25,29 @@ async function api(path, options = {}) {
   return res.status === 204 ? {} : res.json();
 }
 
-function fmtDate(iso) { const [y, m, d] = (iso || '').split('-'); return `${d}/${m}/${y}`; }
-
 // ---------- Carregamento ----------
 async function loadAll() {
-  const [b, cf] = await Promise.all([api('/api/boletos'), api('/api/cashflow')]);
+  const [b, cf, st] = await Promise.all([api('/api/boletos'), api('/api/cashflow'), api('/api/stores')]);
   boletos = b.boletos || [];
   cashflow = cf.entries || [];
+  stores = st.stores || [];
   renderKPIs();
-  renderSyncPanel();
+  renderEmpresaOptions();
   renderTable();
 }
 
-// ---------- KPIs ----------
+function linkedIds() { return new Set(cashflow.filter((e) => e.boleto_id).map((e) => e.boleto_id)); }
+
 function saldoCaixa() {
-  const today = todayStr();
-  return cashflow.filter((e) => e.date <= today)
-    .reduce((a, e) => a + (e.type === 'income' ? +e.value : -(+e.value)), 0);
+  const t = todayStr();
+  return cashflow.filter((e) => e.date <= t).reduce((a, e) => a + (e.type === 'income' ? +e.value : -(+e.value)), 0);
 }
 
 function renderKPIs() {
   const pend = (dir) => boletos.filter((b) => b.direction === dir && b.status === 'pendente').reduce((a, b) => a + (+b.value), 0);
-  const totalPagar = pend('pagar');
-  const totalReceber = pend('receber');
-  const saldo = saldoCaixa();
+  const totalPagar = pend('pagar'), totalReceber = pend('receber'), saldo = saldoCaixa();
   const dividaReal = totalPagar - saldo - totalReceber;
-  const kpi = (label, val, cls = '') => `<div class="stat-card"><span class="stat-label">${label}</span><span class="stat-value ${cls}" style="font-size:1.5rem">${val}</span></div>`;
+  const kpi = (l, v, cls = '') => `<div class="stat-card"><span class="stat-label">${l}</span><span class="stat-value ${cls}" style="font-size:1.4rem">${v}</span></div>`;
   $('boletos-kpis').innerHTML =
     kpi('A pagar (pendente)', money(totalPagar), 'neg') +
     kpi('A receber (pendente)', money(totalReceber), 'pos') +
@@ -51,48 +55,62 @@ function renderKPIs() {
     kpi(dividaReal > 0 ? 'Dívida real projetada' : 'Superávit projetado', money(Math.abs(dividaReal)), dividaReal > 0 ? 'neg' : 'pos');
 }
 
-// ---------- Painel de sincronização ----------
-function renderSyncPanel() {
-  const pagos = boletos.filter((b) => b.status === 'pago');
-  const linkedIds = new Set(cashflow.filter((e) => e.boleto_id).map((e) => e.boleto_id));
-  const lancados = pagos.filter((b) => linkedIds.has(b.id)).length;
-  const pct = pagos.length ? Math.round((lancados / pagos.length) * 100) : 100;
-  const totalLancado = pagos.filter((b) => linkedIds.has(b.id)).reduce((a, b) => a + (+b.value), 0);
-  $('sync-panel').innerHTML = `
-    <div class="chart-head"><h3>Sincronização com o Fluxo de Caixa</h3><span class="health-overall ${pct === 100 ? 'ok' : 'warn'}">${lancados}/${pagos.length} lançados</span></div>
-    <div class="goal-bar"><div class="goal-bar-fill ${pct === 100 ? 'bar-ok' : 'bar-warn'}" style="width:${pct}%"></div></div>
-    <p class="muted">${pct}% dos boletos pagos já estão no Fluxo de Caixa · Total lançado: <b>${money(totalLancado)}</b></p>`;
+// ---------- Empresa (chips no form + filtro) ----------
+function renderEmpresaOptions() {
+  const chips = $('empresa-chips');
+  const names = stores.map((s) => s.name);
+  chips.innerHTML = `<button type="button" class="empresa-chip is-active" data-emp="">Nenhuma</button>` +
+    names.map((n) => `<button type="button" class="empresa-chip" data-emp="${esc(n)}">${esc(n)}</button>`).join('');
+  $('b-empresa').innerHTML = `<option value="">Todas</option>` + names.map((n) => `<option>${esc(n)}</option>`).join('');
+  // Fornecedores, bancos e cartoes distintos dos proprios boletos
+  const uniq = (key) => [...new Set(boletos.map((b) => (b[key] || '').trim()).filter(Boolean))].sort();
+  $('b-forn').innerHTML = `<option value="">Todos</option>` + uniq('supplier').map((n) => `<option>${esc(n)}</option>`).join('');
+  $('b-banco').innerHTML = `<option value="">Todos</option>` + uniq('bank').map((n) => `<option>${esc(n)}</option>`).join('');
+  $('b-cartao').innerHTML = `<option value="">Todos</option>` + boletos.filter((b) => b.kind === 'cartao').map((b) => (b.name || '').trim()).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).map((n) => `<option>${esc(n)}</option>`).join('');
 }
 
 // ---------- Tabela ----------
-function currentFilters() {
-  return { month: $('b-month').value, dir: $('b-dir').value, status: $('b-status').value };
+function statusOf(b) {
+  if (b.status === 'pago') return 'pago';
+  if (b.due_date < todayStr()) return 'atrasado';
+  return 'pendente';
 }
 
 function renderTable() {
-  const f = currentFilters();
-  const rows = boletos.filter((b) =>
-    (!f.month || (b.due_date || '').startsWith(f.month)) &&
-    (!f.dir || b.direction === f.dir) &&
-    (!f.status || b.status === f.status)
-  );
+  const lids = linkedIds();
+  let rows = boletos.filter((b) => {
+    if (filters.month && !(b.due_date || '').startsWith(filters.month)) return false;
+    if (filters.kind && b.kind !== filters.kind) return false;
+    if (filters.dir && b.direction !== filters.dir) return false;
+    if (filters.empresa && (b.empresa || '') !== filters.empresa) return false;
+    if (filters.forn && (b.supplier || '') !== filters.forn) return false;
+    if (filters.banco && (b.bank || '') !== filters.banco) return false;
+    if (filters.cartao && b.name !== filters.cartao) return false;
+    if (filters.dia && Number((b.due_date || '').slice(8, 10)) !== Number(filters.dia)) return false;
+    if (filters.nf && !((b.numero_nf || '').includes(filters.nf))) return false;
+    if (filters.status === 'fc') return lids.has(b.id);
+    if (filters.status === 'atrasado') return statusOf(b) === 'atrasado';
+    if (filters.status === 'pendente') return b.status === 'pendente';
+    if (filters.status === 'pago') return b.status === 'pago';
+    return true;
+  });
+  $('debt-count').textContent = `${rows.length} dívida${rows.length === 1 ? '' : 's'}`;
   const tb = document.querySelector('#boletos-table tbody');
-  if (rows.length === 0) { tb.innerHTML = `<tr><td colspan="8" class="empty">Nenhum registro.</td></tr>`; return; }
-  const today = todayStr();
+  if (rows.length === 0) { tb.innerHTML = `<tr><td colspan="8" class="empty">Nenhuma dívida encontrada.</td></tr>`; return; }
   tb.innerHTML = rows.map((b) => {
-    const overdue = b.status === 'pendente' && b.due_date < today;
-    const dirBadge = b.direction === 'receber' ? '<span class="badge-in">A receber</span>' : '<span class="badge-out">A pagar</span>';
-    const statusBtn = b.status === 'pago'
-      ? `<button class="pill pill-pago" data-toggle="${b.id}">✓ Pago</button>`
-      : `<button class="pill pill-pend" data-toggle="${b.id}">Marcar pago</button>`;
-    return `<tr class="${overdue ? 'row-faltou' : ''}">
-      <td>${fmtDate(b.due_date)}${overdue ? ' <span class="tag-late">vencido</span>' : ''}</td>
-      <td>${esc(b.name)}</td>
-      <td>${esc(b.supplier || '—')}</td>
+    const st = statusOf(b);
+    const late = st === 'atrasado';
+    const statusPill = b.status === 'pago'
+      ? `<button class="pill pill-pago" data-toggle="${b.id}">Pago</button>`
+      : `<button class="pill pill-pend" data-toggle="${b.id}">Pendente</button>`;
+    return `<tr>
+      <td class="${late ? 'venc-late' : ''}">${fmtDate(b.due_date)}${late ? ' <span class="tag-late">ATRASADO</span>' : ''}</td>
+      <td><span class="type-badge">${esc(KIND_LABEL[b.kind] || 'Boleto')}</span></td>
+      <td><b>${esc(b.name)}</b>${b.supplier ? ` <span class="supp">${esc(b.supplier)}</span>` : ''}</td>
       <td>${esc(b.empresa || '—')}</td>
-      <td>${dirBadge}</td>
-      <td class="${b.direction === 'receber' ? 'pos' : 'neg'}">${money(b.value)}</td>
-      <td>${statusBtn}</td>
+      <td>${esc(b.numero_nf || '—')}</td>
+      <td class="${b.direction === 'receber' ? 'pos' : ''}"><b>${money(b.value)}</b></td>
+      <td>${statusPill}${linkedIds().has(b.id) ? ' <span class="badge-boleto">FC</span>' : ''}</td>
       <td>
         <button class="btn-del" data-edit="${b.id}" title="Editar">✏️</button>
         <button class="btn-del" data-del="${b.id}" title="Excluir">🗑</button>
@@ -103,42 +121,68 @@ function renderTable() {
 // ---------- Form ----------
 function resetForm() {
   const f = $('boleto-form'); f.reset();
-  f.due_date.value = todayStr();
+  f.due_date.value = todayStr(); f.kind.value = 'boleto'; f.empresa.value = ''; f.status.value = 'pendente';
+  document.querySelectorAll('.kind-btn').forEach((b) => b.classList.toggle('is-active', b.dataset.kind === 'boleto'));
+  document.querySelectorAll('.empresa-chip').forEach((c) => c.classList.toggle('is-active', c.dataset.emp === ''));
+  document.querySelectorAll('.status-btn').forEach((b) => b.classList.toggle('is-active', b.dataset.st === 'pendente'));
   editingId = null;
-  $('bform-title').textContent = 'Nova dívida / recebível';
-  $('save-boleto').textContent = 'Salvar';
+  $('save-boleto').textContent = 'Cadastrar dívida';
   $('bcancel').hidden = true;
 }
 
 function editBoleto(id) {
   const b = boletos.find((x) => x.id === id); if (!b) return;
   const f = $('boleto-form');
-  f.direction.value = b.direction; f.name.value = b.name; f.supplier.value = b.supplier || '';
-  f.value.value = b.value; f.due_date.value = b.due_date; f.category.value = b.category || '';
-  f.empresa.value = b.empresa || ''; f.numero_nf.value = b.numero_nf || '';
+  f.kind.value = b.kind || 'boleto'; f.due_date.value = b.due_date; f.category.value = b.category || '';
+  f.supplier.value = b.supplier || ''; f.empresa.value = b.empresa || ''; f.numero_nf.value = b.numero_nf || '';
+  f.name.value = b.name; f.direction.value = b.direction; f.value.value = b.value;
+  document.querySelectorAll('.kind-btn').forEach((x) => x.classList.toggle('is-active', x.dataset.kind === b.kind));
+  document.querySelectorAll('.empresa-chip').forEach((c) => c.classList.toggle('is-active', c.dataset.emp === (b.empresa || '')));
+  f.status.value = b.status;
+  document.querySelectorAll('.status-btn').forEach((x) => x.classList.toggle('is-active', x.dataset.st === b.status));
   editingId = id;
-  $('bform-title').textContent = 'Editar registro';
   $('save-boleto').textContent = 'Salvar alterações';
   $('bcancel').hidden = false;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+$('kind-grid').addEventListener('click', (e) => {
+  const btn = e.target.closest('.kind-btn'); if (!btn) return;
+  document.querySelectorAll('.kind-btn').forEach((b) => b.classList.remove('is-active'));
+  btn.classList.add('is-active');
+  $('boleto-form').kind.value = btn.dataset.kind;
+});
+
+$('status-select').addEventListener('click', (e) => {
+  const btn = e.target.closest('.status-btn'); if (!btn) return;
+  document.querySelectorAll('.status-btn').forEach((b) => b.classList.remove('is-active'));
+  btn.classList.add('is-active');
+  $('boleto-form').status.value = btn.dataset.st;
+});
+
+$('empresa-chips').addEventListener('click', (e) => {
+  const chip = e.target.closest('.empresa-chip'); if (!chip) return;
+  document.querySelectorAll('.empresa-chip').forEach((c) => c.classList.remove('is-active'));
+  chip.classList.add('is-active');
+  $('boleto-form').empresa.value = chip.dataset.emp;
+});
 
 $('boleto-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const msg = $('boleto-msg'); msg.textContent = ''; msg.className = 'form-msg';
   const f = e.target;
   const payload = {
-    direction: f.direction.value, name: f.name.value.trim(), supplier: f.supplier.value.trim(),
+    kind: f.kind.value, direction: f.direction.value, name: f.name.value.trim(), supplier: f.supplier.value.trim(),
     value: Number(f.value.value) || 0, due_date: f.due_date.value, category: f.category.value,
     empresa: f.empresa.value.trim(), numero_nf: f.numero_nf.value.trim(),
-    status: editingId ? (boletos.find((x) => x.id === editingId)?.status || 'pendente') : 'pendente',
+    status: f.status.value === 'pago' ? 'pago' : 'pendente', // "atrasado" é derivado da data
   };
   try {
     if (editingId) await api(`/api/boletos/${editingId}`, { method: 'PUT', body: JSON.stringify(payload) });
     else await api('/api/boletos', { method: 'POST', body: JSON.stringify(payload) });
     resetForm();
     await loadAll();
-    msg.textContent = 'Salvo!'; msg.classList.add('ok');
+    msg.textContent = 'Dívida cadastrada!'; msg.classList.add('ok');
   } catch (err) { msg.textContent = err.message; msg.classList.add('err'); }
 });
 $('bcancel').addEventListener('click', resetForm);
@@ -147,20 +191,33 @@ $('bcancel').addEventListener('click', resetForm);
 document.querySelector('#boletos-table tbody').addEventListener('click', async (e) => {
   const tg = e.target.closest('[data-toggle]'); const ed = e.target.closest('[data-edit]'); const dl = e.target.closest('[data-del]');
   if (ed) return editBoleto(ed.dataset.edit);
-  if (dl) {
-    if (!confirm('Excluir este registro? (também remove o lançamento vinculado no Fluxo de Caixa)')) return;
-    await api(`/api/boletos/${dl.dataset.del}`, { method: 'DELETE' });
-    return loadAll();
-  }
+  if (dl) { if (!confirm('Excluir esta dívida? (remove o lançamento vinculado no Fluxo de Caixa)')) return; await api(`/api/boletos/${dl.dataset.del}`, { method: 'DELETE' }); return loadAll(); }
   if (tg) {
     const b = boletos.find((x) => x.id === tg.dataset.toggle); if (!b) return;
-    const novo = { ...b, status: b.status === 'pago' ? 'pendente' : 'pago' };
-    await api(`/api/boletos/${b.id}`, { method: 'PUT', body: JSON.stringify(novo) });
+    await api(`/api/boletos/${b.id}`, { method: 'PUT', body: JSON.stringify({ ...b, status: b.status === 'pago' ? 'pendente' : 'pago' }) });
     return loadAll();
   }
 });
 
-['b-month', 'b-dir', 'b-status'].forEach((id) => $(id).addEventListener('change', renderTable));
+// ---------- Filtros ----------
+$('status-tabs').addEventListener('click', (e) => {
+  const t = e.target.closest('.stab'); if (!t) return;
+  document.querySelectorAll('.stab').forEach((x) => x.classList.remove('is-active'));
+  t.classList.add('is-active'); filters.status = t.dataset.s; renderTable();
+});
+$('type-tabs').addEventListener('click', (e) => {
+  const t = e.target.closest('.ttab'); if (!t) return;
+  document.querySelectorAll('.ttab').forEach((x) => x.classList.remove('is-active'));
+  t.classList.add('is-active'); filters.kind = t.dataset.k; renderTable();
+});
+$('b-month').addEventListener('change', (e) => { filters.month = e.target.value; renderTable(); });
+$('b-empresa').addEventListener('change', (e) => { filters.empresa = e.target.value; renderTable(); });
+$('b-dir').addEventListener('change', (e) => { filters.dir = e.target.value; renderTable(); });
+$('b-nf').addEventListener('input', (e) => { filters.nf = e.target.value.trim(); renderTable(); });
+$('b-dia').addEventListener('input', (e) => { filters.dia = e.target.value.trim(); renderTable(); });
+$('b-forn').addEventListener('change', (e) => { filters.forn = e.target.value; renderTable(); });
+$('b-banco').addEventListener('change', (e) => { filters.banco = e.target.value; renderTable(); });
+$('b-cartao').addEventListener('change', (e) => { filters.cartao = e.target.value; renderTable(); });
 
 // ---------- Init ----------
 (async () => {
