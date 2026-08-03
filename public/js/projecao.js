@@ -46,10 +46,11 @@ async function build() {
   for (const e of entries.filter((x) => x.type === 'income' && x.date > today)) {
     const m = ensure(e.date); m.in += +e.value; m.inItems.push(`${e.reason || 'Entrada'}: ${money(e.value)}`);
   }
-  // Saídas futuras: boletos a pagar pendentes + faturas de cartão
-  for (const b of boletos.filter((x) => x.direction === 'pagar')) {
+  // Saídas futuras: boletos a pagar pendentes (exceto tipo 'cartao', que vem via fatura)
+  for (const b of boletos.filter((x) => x.direction === 'pagar' && x.kind !== 'cartao')) {
     if (b.due_date >= today) { const m = ensure(b.due_date); m.out += +b.value; m.outItems.push(`${b.name}: ${money(b.value)}`); }
   }
+  // Faturas de cartão (fonte da verdade das parcelas) como saída no vencimento
   for (const f of faturas) {
     if (f.due_date >= today) { const m = ensure(f.due_date); m.out += +f.total; m.outItems.push(`Fatura ${f.cartao}: ${money(f.total)}`); }
   }
