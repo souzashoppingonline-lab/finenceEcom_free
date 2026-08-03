@@ -28,7 +28,7 @@ function renderSidebar(active) {
   root.innerHTML = `
     <aside class="sidebar">
       <div class="side-top">
-        <span class="side-logo"><span class="side-txt">FinanceEcom <strong>Free</strong></span><strong class="side-mini">F</strong></span>
+        <span class="side-logo"><img src="/img/logo-mark.svg" alt="" class="side-brand-mark" /><span class="side-txt">FinanceEcom <strong>Free</strong></span></span>
         <button id="side-collapse" class="side-collapse" title="Recolher/expandir menu" aria-label="Recolher menu">«</button>
       </div>
       <div class="side-user"><span class="side-ico">👤</span><span class="side-txt">${first}</span></div>

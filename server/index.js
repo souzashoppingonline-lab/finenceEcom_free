@@ -1183,10 +1183,20 @@ app.get('/api/fatura-pagamentos', requireUser, async (req, res) => {
 // ===========================================================================
 // ALERTA DIARIO DE BOLETOS POR E-MAIL (Resend)
 // ===========================================================================
+// Envia e-mail: usa o SMTP ja configurado (Gmail/nodemailer) e, se nao houver,
+// cai para a API do Resend (RESEND_API_KEY). Assim reaproveita o que ja existe.
 async function resendSend(to, subject, html) {
+  // 1) SMTP existente (mesmo usado nas notificacoes de lead)
+  if (mailer) {
+    try {
+      await mailer.sendMail({ from: `"FinanceEcom Free" <${SMTP_USER}>`, to, subject, html });
+      return true;
+    } catch (err) { console.error('SMTP erro (alerta boletos):', err.message); }
+  }
+  // 2) Fallback: API do Resend
   const key = process.env.RESEND_API_KEY;
   const from = process.env.ALERT_FROM || 'FinanceEcom Free <nao-responda@financeecom.com.br>';
-  if (!key) { console.warn('[AVISO] RESEND_API_KEY nao configurado — alerta de boletos nao enviado.'); return false; }
+  if (!key) { console.warn('[AVISO] Sem SMTP e sem RESEND_API_KEY — alerta de boletos nao enviado.'); return false; }
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',

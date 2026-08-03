@@ -1,16 +1,17 @@
 :root {
-  --bg: #0e1525;
-  --bg-soft: #16203a;
+  --bg: #0a1428;
+  --bg-soft: #12203d;
   --card: #ffffff;
-  --primary: #1d7a5f;
-  --primary-dark: #15614b;
-  --accent: #35c48c;
+  --primary: #1e6fff;
+  --primary-dark: #1657d6;
+  --accent: #22d3ee;
   --text: #1c2434;
   --muted: #6b7686;
   --border: #e2e6ee;
-  --danger: #d64545;
+  --danger: #e04545;
   --radius: 14px;
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  --shadow: 0 10px 30px rgba(20, 40, 90, 0.14);
+  --grad: linear-gradient(120deg, #1e6fff 0%, #6a5cff 55%, #22d3ee 120%);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -43,18 +44,35 @@ h1, h2, h3 { line-height: 1.15; }
 .btn-nav:hover { background: #2bb37e; }
 
 /* ---------- Hero ---------- */
+.brand { display: inline-flex; align-items: center; gap: 10px; }
+.brand-mark { width: 34px; height: 34px; }
 .hero {
-  background: radial-gradient(1100px 500px at 15% -10%, #1e3357, var(--bg));
-  color: #fff; padding: 56px 0 72px;
+  position: relative; overflow: hidden;
+  background:
+    radial-gradient(800px 380px at 12% -10%, rgba(106,92,255,0.55), transparent 60%),
+    radial-gradient(700px 360px at 92% 8%, rgba(34,211,238,0.35), transparent 55%),
+    linear-gradient(160deg, #0a1428 0%, #12224a 55%, #0a1428 100%);
+  color: #fff; padding: 56px 0 84px;
 }
+.hero::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 80px;
+  background: linear-gradient(to bottom, transparent, #f4f6fb);
+}
+.hero-grid { position: relative; z-index: 1; }
 .hero-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 48px; align-items: center; }
+.hero-logo { width: 76px; height: 76px; margin-bottom: 10px; filter: drop-shadow(0 6px 16px rgba(30,111,255,0.4)); }
 .badge {
-  display: inline-block; background: rgba(53,196,140,0.15); color: var(--accent);
-  border: 1px solid rgba(53,196,140,0.35); padding: 6px 14px; border-radius: 999px;
-  font-size: 0.82rem; font-weight: 600; margin-bottom: 18px;
+  display: inline-block; background: rgba(34,211,238,0.14); color: #7fe9fb;
+  border: 1px solid rgba(34,211,238,0.4); padding: 7px 16px; border-radius: 999px;
+  font-size: 0.82rem; font-weight: 700; margin-bottom: 18px;
 }
 .hero-text h1 { font-size: clamp(2.1rem, 4.5vw, 3.2rem); margin: 0 0 18px; }
-.hl { color: var(--accent); }
+.hl { background: linear-gradient(100deg, #4aa3ff, #22d3ee); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.btn-primary { background: var(--grad); box-shadow: 0 8px 22px rgba(30,111,255,0.35); }
+.btn-primary:hover { filter: brightness(1.05); background: var(--grad); }
+.btn-nav { background: var(--grad); color: #fff; }
+.btn-nav:hover { filter: brightness(1.06); background: var(--grad); }
+.benefits li::before, .hero-check li::before { color: var(--accent); }
 .lead { color: #c6d0e2; font-size: 1.12rem; }
 .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; margin: 28px 0 22px; }
 .btn-primary {
@@ -257,6 +275,9 @@ tbody tr:hover { background: #f7f9fc; }
 }
 .side-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
 .side-mini { color: var(--accent); display: none; }
+.side-brand-mark { width: 26px; height: 26px; flex: 0 0 26px; }
+.side-logo { display: inline-flex; align-items: center; gap: 8px; }
+:root.sidebar-collapsed .side-brand-mark { margin: 0 auto; }
 .side-collapse {
   width: auto; margin: 0; background: rgba(255,255,255,0.08); color: #cdd6e6; border: none;
   border-radius: 8px; padding: 4px 10px; cursor: pointer; font-size: 1rem; line-height: 1;

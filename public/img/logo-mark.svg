@@ -1,0 +1,21 @@
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FinanceEcom">
+  <defs>
+    <linearGradient id="fecBar" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#1560e6"/>
+      <stop offset="1" stop-color="#4aa3ff"/>
+    </linearGradient>
+    <linearGradient id="fecArrow" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#1e6fff"/>
+      <stop offset="1" stop-color="#5bb0ff"/>
+    </linearGradient>
+  </defs>
+  <!-- anel/swoosh -->
+  <path d="M92 30 A44 44 0 1 0 100 74" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
+  <!-- barras ascendentes -->
+  <rect x="40" y="62" width="10" height="26" rx="2" fill="url(#fecBar)"/>
+  <rect x="55" y="50" width="10" height="38" rx="2" fill="url(#fecBar)"/>
+  <rect x="70" y="38" width="10" height="50" rx="2" fill="url(#fecBar)"/>
+  <!-- seta ascendente -->
+  <path d="M34 84 C52 82 74 70 92 44" fill="none" stroke="url(#fecArrow)" stroke-width="7" stroke-linecap="round"/>
+  <path d="M80 40 L96 40 L96 56 Z" fill="url(#fecArrow)"/>
+</svg>
