@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRE — FinanceEcom Free</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="app-body">
+  <div id="sidebar-root"></div>
+  <main class="app-content">
+    <div class="dash-head dash-head-row">
+      <div>
+        <h1>DRE — Demonstração de Resultado</h1>
+        <p class="muted">Resultado mensal automático com histórico e análise.</p>
+      </div>
+      <div class="head-actions">
+        <select id="sel-month" class="filter-inp"></select>
+        <select id="sel-year" class="filter-inp"></select>
+      </div>
+    </div>
+
+    <!-- Grade anual -->
+    <div class="card">
+      <h3>Visão Anual — <span id="year-lbl"></span></h3>
+      <div class="dre-grid" id="dre-grid"></div>
+      <div class="dre-annual-tot" id="dre-annual-tot"></div>
+    </div>
+
+    <!-- Cards comparativos -->
+    <div class="stats-grid" id="dre-cards"></div>
+
+    <!-- DRE completo -->
+    <h3 class="v-section-title">Demonstração de Resultado (DRE) — <span id="dre-mes-lbl"></span></h3>
+    <div class="dre-report">
+      <div class="card" id="dre-lines"></div>
+      <div class="card" id="dre-composition"></div>
+    </div>
+
+    <!-- Historico -->
+    <h3 class="v-section-title">Histórico Mensal</h3>
+    <div class="table-wrap">
+      <table id="dre-history">
+        <thead><tr><th>Mês</th><th>Receita</th><th>Custos Totais</th><th>Resultado</th><th>Margem</th><th>Status</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/auth-common.js"></script>
+  <script src="/js/app-shell.js"></script>
+  <script src="/js/dre-core.js"></script>
+  <script src="/js/dre.js"></script>
+</body>
+</html>

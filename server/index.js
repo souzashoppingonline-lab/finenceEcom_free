@@ -85,6 +85,7 @@ const memImports = [];
 const memBoletos = [];
 const memCF = []; // cash_flow_entries
 const memLists = []; // fornecedores, categorias, etc.
+const memExpenses = [];
 const memCards = [];
 const memParcelas = [];
 const memFaturaPagtos = [];
@@ -927,6 +928,58 @@ app.delete('/api/lists/:id', requireUser, async (req, res) => {
     else { const i = memLists.findIndex((l) => l.id === id && l.user_id === req.userId); if (i >= 0) memLists.splice(i, 1); }
     return res.json({ ok: true });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao excluir.' }); }
+});
+
+// ===========================================================================
+// DESPESAS (custos fixos e operacionais) -> alimenta DRE e Ponto de Equilibrio
+// ===========================================================================
+function normExpense(b) {
+  return {
+    date: b.date || new Date().toISOString().slice(0, 10),
+    description: (b.description || '').trim(),
+    category: (b.category || '').trim() || null,
+    type: b.type === 'operational' ? 'operational' : 'fixed',
+    value: Number(b.value) || 0,
+    recurring: !!b.recurring,
+  };
+}
+
+app.get('/api/expenses', requireUser, async (req, res) => {
+  try {
+    if (supabase) {
+      const { data, error } = await supabase.from('expenses').select('*').eq('user_id', req.userId).order('date', { ascending: false });
+      if (error) throw error;
+      return res.json({ expenses: data });
+    }
+    return res.json({ expenses: memExpenses.filter((e) => e.user_id === req.userId) });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao listar despesas.' }); }
+});
+
+app.post('/api/expenses', requireUser, async (req, res) => {
+  const rec = normExpense(req.body || {});
+  if (!rec.description || rec.value <= 0) return res.status(400).json({ error: 'Descricao e valor sao obrigatorios.' });
+  try {
+    if (supabase) { const { data, error } = await supabase.from('expenses').insert({ ...rec, user_id: req.userId }).select().single(); if (error) throw error; return res.status(201).json({ expense: data }); }
+    const exp = { id: makeId(), ...rec, user_id: req.userId, created_at: new Date().toISOString() }; memExpenses.push(exp); return res.status(201).json({ expense: exp });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao salvar despesa.' }); }
+});
+
+app.put('/api/expenses/:id', requireUser, async (req, res) => {
+  const { id } = req.params; const rec = normExpense(req.body || {});
+  try {
+    if (supabase) { const { error } = await supabase.from('expenses').update(rec).eq('id', id).eq('user_id', req.userId); if (error) throw error; }
+    else { const e = memExpenses.find((x) => x.id === id && x.user_id === req.userId); if (e) Object.assign(e, rec); }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao atualizar despesa.' }); }
+});
+
+app.delete('/api/expenses/:id', requireUser, async (req, res) => {
+  const { id } = req.params;
+  try {
+    if (supabase) { const { error } = await supabase.from('expenses').delete().eq('id', id).eq('user_id', req.userId); if (error) throw error; }
+    else { const i = memExpenses.findIndex((x) => x.id === id && x.user_id === req.userId); if (i >= 0) memExpenses.splice(i, 1); }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao excluir despesa.' }); }
 });
 
 // ===========================================================================

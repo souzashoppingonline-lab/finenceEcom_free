@@ -347,6 +347,46 @@ tbody tr:hover { background: #f7f9fc; }
 .emp-tag { font-weight: 700; margin-right: 10px; }
 .receb-footer { display: flex; gap: 28px; justify-content: flex-end; padding: 16px 4px; font-size: 0.95rem; }
 
+/* ---------- Despesas & DRE ---------- */
+.despesas-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+.despesas-side { position: sticky; top: 20px; }
+.mini-dre { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.mini-dre td { padding: 6px 4px; border-bottom: 1px solid var(--border); }
+.mini-dre-head td { color: var(--muted); font-weight: 700; }
+.mini-dre-row { cursor: pointer; }
+.mini-dre-row:hover { background: #f7f9fc; }
+.mini-dre-row.is-cur { background: #eafaf3; }
+.mini-dre-tot { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; }
+.mini-dre-tot div { display: flex; justify-content: space-between; }
+.dre-block { margin-bottom: 18px; }
+.dre-block h4 { margin: 0 0 6px; font-size: 0.9rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+.dre-line { display: grid; grid-template-columns: 1fr auto 130px; gap: 12px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.92rem; }
+.dre-line span:last-child { text-align: right; font-weight: 600; }
+.dre-pct { color: var(--muted); font-size: 0.8rem; }
+.dre-sub { font-weight: 700; border-top: 2px solid var(--border); border-bottom: none; margin-top: 4px; }
+.dre-final { font-weight: 800; font-size: 1.05rem; border-top: 2px solid var(--primary); padding-top: 10px; }
+.be-premium { background: radial-gradient(600px 200px at 100% -20%, #1e3357, var(--bg)); color: #fff; }
+.be-premium .stat-label, .be-premium .muted { color: #c6d0e2; }
+.be-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.be-value { font-size: 2rem; font-weight: 800; }
+
+/* DRE page */
+.dre-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.dre-cell { border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 2px; cursor: pointer; border: 1px solid var(--border); }
+.dre-cell.nd { opacity: 0.5; }
+.dre-cell.pos-bg { background: #eafaf3; }
+.dre-cell.neg-bg { background: #fdecec; }
+.dre-cell.is-cur { outline: 2px solid var(--primary); }
+.dre-cell-m { font-weight: 700; font-size: 0.82rem; }
+.dre-cell-r { font-size: 0.85rem; }
+.dre-cell-l { font-size: 0.8rem; font-weight: 700; }
+.dre-annual-tot { display: flex; gap: 32px; margin-top: 16px; flex-wrap: wrap; }
+.dre-annual-tot div { display: flex; flex-direction: column; }
+.dre-report { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; align-items: start; }
+.dre-kpis { display: flex; gap: 24px; margin-top: 16px; }
+.dre-kpis div { display: flex; flex-direction: column; }
+@media (max-width: 900px) { .despesas-layout, .dre-report { grid-template-columns: 1fr; } .dre-grid { grid-template-columns: repeat(3, 1fr); } .despesas-side { position: static; } }
+
 /* ---------- Projeção de Caixa ---------- */
 .periods-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
 .period-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px; text-align: center; }
