@@ -3,74 +3,83 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Minha conta — FinanceEcom Free</title>
+  <title>Dashboard — FinanceEcom Free</title>
   <link rel="stylesheet" href="/css/style.css" />
 </head>
-<body class="admin-body">
-  <header class="admin-header">
-    <span class="logo">FinanceEcom <strong>Free</strong></span>
-    <nav class="v-nav">
-      <span id="user-email" class="nav-link"></span>
-      <button id="logout" class="btn-ghost">Sair</button>
-    </nav>
-  </header>
+<body class="app-body">
+  <div id="sidebar-root"></div>
 
-  <main class="admin-main">
-    <section class="card">
-      <h1>Bem-vindo(a), <span id="user-name">vendedor</span>! 👋</h1>
-      <p class="muted">Sua conta está ativa. Comece a organizar suas finanças.</p>
-      <div class="app-shortcuts">
-        <a class="app-tile" href="/vendas.html">
-          <span class="app-ico">📊</span>
-          <b>Vendas &amp; Custos</b>
-          <span class="muted">Lance vendas e veja sua margem real</span>
-        </a>
-      </div>
-    </section>
+  <main class="app-content">
+    <div class="dash-head">
+      <h1>Bem-vindo, <span id="user-name">vendedor</span> 👋</h1>
+      <p class="muted">Vamos registrar as vendas de hoje.</p>
+    </div>
 
-    <section class="card" style="margin-top:20px">
+    <div class="stats-grid">
+      <div class="stat-card"><span class="stat-label">Receita do dia</span><span class="stat-value" id="k-rev">—</span></div>
+      <div class="stat-card"><span class="stat-label">Lucro do dia</span><span class="stat-value" id="k-profit">—</span></div>
+      <div class="stat-card"><span class="stat-label">Margem</span><span class="stat-value" id="k-margin">—</span></div>
+      <div class="stat-card"><span class="stat-label">Meta do dia</span><span class="stat-value" id="k-goal">—</span></div>
+    </div>
+
+    <a href="/vendas.html" class="btn-add-sale">+ Adicionar Venda</a>
+
+    <div class="card" id="mfa-card" style="margin-top:26px">
       <h3>Segurança da conta</h3>
-      <div id="mfa-area">
-        <p class="muted">Ative a verificação em duas etapas (MFA) com o Google Authenticator para proteger sua conta.</p>
-        <button id="mfa-btn" class="btn-ghost">Ativar 2 etapas (MFA)</button>
-        <div id="mfa-setup" hidden>
-          <p class="muted">Escaneie o QR Code no app Google Authenticator e digite o código gerado.</p>
-          <div id="qr"></div>
-          <form id="mfa-form" class="inline-form">
-            <input type="text" id="mfa-code" inputmode="numeric" maxlength="6" placeholder="Código de 6 dígitos" />
-            <button type="submit" class="btn-inline">Confirmar</button>
-          </form>
-          <p id="mfa-msg" class="form-msg"></p>
-        </div>
+      <p class="muted">Ative a verificação em duas etapas (MFA) com o Google Authenticator.</p>
+      <button id="mfa-btn" class="btn-ghost">Ativar 2 etapas (MFA)</button>
+      <div id="mfa-setup" hidden>
+        <p class="muted">Escaneie o QR Code no app Google Authenticator e digite o código.</p>
+        <div id="qr"></div>
+        <form id="mfa-form" class="inline-form">
+          <input type="text" id="mfa-code" inputmode="numeric" maxlength="6" placeholder="Código de 6 dígitos" />
+          <button type="submit" class="btn-inline">Confirmar</button>
+        </form>
+        <p id="mfa-msg" class="form-msg"></p>
       </div>
-    </section>
+    </div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/js/auth-common.js"></script>
+  <script src="/js/app-shell.js"></script>
   <script>
     (async () => {
-      const session = await requireSession();
+      const session = await initShell('dash');
       if (!session) return;
-      const user = session.user;
-      const meta = user.user_metadata || {};
-      document.getElementById('user-email').textContent = user.email;
+      const meta = session.user.user_metadata || {};
       document.getElementById('user-name').textContent = (meta.full_name || 'vendedor').split(' ')[0];
 
-      document.getElementById('logout').addEventListener('click', async () => {
-        await sb.auth.signOut();
-        location.href = '/entrar.html';
-      });
+      // KPIs do dia
+      const money = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      const today = new Date().toLocaleDateString('en-CA');
+      const month = today.slice(0, 7);
+      try {
+        const h = await authHeader();
+        const [salesRes, goalsRes] = await Promise.all([
+          fetch(`/api/sales?month=${month}`, { headers: h }).then((r) => r.json()),
+          fetch(`/api/goals?month=${month}`, { headers: h }).then((r) => r.json()),
+        ]);
+        const todaySales = (salesRes.sales || []).filter((s) => s.date === today);
+        const rev = todaySales.reduce((a, s) => a + (+s.revenue), 0);
+        const profit = todaySales.reduce((a, s) => a + ((+s.revenue) - (+s.fee_mp) - (+s.freight) - (+s.cmv) - (+s.ads_ml) - (+s.ads_ext) - (+s.tax)), 0);
+        const margin = rev > 0 ? (profit / rev) * 100 : 0;
+        const geral = (goalsRes.goals || []).find((g) => !g.store_id);
+        const dim = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
+        const metaDia = geral ? (+geral.amount) / dim : 0;
+        document.getElementById('k-rev').textContent = money(rev);
+        document.getElementById('k-profit').textContent = money(profit);
+        document.getElementById('k-margin').textContent = margin.toFixed(1) + '%';
+        document.getElementById('k-goal').textContent = geral ? money(metaDia) : '—';
+      } catch (_) {}
 
-      // MFA (TOTP) - Google Authenticator
+      // MFA
       const btn = document.getElementById('mfa-btn');
       btn.addEventListener('click', async () => {
         btn.disabled = true;
         const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp' });
         if (error) { document.getElementById('mfa-msg').textContent = error.message; btn.disabled = false; return; }
-        document.getElementById('qr').innerHTML = data.totp.qr_code
-          ? `<img src="${data.totp.qr_code}" alt="QR Code MFA" width="180" />`
-          : `<code>${data.totp.secret}</code>`;
+        document.getElementById('qr').innerHTML = data.totp.qr_code ? `<img src="${data.totp.qr_code}" width="180" alt="QR" />` : `<code>${data.totp.secret}</code>`;
         document.getElementById('mfa-setup').hidden = false;
         document.getElementById('mfa-form').dataset.factor = data.id;
       });

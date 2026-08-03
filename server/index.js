@@ -395,62 +395,79 @@ app.put('/api/settings', requireAdmin, async (req, res) => {
 });
 
 // ===========================================================================
-// FASE 2 - VENDAS & CUSTOS (protegido por admin token)
+// FASE 2 - VENDAS & CUSTOS (multi-tenant: autenticado por login do Supabase)
+// Cada usuario ve apenas os proprios dados (escopo por user_id).
 // ===========================================================================
 
+// Middleware: exige um JWT de usuario do Supabase (Authorization: Bearer <token>)
+async function requireUser(req, res, next) {
+  const auth = req.headers['authorization'] || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  if (!supabase) { req.userId = 'dev-user'; return next(); } // modo memoria (dev)
+  if (!token) return res.status(401).json({ error: 'Nao autenticado.' });
+  try {
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data?.user) return res.status(401).json({ error: 'Sessao invalida.' });
+    req.userId = data.user.id;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Sessao invalida.' });
+  }
+}
+
 // ---------- LOJAS ----------
-app.get('/api/stores', requireAdmin, async (req, res) => {
+app.get('/api/stores', requireUser, async (req, res) => {
   try {
     if (supabase) {
-      const { data, error } = await supabase.from('stores').select('*').order('created_at');
+      const { data, error } = await supabase.from('stores').select('*').eq('user_id', req.userId).order('created_at');
       if (error) throw error;
       return res.json({ stores: data });
     }
-    return res.json({ stores: memStores });
+    return res.json({ stores: memStores.filter((s) => s.user_id === req.userId) });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao listar lojas.' }); }
 });
 
-app.post('/api/stores', requireAdmin, async (req, res) => {
+app.post('/api/stores', requireUser, async (req, res) => {
   const name = (req.body?.name || '').trim();
   const color = (req.body?.color || '#1d7a5f').trim();
   if (!name) return res.status(400).json({ error: 'Nome da loja e obrigatorio.' });
   try {
     if (supabase) {
-      const { data, error } = await supabase.from('stores').insert({ name, color }).select().single();
+      const { data, error } = await supabase.from('stores').insert({ name, color, user_id: req.userId }).select().single();
       if (error) throw error;
       return res.status(201).json({ store: data });
     }
-    const store = { id: makeId(), name, color, created_at: new Date().toISOString() };
+    const store = { id: makeId(), name, color, user_id: req.userId, created_at: new Date().toISOString() };
     memStores.push(store);
     return res.status(201).json({ store });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao criar loja.' }); }
 });
 
-app.put('/api/stores/:id', requireAdmin, async (req, res) => {
+app.put('/api/stores/:id', requireUser, async (req, res) => {
   const { id } = req.params;
   const patch = {};
   if (req.body?.name != null) patch.name = String(req.body.name).trim();
   if (req.body?.color != null) patch.color = String(req.body.color).trim();
   try {
     if (supabase) {
-      const { error } = await supabase.from('stores').update(patch).eq('id', id);
+      const { error } = await supabase.from('stores').update(patch).eq('id', id).eq('user_id', req.userId);
       if (error) throw error;
     } else {
-      const s = memStores.find((x) => x.id === id);
+      const s = memStores.find((x) => x.id === id && x.user_id === req.userId);
       if (s) Object.assign(s, patch);
     }
     return res.json({ ok: true });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao atualizar loja.' }); }
 });
 
-app.delete('/api/stores/:id', requireAdmin, async (req, res) => {
+app.delete('/api/stores/:id', requireUser, async (req, res) => {
   const { id } = req.params;
   try {
     if (supabase) {
-      const { error } = await supabase.from('stores').delete().eq('id', id);
+      const { error } = await supabase.from('stores').delete().eq('id', id).eq('user_id', req.userId);
       if (error) throw error;
     } else {
-      const i = memStores.findIndex((x) => x.id === id);
+      const i = memStores.findIndex((x) => x.id === id && x.user_id === req.userId);
       if (i >= 0) memStores.splice(i, 1);
       for (let j = memSales.length - 1; j >= 0; j--) if (memSales[j].store_id === id) memSales.splice(j, 1);
     }
@@ -467,19 +484,19 @@ function normalizeSale(body) {
   return rec;
 }
 
-app.get('/api/sales', requireAdmin, async (req, res) => {
+app.get('/api/sales', requireUser, async (req, res) => {
   const month = req.query.month; // 'YYYY-MM'
   const store = req.query.store;  // opcional
   try {
     if (supabase) {
-      let q = supabase.from('sales').select('*').order('date', { ascending: true });
+      let q = supabase.from('sales').select('*').eq('user_id', req.userId).order('date', { ascending: true });
       if (month) q = q.gte('date', `${month}-01`).lte('date', `${month}-31`);
       if (store) q = q.eq('store_id', store);
       const { data, error } = await q;
       if (error) throw error;
       return res.json({ sales: data });
     }
-    let list = memSales.slice();
+    let list = memSales.filter((s) => s.user_id === req.userId);
     if (month) list = list.filter((s) => s.date.startsWith(month));
     if (store) list = list.filter((s) => s.store_id === store);
     list.sort((a, b) => a.date.localeCompare(b.date));
@@ -487,52 +504,52 @@ app.get('/api/sales', requireAdmin, async (req, res) => {
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao listar vendas.' }); }
 });
 
-app.post('/api/sales', requireAdmin, async (req, res) => {
+app.post('/api/sales', requireUser, async (req, res) => {
   const rec = normalizeSale(req.body || {});
   if (!rec.date || !rec.store_id) return res.status(400).json({ error: 'Data e loja sao obrigatorias.' });
   try {
     if (supabase) {
-      const { data, error } = await supabase.from('sales').insert(rec).select().single();
+      const { data, error } = await supabase.from('sales').insert({ ...rec, user_id: req.userId }).select().single();
       if (error) {
         if (error.code === '23505') return res.status(409).json({ error: 'Ja existe um lancamento para esta data e loja. Edite o registro existente ou escolha outra data.' });
         throw error;
       }
       return res.status(201).json({ sale: data });
     }
-    if (memSales.some((s) => s.date === rec.date && s.store_id === rec.store_id))
+    if (memSales.some((s) => s.user_id === req.userId && s.date === rec.date && s.store_id === rec.store_id))
       return res.status(409).json({ error: 'Ja existe um lancamento para esta data e loja.' });
-    const sale = { id: makeId(), ...rec, created_at: new Date().toISOString() };
+    const sale = { id: makeId(), ...rec, user_id: req.userId, created_at: new Date().toISOString() };
     memSales.push(sale);
     return res.status(201).json({ sale });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao salvar venda.' }); }
 });
 
-app.put('/api/sales/:id', requireAdmin, async (req, res) => {
+app.put('/api/sales/:id', requireUser, async (req, res) => {
   const { id } = req.params;
   const rec = normalizeSale(req.body || {});
   try {
     if (supabase) {
-      const { error } = await supabase.from('sales').update(rec).eq('id', id);
+      const { error } = await supabase.from('sales').update(rec).eq('id', id).eq('user_id', req.userId);
       if (error) {
         if (error.code === '23505') return res.status(409).json({ error: 'Ja existe um lancamento para esta data e loja.' });
         throw error;
       }
     } else {
-      const s = memSales.find((x) => x.id === id);
+      const s = memSales.find((x) => x.id === id && x.user_id === req.userId);
       if (s) Object.assign(s, rec);
     }
     return res.json({ ok: true });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao atualizar venda.' }); }
 });
 
-app.delete('/api/sales/:id', requireAdmin, async (req, res) => {
+app.delete('/api/sales/:id', requireUser, async (req, res) => {
   const { id } = req.params;
   try {
     if (supabase) {
-      const { error } = await supabase.from('sales').delete().eq('id', id);
+      const { error } = await supabase.from('sales').delete().eq('id', id).eq('user_id', req.userId);
       if (error) throw error;
     } else {
-      const i = memSales.findIndex((x) => x.id === id);
+      const i = memSales.findIndex((x) => x.id === id && x.user_id === req.userId);
       if (i >= 0) memSales.splice(i, 1);
     }
     return res.json({ ok: true });
@@ -540,39 +557,39 @@ app.delete('/api/sales/:id', requireAdmin, async (req, res) => {
 });
 
 // ---------- METAS ----------
-app.get('/api/goals', requireAdmin, async (req, res) => {
+app.get('/api/goals', requireUser, async (req, res) => {
   const month = req.query.month;
   try {
     if (supabase) {
-      let q = supabase.from('goals').select('*');
+      let q = supabase.from('goals').select('*').eq('user_id', req.userId);
       if (month) q = q.eq('month', month);
       const { data, error } = await q;
       if (error) throw error;
       return res.json({ goals: data });
     }
-    return res.json({ goals: memGoals.filter((g) => !month || g.month === month) });
+    return res.json({ goals: memGoals.filter((g) => g.user_id === req.userId && (!month || g.month === month)) });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao listar metas.' }); }
 });
 
-app.put('/api/goals', requireAdmin, async (req, res) => {
+app.put('/api/goals', requireUser, async (req, res) => {
   const month = (req.body?.month || '').trim();
   const store_id = req.body?.store_id || null;
   const amount = Number(req.body?.amount) || 0;
   if (!month) return res.status(400).json({ error: 'Mes e obrigatorio.' });
   try {
     if (supabase) {
-      // upsert manual (delete + insert) para respeitar o indice com coalesce
-      let del = supabase.from('goals').delete().eq('month', month);
+      // upsert manual (delete + insert) respeitando o indice (user_id, month, store)
+      let del = supabase.from('goals').delete().eq('user_id', req.userId).eq('month', month);
       del = store_id ? del.eq('store_id', store_id) : del.is('store_id', null);
       await del;
       if (amount > 0) {
-        const { error } = await supabase.from('goals').insert({ month, store_id, amount });
+        const { error } = await supabase.from('goals').insert({ month, store_id, amount, user_id: req.userId });
         if (error) throw error;
       }
     } else {
-      const i = memGoals.findIndex((g) => g.month === month && (g.store_id || null) === store_id);
+      const i = memGoals.findIndex((g) => g.user_id === req.userId && g.month === month && (g.store_id || null) === store_id);
       if (i >= 0) memGoals.splice(i, 1);
-      if (amount > 0) memGoals.push({ id: makeId(), month, store_id, amount });
+      if (amount > 0) memGoals.push({ id: makeId(), month, store_id, amount, user_id: req.userId });
     }
     return res.json({ ok: true });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao salvar meta.' }); }

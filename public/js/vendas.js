@@ -2,8 +2,6 @@
 // FinanceEcom Free - Vendas & Custos
 // ===========================================================================
 const $ = (id) => document.getElementById(id);
-const loginView = $('login-view');
-const appView = $('app-view');
 
 let stores = [];
 let sales = [];
@@ -12,14 +10,14 @@ let editingId = null;
 
 const state = { month: '', store: '' };
 
-// ---------- Auth ----------
-const getToken = () => sessionStorage.getItem('admin_token') || '';
+// ---------- Auth (Supabase) ----------
 async function api(path, options = {}) {
+  const h = await authHeader();
   const res = await fetch(path, {
     ...options,
-    headers: { 'x-admin-token': getToken(), 'Content-Type': 'application/json', ...(options.headers || {}) },
+    headers: { ...h, 'Content-Type': 'application/json', ...(options.headers || {}) },
   });
-  if (res.status === 401) throw new Error('Token inválido.');
+  if (res.status === 401) { location.href = '/entrar.html'; throw new Error('Sessão expirada.'); }
   if (!res.ok) { let m = 'Erro.'; try { m = (await res.json()).error || m; } catch (_) {} throw new Error(m); }
   return res.status === 204 ? {} : res.json();
 }
@@ -433,15 +431,6 @@ function exportCSV() {
 // ===========================================================================
 // Eventos
 // ===========================================================================
-function showApp() { loginView.hidden = true; appView.hidden = false; $('logout').hidden = false; }
-
-$('login-btn').addEventListener('click', async () => {
-  sessionStorage.setItem('admin_token', $('token-input').value.trim());
-  try { await loadAll(); showApp(); }
-  catch (e) { $('login-msg').textContent = e.message; $('login-msg').classList.add('err'); sessionStorage.removeItem('admin_token'); }
-});
-$('logout').addEventListener('click', () => { sessionStorage.removeItem('admin_token'); location.reload(); });
-
 $('month-sel').addEventListener('change', (e) => { state.month = e.target.value; loadAll(); });
 $('store-filter').addEventListener('change', (e) => { state.store = e.target.value; loadAll(); });
 $('manage-stores').addEventListener('click', () => { $('stores-panel').hidden = !$('stores-panel').hidden; });
@@ -501,7 +490,11 @@ $('stores-list').addEventListener('click', async (e) => {
 });
 
 // Init
-state.month = curMonth();
-$('month-sel').value = state.month;
-$('sales-form').date.value = todayStr();
-if (getToken()) { loadAll().then(showApp).catch(() => sessionStorage.removeItem('admin_token')); }
+(async () => {
+  const session = await initShell('vendas');
+  if (!session) return;
+  state.month = curMonth();
+  $('month-sel').value = state.month;
+  $('sales-form').date.value = todayStr();
+  await loadAll();
+})();
