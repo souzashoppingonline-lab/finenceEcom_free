@@ -216,6 +216,21 @@ button:hover { background: var(--primary-dark); }
 .chart-svg .axis-x { fill: var(--muted); font-size: 10px; text-anchor: middle; }
 .chart-svg .bar-visits { fill: #9db8e0; }
 .chart-svg .bar-signups { fill: var(--primary); }
+.health-card { margin-top: 24px; }
+.health-overall { font-size: 0.85rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; margin-left: 8px; }
+.health-overall.ok { background: #eafaf3; color: #17915f; }
+.health-overall.warn { background: #fff7e8; color: #b7791f; }
+.health-list { display: flex; flex-direction: column; gap: 2px; margin: 8px 0; }
+.health-row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--border); }
+.health-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 10px; }
+.health-dot.up { background: #2bb37e; box-shadow: 0 0 0 3px rgba(43,179,126,0.18); }
+.health-dot.down { background: #d9645f; box-shadow: 0 0 0 3px rgba(217,100,95,0.18); }
+.health-info { flex: 1; display: flex; flex-direction: column; }
+.health-info span { font-size: 0.82rem; }
+.health-status { font-size: 0.82rem; font-weight: 600; }
+.health-status.ok { color: #17915f; }
+.health-status.warn { color: #b7791f; }
+
 .create-card { margin-top: 24px; }
 .create-card h3 { margin: 0 0 14px; }
 .inline-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }

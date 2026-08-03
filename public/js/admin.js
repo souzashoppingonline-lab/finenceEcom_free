@@ -111,6 +111,8 @@ async function loadDashboard() {
   const { series } = await api('/api/timeseries?days=14');
   renderChart(series);
 
+  loadHealth();
+
   const settings = await api('/api/settings');
   document.getElementById('support-input').value = formatWhats(settings.support_whatsapp);
 
@@ -118,6 +120,26 @@ async function loadDashboard() {
   currentLeads = leads;
   renderTable();
 }
+
+async function loadHealth() {
+  const list = document.getElementById('health-list');
+  const overall = document.getElementById('health-overall');
+  try {
+    const h = await api('/api/health-status');
+    overall.textContent = h.overall === 'ok' ? 'Tudo operacional' : 'Atenção';
+    overall.className = 'health-overall ' + (h.overall === 'ok' ? 'ok' : 'warn');
+    list.innerHTML = h.services.map((s) => `
+      <div class="health-row">
+        <span class="health-dot ${s.ok ? 'up' : 'down'}"></span>
+        <div class="health-info"><b>${escapeHtml(s.name)}</b><span class="muted">${escapeHtml(s.detail || '')}</span></div>
+        <span class="health-status ${s.ok ? 'ok' : 'warn'}">${escapeHtml(s.status)}</span>
+      </div>`).join('');
+    document.getElementById('health-time').textContent = 'Verificado às ' + new Date(h.checkedAt).toLocaleTimeString('pt-BR');
+  } catch (err) {
+    list.innerHTML = `<p class="muted">Não foi possível verificar (${escapeHtml(err.message)}).</p>`;
+  }
+}
+document.getElementById('health-refresh')?.addEventListener('click', loadHealth);
 
 function showDashboard() {
   loginView.hidden = true;

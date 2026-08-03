@@ -626,6 +626,40 @@ app.post('/api/imports', requireUser, async (req, res) => {
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao registrar importacao.' }); }
 });
 
+// ---------- SAUDE DO SERVIDOR (painel admin) ----------
+app.get('/api/health-status', requireAdmin, async (req, res) => {
+  const services = [];
+
+  // 1. Servidor (aplicacao)
+  const up = process.uptime();
+  services.push({
+    name: 'Aplicação (API)', ok: true, status: 'Online',
+    detail: `no ar há ${Math.floor(up / 3600)}h ${Math.floor((up % 3600) / 60)}min`,
+  });
+
+  // 2. Banco de dados (Supabase)
+  if (supabase) {
+    const t0 = Date.now();
+    try {
+      const { error } = await supabase.from('leads').select('id', { count: 'exact', head: true });
+      if (error) throw error;
+      services.push({ name: 'Banco de dados (Supabase)', ok: true, status: 'Conectado', detail: `resposta em ${Date.now() - t0}ms` });
+    } catch (err) {
+      services.push({ name: 'Banco de dados (Supabase)', ok: false, status: 'Falha', detail: 'sem resposta do banco' });
+    }
+  } else {
+    services.push({ name: 'Banco de dados (Supabase)', ok: false, status: 'Não configurado', detail: 'rodando em modo memória' });
+  }
+
+  // 3. E-mail de notificacao (SMTP)
+  services.push(mailer
+    ? { name: 'E-mail de notificação (SMTP)', ok: true, status: 'Ativo', detail: 'notificações habilitadas' }
+    : { name: 'E-mail de notificação (SMTP)', ok: false, status: 'Desativado', detail: 'SMTP não configurado' });
+
+  const allOk = services.every((s) => s.ok);
+  res.json({ overall: allOk ? 'ok' : 'degraded', checkedAt: new Date().toISOString(), services });
+});
+
 app.get('/health', (req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => {
