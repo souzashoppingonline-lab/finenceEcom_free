@@ -347,6 +347,11 @@ tbody tr:hover { background: #f7f9fc; }
 .emp-tag { font-weight: 700; margin-right: 10px; }
 .receb-footer { display: flex; gap: 28px; justify-content: flex-end; padding: 16px 4px; font-size: 0.95rem; }
 
+/* ---------- Cartões: faturas ---------- */
+.fatura-card { text-align: center; }
+.fatura-card h4 { margin: 0 0 4px; }
+.fatura-total { font-size: 1.8rem; font-weight: 700; color: #6b46c1; margin: 10px 0 14px; }
+
 /* ---------- Dashboard: cards de atalho ---------- */
 .dash-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 22px; }
 .dash-card-link { display: flex; flex-direction: column; gap: 4px; padding: 20px; border: 1px solid var(--border); border-radius: var(--radius); text-decoration: none; color: var(--text); background: var(--card); transition: transform .1s, box-shadow .15s; }

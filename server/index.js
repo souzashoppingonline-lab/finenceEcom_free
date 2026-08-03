@@ -85,6 +85,9 @@ const memImports = [];
 const memBoletos = [];
 const memCF = []; // cash_flow_entries
 const memLists = []; // fornecedores, categorias, etc.
+const memCards = [];
+const memParcelas = [];
+const memFaturaPagtos = [];
 
 function makeId() {
   return 'mem-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -924,6 +927,195 @@ app.delete('/api/lists/:id', requireUser, async (req, res) => {
     else { const i = memLists.findIndex((l) => l.id === id && l.user_id === req.userId); if (i >= 0) memLists.splice(i, 1); }
     return res.json({ ok: true });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao excluir.' }); }
+});
+
+// ===========================================================================
+// CARTAO DE CREDITO (cartoes, parcelas, pagar fatura -> agrupa por empresa)
+// ===========================================================================
+function addMonths(ym, n) {
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(y, m - 1 + n, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// ---------- CARTOES ----------
+app.get('/api/cards', requireUser, async (req, res) => {
+  try {
+    if (supabase) { const { data, error } = await supabase.from('cartoes').select('*').eq('user_id', req.userId).order('name'); if (error) throw error; return res.json({ cards: data }); }
+    return res.json({ cards: memCards.filter((c) => c.user_id === req.userId) });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao listar cartoes.' }); }
+});
+
+app.post('/api/cards', requireUser, async (req, res) => {
+  const b = req.body || {};
+  const rec = { name: (b.name || '').trim(), closing_day: Number(b.closing_day) || 1, due_day: Number(b.due_day) || 10, card_limit: Number(b.card_limit) || 0, color: (b.color || '#6b46c1').trim() };
+  if (!rec.name) return res.status(400).json({ error: 'Nome do cartao e obrigatorio.' });
+  try {
+    if (supabase) { const { data, error } = await supabase.from('cartoes').insert({ ...rec, user_id: req.userId }).select().single(); if (error) throw error; return res.status(201).json({ card: data }); }
+    const card = { id: makeId(), ...rec, user_id: req.userId }; memCards.push(card); return res.status(201).json({ card });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao criar cartao.' }); }
+});
+
+app.put('/api/cards/:id', requireUser, async (req, res) => {
+  const { id } = req.params; const patch = {};
+  ['name', 'color'].forEach((k) => { if (req.body?.[k] != null) patch[k] = String(req.body[k]).trim(); });
+  ['closing_day', 'due_day', 'card_limit'].forEach((k) => { if (req.body?.[k] != null) patch[k] = Number(req.body[k]) || 0; });
+  try {
+    if (supabase) { const { error } = await supabase.from('cartoes').update(patch).eq('id', id).eq('user_id', req.userId); if (error) throw error; }
+    else { const c = memCards.find((x) => x.id === id && x.user_id === req.userId); if (c) Object.assign(c, patch); }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao atualizar cartao.' }); }
+});
+
+app.delete('/api/cards/:id', requireUser, async (req, res) => {
+  const { id } = req.params;
+  try {
+    if (supabase) { await supabase.from('parcelas_cartao').delete().eq('user_id', req.userId).eq('cartao_id', id); const { error } = await supabase.from('cartoes').delete().eq('id', id).eq('user_id', req.userId); if (error) throw error; }
+    else { for (let i = memParcelas.length - 1; i >= 0; i--) if (memParcelas[i].cartao_id === id) memParcelas.splice(i, 1); const i = memCards.findIndex((x) => x.id === id && x.user_id === req.userId); if (i >= 0) memCards.splice(i, 1); }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao excluir cartao.' }); }
+});
+
+// ---------- PARCELAS ----------
+app.get('/api/parcelas', requireUser, async (req, res) => {
+  const { cartao, fatura_mes, status } = req.query;
+  try {
+    if (supabase) {
+      let q = supabase.from('parcelas_cartao').select('*').eq('user_id', req.userId).order('fatura_mes');
+      if (cartao) q = q.eq('cartao_id', cartao);
+      if (fatura_mes) q = q.eq('fatura_mes', fatura_mes);
+      if (status) q = q.eq('status', status);
+      const { data, error } = await q; if (error) throw error; return res.json({ parcelas: data });
+    }
+    let list = memParcelas.filter((p) => p.user_id === req.userId);
+    if (cartao) list = list.filter((p) => p.cartao_id === cartao);
+    if (fatura_mes) list = list.filter((p) => p.fatura_mes === fatura_mes);
+    if (status) list = list.filter((p) => p.status === status);
+    return res.json({ parcelas: list });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao listar parcelas.' }); }
+});
+
+// Cria uma compra parcelada -> gera N parcelas em faturas consecutivas
+app.post('/api/parcelas/purchase', requireUser, async (req, res) => {
+  const b = req.body || {};
+  const cartao_id = b.cartao_id;
+  const description = (b.description || '').trim();
+  const empresa = (b.empresa || '').trim() || null;
+  const total = Number(b.value) || 0;
+  const n = Math.max(1, Number(b.installments) || 1);
+  const purchase_date = b.purchase_date || new Date().toISOString().slice(0, 10);
+  if (!cartao_id || !description || total <= 0) return res.status(400).json({ error: 'Cartao, descricao e valor sao obrigatorios.' });
+  try {
+    // busca o cartao para o dia de fechamento
+    let closing = 1;
+    if (supabase) { const { data } = await supabase.from('cartoes').select('closing_day').eq('id', cartao_id).eq('user_id', req.userId).maybeSingle(); closing = data?.closing_day || 1; }
+    else { closing = (memCards.find((c) => c.id === cartao_id) || {}).closing_day || 1; }
+    const pDay = Number(purchase_date.slice(8, 10));
+    const pMonth = purchase_date.slice(0, 7);
+    const firstFatura = pDay <= closing ? pMonth : addMonths(pMonth, 1);
+    const valor = Math.round((total / n) * 100) / 100;
+    const parcelas = [];
+    for (let i = 0; i < n; i++) {
+      parcelas.push({
+        cartao_id, description, empresa, value: valor,
+        installment_no: i + 1, installments_total: n, purchase_date,
+        fatura_mes: addMonths(firstFatura, i), status: 'pendente', user_id: req.userId,
+      });
+    }
+    if (supabase) { const { error } = await supabase.from('parcelas_cartao').insert(parcelas); if (error) throw error; }
+    else { parcelas.forEach((p) => memParcelas.push({ id: makeId(), ...p, created_at: new Date().toISOString() })); }
+    return res.status(201).json({ ok: true, count: n });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao lancar compra.' }); }
+});
+
+app.delete('/api/parcelas/:id', requireUser, async (req, res) => {
+  const { id } = req.params;
+  try {
+    if (supabase) { const { error } = await supabase.from('parcelas_cartao').delete().eq('id', id).eq('user_id', req.userId); if (error) throw error; }
+    else { const i = memParcelas.findIndex((p) => p.id === id && p.user_id === req.userId); if (i >= 0) memParcelas.splice(i, 1); }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao excluir parcela.' }); }
+});
+
+// ---------- FATURAS (computadas) ----------
+app.get('/api/faturas', requireUser, async (req, res) => {
+  try {
+    let parcelas, cards;
+    if (supabase) {
+      const [p, c] = await Promise.all([
+        supabase.from('parcelas_cartao').select('*').eq('user_id', req.userId).eq('status', 'pendente'),
+        supabase.from('cartoes').select('*').eq('user_id', req.userId),
+      ]);
+      parcelas = p.data || []; cards = c.data || [];
+    } else {
+      parcelas = memParcelas.filter((x) => x.user_id === req.userId && x.status === 'pendente');
+      cards = memCards.filter((x) => x.user_id === req.userId);
+    }
+    const cardName = (id) => (cards.find((c) => c.id === id) || {}).name || 'Cartão';
+    const groups = {};
+    for (const p of parcelas) {
+      const key = `${p.cartao_id}|${p.fatura_mes}`;
+      if (!groups[key]) groups[key] = { cartao_id: p.cartao_id, cartao: cardName(p.cartao_id), fatura_mes: p.fatura_mes, total: 0, count: 0 };
+      groups[key].total += Number(p.value); groups[key].count += 1;
+    }
+    const faturas = Object.values(groups).sort((a, b) => a.fatura_mes.localeCompare(b.fatura_mes));
+    return res.json({ faturas });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao gerar faturas.' }); }
+});
+
+// PAGAR FATURA: marca parcelas pagas, registra pagamento e agrupa por empresa no FC
+app.post('/api/faturas/pay', requireUser, async (req, res) => {
+  const cartao_id = req.body?.cartao_id;
+  const fatura_mes = req.body?.fatura_mes;
+  const data_pagamento = req.body?.data_pagamento || new Date().toISOString().slice(0, 10);
+  if (!cartao_id || !fatura_mes) return res.status(400).json({ error: 'Cartao e mes da fatura sao obrigatorios.' });
+  try {
+    // busca parcelas pendentes da fatura
+    let parcelas, cardName = 'Cartão';
+    if (supabase) {
+      const { data } = await supabase.from('parcelas_cartao').select('*').eq('user_id', req.userId).eq('cartao_id', cartao_id).eq('fatura_mes', fatura_mes).eq('status', 'pendente');
+      parcelas = data || [];
+      const { data: c } = await supabase.from('cartoes').select('name').eq('id', cartao_id).maybeSingle();
+      cardName = c?.name || 'Cartão';
+    } else {
+      parcelas = memParcelas.filter((p) => p.user_id === req.userId && p.cartao_id === cartao_id && p.fatura_mes === fatura_mes && p.status === 'pendente');
+      cardName = (memCards.find((c) => c.id === cartao_id) || {}).name || 'Cartão';
+    }
+    if (parcelas.length === 0) return res.status(404).json({ error: 'Nenhuma parcela pendente nesta fatura.' });
+
+    // 1. marca pagas
+    if (supabase) await supabase.from('parcelas_cartao').update({ status: 'pago' }).eq('user_id', req.userId).eq('cartao_id', cartao_id).eq('fatura_mes', fatura_mes).eq('status', 'pendente');
+    else parcelas.forEach((p) => { p.status = 'pago'; });
+
+    const total = parcelas.reduce((a, p) => a + Number(p.value), 0);
+
+    // 2. registra pagamento
+    const pagto = { user_id: req.userId, cartao_id, fatura_mes, data_pagamento, valor_pago: total, parcelas_count: parcelas.length };
+    if (supabase) await supabase.from('fatura_pagamentos').insert(pagto);
+    else memFaturaPagtos.push({ id: makeId(), ...pagto, created_at: new Date().toISOString() });
+
+    // 3. agrupa por empresa -> 1 lancamento por empresa no FC
+    const empGroups = {};
+    for (const p of parcelas) { const emp = (p.empresa || '').trim(); (empGroups[emp] = empGroups[emp] || { valor: 0, count: 0 }); empGroups[emp].valor += Number(p.value); empGroups[emp].count += 1; }
+    const [y, m] = fatura_mes.split('-'); const mesLabel = `${m}/${y}`;
+    const entries = Object.entries(empGroups).map(([emp, g]) => ({
+      user_id: req.userId, type: 'expense', date: data_pagamento, value: g.valor,
+      category: 'Cartão de Crédito',
+      reason: emp ? `Fatura ${cardName} — ${emp} — ${mesLabel}` : `Fatura ${cardName} — ${mesLabel}`,
+      empresa: emp || null, boleto_id: null, nota_fiscal: null,
+    }));
+    if (supabase) await supabase.from('cash_flow_entries').insert(entries);
+    else entries.forEach((e) => memCF.push({ id: makeId(), ...e, created_at: new Date().toISOString() }));
+
+    return res.json({ ok: true, total, parcelas: parcelas.length, lancamentos: entries.length });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao pagar fatura.' }); }
+});
+
+app.get('/api/fatura-pagamentos', requireUser, async (req, res) => {
+  try {
+    if (supabase) { const { data, error } = await supabase.from('fatura_pagamentos').select('*').eq('user_id', req.userId).order('data_pagamento', { ascending: false }).limit(100); if (error) throw error; return res.json({ pagamentos: data }); }
+    return res.json({ pagamentos: memFaturaPagtos.filter((p) => p.user_id === req.userId).slice().reverse() });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao listar pagamentos.' }); }
 });
 
 app.get('/health', (req, res) => res.json({ ok: true }));
