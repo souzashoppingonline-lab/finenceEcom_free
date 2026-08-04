@@ -86,6 +86,7 @@ function renderKPIs() {
     kpi('Entradas previstas (90d)', money(entradas), 'pos') +
     kpi('Saídas previstas (90d)', money(saidas), 'neg') +
     kpi('Caixa projetado (90d)', money(proj), proj >= 0 ? 'pos' : 'neg');
+  window.animateCounts?.($('proj-kpis').querySelectorAll('.stat-value'));
 }
 
 function renderPeriods() {

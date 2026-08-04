@@ -128,6 +128,7 @@ function renderBreakEven() {
       Ponto de Equilíbrio = Custos Fixos ÷ Margem de Contribuição %<br>
       Com margem de <b>${be.mcPct.toFixed(1)}%</b> e custos fixos de <b>${money(be.custosFixos)}</b>, você precisa faturar <b>${money(be.pe)}</b> para não ter prejuízo.</p>
     </div>`;
+  window.animateCounts?.($('be-content').querySelectorAll('.stat-value'));
 }
 
 // ---------- Form ----------

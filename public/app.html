@@ -110,6 +110,8 @@
         document.getElementById('dc-empresas').textContent = (emp.stores || []).length;
       } catch (_) {}
 
+      window.animateCounts?.(document.querySelectorAll('.stat-value'));
+
       // MFA
       const btn = document.getElementById('mfa-btn');
       btn.addEventListener('click', async () => {

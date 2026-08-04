@@ -78,6 +78,7 @@ function renderKPIs() {
     kpi('A receber (pendente)', money(totalReceber), 'pos') +
     kpi('Saldo em caixa', money(saldo), saldo >= 0 ? 'pos' : 'neg') +
     kpi(dividaReal > 0 ? 'Dívida real projetada' : 'Superávit projetado', money(Math.abs(dividaReal)), dividaReal > 0 ? 'neg' : 'pos');
+  window.animateCounts?.($('boletos-kpis').querySelectorAll('.stat-value'));
 }
 
 // ---------- Empresa (chips no form + filtro) ----------

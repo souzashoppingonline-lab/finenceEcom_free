@@ -69,12 +69,38 @@ function renderSidebar(active) {
   });
 }
 
+// Barra de carregamento no topo (decorativa)
+function setLoad(on) {
+  let b = document.getElementById('loadbar');
+  if (!b) { b = document.createElement('div'); b.id = 'loadbar'; b.className = 'loadbar'; document.body.prepend(b); }
+  b.classList.toggle('active', on);
+}
+window.setLoad = setLoad;
+
+// Contagem animada (count-up) — anima os numeros de um container
+window.animateCounts = function (nodes) {
+  (nodes || document.querySelectorAll('.stat-value')).forEach((el) => {
+    const txt = el.textContent.trim();
+    if (!/\d/.test(txt) || el.dataset.animated === txt) return;
+    el.dataset.animated = txt;
+    const isPct = txt.includes('%'), isMoney = txt.includes('R$');
+    let num = parseFloat(txt.replace(/[^\d,-]/g, '').replace(',', '.'));
+    if (isNaN(num)) return;
+    const fmt = (v) => isMoney ? v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+      : isPct ? v.toFixed(1) + '%' : Math.round(v).toLocaleString('pt-BR');
+    const dur = 650, start = performance.now();
+    (function step(t) { const p = Math.min((t - start) / dur, 1), e = 1 - Math.pow(1 - p, 3); el.textContent = fmt(num * e); if (p < 1) requestAnimationFrame(step); else el.dataset.animated = txt; })(performance.now());
+  });
+};
+
 // Inicializa o shell. Retorna a sessao (ou redireciona para login).
 async function initShell(active) {
+  setLoad(true);
   const { data } = await sb.auth.getSession();
   if (!data.session) { location.href = '/entrar.html'; return null; }
   _session = data.session;
   renderSidebar(active);
+  setTimeout(() => setLoad(false), 1200);
   return _session;
 }
 

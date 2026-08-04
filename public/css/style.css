@@ -376,27 +376,33 @@ tbody tr:hover { background: #f7f9fc; }
 @keyframes drawLine { to { stroke-dashoffset: 0; } }
 @keyframes popDot { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: none; } }
 
-.page-dre #dre-cards .stat-card,
-.page-dre .dre-report .card,
-.page-dre .chart-card { animation: feUp .5s both; }
-.page-dre #dre-cards .stat-card:nth-child(1) { animation-delay: .04s; }
-.page-dre #dre-cards .stat-card:nth-child(2) { animation-delay: .10s; }
-.page-dre #dre-cards .stat-card:nth-child(3) { animation-delay: .16s; }
-.page-dre #dre-cards .stat-card:nth-child(4) { animation-delay: .22s; }
-.page-dre #dre-grid .dre-cell { animation: feUp .42s both; }
-.page-dre #dre-grid .dre-cell:nth-child(n) { animation-delay: calc(var(--i, 0) * .03s); }
-.page-dre #dre-grid .dre-cell:nth-child(2) { animation-delay: .03s; } .page-dre #dre-grid .dre-cell:nth-child(3) { animation-delay: .06s; }
-.page-dre #dre-grid .dre-cell:nth-child(4) { animation-delay: .09s; } .page-dre #dre-grid .dre-cell:nth-child(5) { animation-delay: .12s; }
-.page-dre #dre-grid .dre-cell:nth-child(6) { animation-delay: .15s; } .page-dre #dre-grid .dre-cell:nth-child(7) { animation-delay: .18s; }
-.page-dre #dre-grid .dre-cell:nth-child(8) { animation-delay: .21s; } .page-dre #dre-grid .dre-cell:nth-child(9) { animation-delay: .24s; }
-.page-dre #dre-grid .dre-cell:nth-child(10) { animation-delay: .27s; } .page-dre #dre-grid .dre-cell:nth-child(11) { animation-delay: .30s; } .page-dre #dre-grid .dre-cell:nth-child(12) { animation-delay: .33s; }
-.page-dre .stat-card:hover, .dre-cell:hover { transform: translateY(-2px); transition: transform .15s; }
+/* Entrada suave (todas as telas do app) */
+.app-body .stat-card,
+.app-body .chart-card,
+.app-body .report-card,
+.app-body .dash-card-link,
+.app-body .period-card,
+.app-body .fatura-card,
+.app-body .dre-report .card { animation: feUp .5s both; }
+.app-body .stats-grid .stat-card:nth-child(1) { animation-delay: .04s; }
+.app-body .stats-grid .stat-card:nth-child(2) { animation-delay: .10s; }
+.app-body .stats-grid .stat-card:nth-child(3) { animation-delay: .16s; }
+.app-body .stats-grid .stat-card:nth-child(4) { animation-delay: .22s; }
+.app-body .stats-grid .stat-card:nth-child(5) { animation-delay: .28s; }
+.dre-cell { animation: feUp .42s both; }
+#dre-grid .dre-cell:nth-child(2) { animation-delay: .03s; } #dre-grid .dre-cell:nth-child(3) { animation-delay: .06s; }
+#dre-grid .dre-cell:nth-child(4) { animation-delay: .09s; } #dre-grid .dre-cell:nth-child(5) { animation-delay: .12s; }
+#dre-grid .dre-cell:nth-child(6) { animation-delay: .15s; } #dre-grid .dre-cell:nth-child(7) { animation-delay: .18s; }
+#dre-grid .dre-cell:nth-child(8) { animation-delay: .21s; } #dre-grid .dre-cell:nth-child(9) { animation-delay: .24s; }
+#dre-grid .dre-cell:nth-child(10) { animation-delay: .27s; } #dre-grid .dre-cell:nth-child(11) { animation-delay: .30s; } #dre-grid .dre-cell:nth-child(12) { animation-delay: .33s; }
+.app-body .stat-card:hover, .dre-cell:hover { transform: translateY(-2px); transition: transform .15s; }
 
 .trend-line { stroke-dasharray: 1600; stroke-dashoffset: 1600; animation: drawLine 1.3s ease forwards; }
 .trend-dot { animation: popDot .3s both; }
 
 @media (prefers-reduced-motion: reduce) {
-  .page-dre .stat-card, .page-dre .dre-cell, .page-dre .card, .trend-line, .trend-dot { animation: none !important; stroke-dashoffset: 0 !important; }
+  .app-body .stat-card, .app-body .card, .dre-cell, .trend-line, .trend-dot,
+  .app-body .chart-card, .app-body .report-card, .app-body .dash-card-link, .app-body .period-card, .app-body .fatura-card { animation: none !important; stroke-dashoffset: 0 !important; }
 }
 
 /* ---------- Gráficos (donut / tendência) ---------- */

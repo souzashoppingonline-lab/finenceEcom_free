@@ -55,6 +55,7 @@ function renderKPIs() {
     kpi('Entradas (mês)', money(inc), 'pos') +
     kpi('Saídas (mês)', money(exp), 'neg') +
     kpi('Saldo projetado', money(proj), proj >= 0 ? 'pos' : 'neg');
+  window.animateCounts?.($('cf-kpis').querySelectorAll('.stat-value'));
 }
 
 function renderCompany() {
