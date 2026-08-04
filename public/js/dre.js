@@ -4,13 +4,43 @@
 const $ = (id) => document.getElementById(id);
 function selMonth() { return `${$('sel-year').value}-${String(+$('sel-month').value).padStart(2, '0')}`; }
 
+function setLoading(on) {
+  const b = document.getElementById('loadbar');
+  if (b) b.classList.toggle('active', on);
+}
+
+// Contagem animada dos números (count-up)
+function animateCounts(nodes) {
+  nodes.forEach((el) => {
+    const txt = el.textContent.trim();
+    if (!/\d/.test(txt)) return;
+    const isPct = txt.includes('%');
+    const isMoney = txt.includes('R$');
+    let num = parseFloat(txt.replace(/[^\d,-]/g, '').replace(',', '.'));
+    if (isNaN(num)) return;
+    const fmt = (v) => isMoney
+      ? (v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+      : isPct ? v.toFixed(1) + '%' : Math.round(v).toLocaleString('pt-BR');
+    const dur = 650, start = performance.now();
+    function step(t) {
+      const p = Math.min((t - start) / dur, 1), e = 1 - Math.pow(1 - p, 3);
+      el.textContent = fmt(num * e);
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+}
+
 async function refresh() {
+  setLoading(true);
   await loadFinance();
   renderGrid();
   renderCards();
   renderTrend();
   renderReport();
   renderHistory();
+  setLoading(false);
+  animateCounts(document.querySelectorAll('#dre-cards .stat-value, #dre-annual-tot b'));
 }
 
 function renderTrend() {

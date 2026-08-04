@@ -49,8 +49,8 @@ function trendChart(el, series, labels, { height = 220 } = {}) {
   });
   for (const s of series) {
     const line = s.values.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-    svg += `<path d="${line}" fill="none" stroke="${s.color}" stroke-width="2.5"/>`;
-    s.values.forEach((v, i) => { svg += `<circle cx="${x(i)}" cy="${y(v)}" r="2.5" fill="${s.color}"/>`; });
+    svg += `<path d="${line}" fill="none" stroke="${s.color}" stroke-width="2.5" class="trend-line"/>`;
+    s.values.forEach((v, i) => { svg += `<circle cx="${x(i)}" cy="${y(v)}" r="2.5" fill="${s.color}" class="trend-dot" style="animation-delay:${0.5 + i * 0.05}s"/>`; });
   }
   labels.forEach((l, i) => { if (n <= 12 || i % 2 === 0) svg += `<text x="${x(i)}" y="${H - 8}" class="axis-x">${l}</text>`; });
   svg += `</svg>`;
