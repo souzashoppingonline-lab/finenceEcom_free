@@ -85,8 +85,8 @@ function renderKPIs() {
 function renderEmpresaOptions() {
   const chips = $('empresa-chips');
   const names = stores.map((s) => s.name);
-  chips.innerHTML = `<button type="button" class="empresa-chip is-active" data-emp="">Nenhuma</button>` +
-    names.map((n) => `<button type="button" class="empresa-chip" data-emp="${esc(n)}">${esc(n)}</button>`).join('');
+  chips.innerHTML = `<button type="button" class="empresa-chip is-active" data-emp="" data-cnpj="">Nenhuma</button>` +
+    stores.map((s) => `<button type="button" class="empresa-chip" data-emp="${esc(s.name)}" data-cnpj="${esc(s.cnpj || '')}">${esc(s.name)}</button>`).join('');
   $('b-empresa').innerHTML = `<option value="">Todas</option>` + names.map((n) => `<option>${esc(n)}</option>`).join('');
   // Fornecedores, bancos e cartoes distintos dos proprios boletos
   const uniq = (key) => [...new Set(boletos.map((b) => (b[key] || '').trim()).filter(Boolean))].sort();
@@ -143,7 +143,7 @@ function renderTable() {
       <td class="${late ? 'venc-late' : ''}">${fmtDate(b.due_date)}${late ? ' <span class="tag-late">ATRASADO</span>' : ''}</td>
       <td><span class="type-badge">${esc(KIND_LABEL[b.kind] || 'Boleto')}</span></td>
       <td><b>${esc(b.name)}</b>${b.supplier ? ` <span class="supp">${esc(b.supplier)}</span>` : ''}</td>
-      <td>${esc(b.empresa || '—')}</td>
+      <td>${esc(b.empresa || '—')}${b.cnpj ? `<br><span class="supp" style="text-transform:none">${esc(b.cnpj)}</span>` : ''}</td>
       <td>${esc(b.numero_nf || '—')}</td>
       <td class="${b.direction === 'receber' ? 'pos' : ''}"><b>${money(b.value)}</b></td>
       <td>${statusPill}${linkedIds().has(b.id) ? ' <span class="badge-boleto">FC</span>' : ''}</td>
@@ -170,7 +170,7 @@ function editBoleto(id) {
   const b = boletos.find((x) => x.id === id); if (!b) return;
   const f = $('boleto-form');
   f.kind.value = b.kind || 'boleto'; f.due_date.value = b.due_date; f.category.value = b.category || '';
-  f.supplier.value = b.supplier || ''; f.empresa.value = b.empresa || ''; f.numero_nf.value = b.numero_nf || '';
+  f.supplier.value = b.supplier || ''; f.empresa.value = b.empresa || ''; f.cnpj.value = b.cnpj || ''; f.numero_nf.value = b.numero_nf || '';
   f.name.value = b.name; f.direction.value = b.direction; f.value.value = b.value;
   document.querySelectorAll('.kind-btn').forEach((x) => x.classList.toggle('is-active', x.dataset.kind === b.kind));
   document.querySelectorAll('.empresa-chip').forEach((c) => c.classList.toggle('is-active', c.dataset.emp === (b.empresa || '')));
@@ -201,6 +201,7 @@ $('empresa-chips').addEventListener('click', (e) => {
   document.querySelectorAll('.empresa-chip').forEach((c) => c.classList.remove('is-active'));
   chip.classList.add('is-active');
   $('boleto-form').empresa.value = chip.dataset.emp;
+  $('boleto-form').cnpj.value = chip.dataset.cnpj || '';
 });
 
 $('boleto-form').addEventListener('submit', async (e) => {
@@ -210,7 +211,7 @@ $('boleto-form').addEventListener('submit', async (e) => {
   const payload = {
     kind: f.kind.value, direction: f.direction.value, name: f.name.value.trim(), supplier: f.supplier.value.trim(),
     value: Number(f.value.value) || 0, due_date: f.due_date.value, category: f.category.value,
-    empresa: f.empresa.value.trim(), numero_nf: f.numero_nf.value.trim(),
+    empresa: f.empresa.value.trim(), cnpj: f.cnpj.value.trim(), numero_nf: f.numero_nf.value.trim(),
     status: f.status.value === 'pago' ? 'pago' : 'pendente', // "atrasado" é derivado da data
   };
   try {

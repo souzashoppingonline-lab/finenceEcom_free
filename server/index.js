@@ -859,6 +859,7 @@ function normBoleto(b) {
     direction: b.direction === 'receber' ? 'receber' : 'pagar',
     status: b.status === 'pago' ? 'pago' : 'pendente',
     empresa: b.empresa || null,
+    cnpj: (b.cnpj || '').trim() || null,
     numero_nf: (b.numero_nf || '').trim() || null,
   };
 }

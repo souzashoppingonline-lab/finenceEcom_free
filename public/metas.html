@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Metas — FinanceEcom Free</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="app-body">
+  <div id="sidebar-root"></div>
+  <main class="app-content">
+    <div class="dash-head dash-head-row">
+      <div>
+        <h1>🎯 Metas de Faturamento</h1>
+        <p class="muted">Defina metas do mês e acompanhe o progresso por empresa.</p>
+      </div>
+      <div class="head-actions"><input type="month" id="meta-month" class="filter-inp" /></div>
+    </div>
+
+    <!-- Meta geral -->
+    <div id="meta-geral"></div>
+
+    <!-- Metas por empresa -->
+    <h3 class="v-section-title">Metas por empresa</h3>
+    <div id="meta-stores" class="reports-grid"></div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/auth-common.js"></script>
+  <script src="/js/app-shell.js"></script>
+  <script src="/js/metas.js"></script>
+</body>
+</html>
