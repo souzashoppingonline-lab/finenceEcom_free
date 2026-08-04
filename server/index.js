@@ -99,7 +99,18 @@ function makeId() {
 }
 
 app.set('trust proxy', 1); // atras do Cloudflare/Render — usa X-Forwarded-For
-app.use(express.json());
+
+// Cabecalhos de seguranca (defesa em profundidade)
+app.use((req, res, next) => {
+  res.set('X-Content-Type-Options', 'nosniff');       // impede MIME sniffing
+  res.set('X-Frame-Options', 'SAMEORIGIN');            // anti-clickjacking
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.set('Permissions-Policy', 'geolocation=(), camera=(), microphone=()');
+  res.set('X-DNS-Prefetch-Control', 'off');
+  next();
+});
+
+app.use(express.json({ limit: '1mb' })); // limita tamanho do corpo (anti-DoS)
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ---------------------------------------------------------------------------
