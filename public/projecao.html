@@ -52,11 +52,34 @@
         <tbody></tbody>
       </table>
     </div>
+
+    <!-- Fluxo de Caixa Anual (manual) -->
+    <div class="dash-head-row" style="margin-top:34px">
+      <h3 style="margin:0">📒 Fluxo de Caixa Anual (extrato bancário)</h3>
+      <div class="head-actions"><select id="manual-year" class="filter-inp"></select></div>
+    </div>
+    <p class="muted">Lance o saldo do dia 1, entradas e saídas do banco. O sistema compara com o faturamento e o lucro.</p>
+    <div class="table-wrap">
+      <table id="manual-table">
+        <thead><tr>
+          <th>Mês</th><th>Saldo Dia 1</th><th>Entrada Banco</th><th>Saída Banco</th>
+          <th>Saldo Banco</th><th>Faturamento</th><th>Lucro %</th><th>Cresc. %</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card chart-card" style="margin-top:16px">
+      <h3>Comparativo anual — Faturamento × Saldo Banco</h3>
+      <div id="manual-chart"></div>
+    </div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/js/auth-common.js"></script>
   <script src="/js/app-shell.js"></script>
+  <script src="/js/dre-core.js"></script>
+  <script src="/js/charts.js"></script>
   <script src="/js/projecao.js"></script>
 </body>
 </html>

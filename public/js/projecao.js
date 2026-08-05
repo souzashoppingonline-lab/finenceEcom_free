@@ -163,9 +163,66 @@ function renderAlerts() {
 
 $('days-sel').addEventListener('change', renderTable);
 
+// ===========================================================================
+// Fluxo de Caixa Anual (manual)
+// ===========================================================================
+const MONTHS_PT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+let manualRows = [];
+let manualYear = new Date().getFullYear();
+
+async function loadManual() {
+  await loadFinance(); // sales + expenses (dre-core)
+  const { rows } = await api(`/api/manual-cashflow?year=${manualYear}`);
+  manualRows = rows || [];
+  renderManual();
+}
+
+function manualOf(month) { return manualRows.find((r) => r.month === month) || { day1: 0, bank_in: 0, bank_out: 0 }; }
+
+function renderManual() {
+  const dre = annualDRE(String(manualYear));
+  const tb = document.querySelector('#manual-table tbody');
+  const inp = (m, field, val) => `<input type="number" step="0.01" class="mini-inp" data-m="${m}" data-f="${field}" value="${val || ''}" placeholder="0" />`;
+  tb.innerHTML = MONTHS_PT.map((lbl, i) => {
+    const m = i + 1, r = manualOf(m), d = dre[i];
+    const saldoBanco = (+r.bank_in) - (+r.bank_out);
+    const cresc = i > 0 && dre[i - 1].receita > 0 ? ((d.receita - dre[i - 1].receita) / dre[i - 1].receita) * 100 : null;
+    return `<tr>
+      <td><b>${lbl}</b></td>
+      <td>${inp(m, 'day1', r.day1)}</td>
+      <td>${inp(m, 'bank_in', r.bank_in)}</td>
+      <td>${inp(m, 'bank_out', r.bank_out)}</td>
+      <td class="${saldoBanco >= 0 ? 'pos' : 'neg'}"><b>${money(saldoBanco)}</b></td>
+      <td>${d.receita > 0 ? money(d.receita) : '—'}</td>
+      <td class="${d.lucroPct >= 0 ? 'pos' : 'neg'}">${d.receita > 0 ? d.lucroPct.toFixed(1) + '%' : '—'}</td>
+      <td class="${cresc == null ? 'muted' : cresc >= 0 ? 'pos' : 'neg'}">${cresc == null ? '—' : (cresc >= 0 ? '▲' : '▼') + ' ' + Math.abs(cresc).toFixed(1) + '%'}</td>
+    </tr>`;
+  }).join('');
+  // grafico: faturamento x saldo banco
+  trendChart($('manual-chart'), [
+    { name: 'Faturamento', color: '#1e6fff', values: dre.map((d) => d.receita) },
+    { name: 'Saldo Banco', color: '#22d3ee', values: MONTHS_PT.map((_, i) => (+manualOf(i + 1).bank_in) - (+manualOf(i + 1).bank_out)) },
+  ], MONTHS_PT);
+}
+
+document.querySelector('#manual-table tbody').addEventListener('change', async (e) => {
+  const el = e.target.closest('.mini-inp'); if (!el) return;
+  const m = Number(el.dataset.m);
+  const r = manualOf(m);
+  const payload = { year: manualYear, month: m, day1: +r.day1, bank_in: +r.bank_in, bank_out: +r.bank_out };
+  payload[el.dataset.f] = Number(el.value) || 0;
+  try { await api('/api/manual-cashflow', { method: 'PUT', body: JSON.stringify(payload) }); await loadManual(); }
+  catch (err) { alert(err.message); }
+});
+
+$('manual-year').addEventListener('change', (e) => { manualYear = Number(e.target.value); loadManual(); });
+
 (async () => {
   const session = await initShell('projecao');
   if (!session) return;
   await build();
   renderAlerts(); renderKPIs(); renderPeriods(); renderChart(); renderTable();
+  const yr = new Date().getFullYear();
+  $('manual-year').innerHTML = [yr - 1, yr, yr + 1].map((y) => `<option ${y === yr ? 'selected' : ''}>${y}</option>`).join('');
+  loadManual();
 })();

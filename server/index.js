@@ -90,6 +90,7 @@ const memCF = []; // cash_flow_entries
 const memLists = []; // fornecedores, categorias, etc.
 const memExpenses = [];
 const memAlerts = [];
+const memManual = []; // fluxo de caixa anual manual
 const memCards = [];
 const memParcelas = [];
 const memFaturaPagtos = [];
@@ -1384,6 +1385,37 @@ async function runAlertScheduler() {
   } catch (err) { console.error('Scheduler erro:', err.message); }
 }
 setInterval(runAlertScheduler, 10 * 60 * 1000);
+
+// ---------- FLUXO DE CAIXA ANUAL (manual / extrato bancario) ----------
+app.get('/api/manual-cashflow', requireUser, async (req, res) => {
+  const year = Number(req.query.year) || new Date().getFullYear();
+  try {
+    if (supabase) {
+      const { data, error } = await supabase.from('manual_cashflow').select('*').eq('user_id', req.userId).eq('year', year);
+      if (error) throw error;
+      return res.json({ rows: data });
+    }
+    return res.json({ rows: memManual.filter((m) => m.user_id === req.userId && m.year === year) });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao listar.' }); }
+});
+
+app.put('/api/manual-cashflow', requireUser, async (req, res) => {
+  const year = Number(req.body?.year); const month = Number(req.body?.month);
+  if (!year || !month) return res.status(400).json({ error: 'Ano e mes sao obrigatorios.' });
+  const rec = { year, month, day1: Number(req.body?.day1) || 0, bank_in: Number(req.body?.bank_in) || 0, bank_out: Number(req.body?.bank_out) || 0 };
+  try {
+    if (supabase) {
+      await supabase.from('manual_cashflow').delete().eq('user_id', req.userId).eq('year', year).eq('month', month);
+      const { error } = await supabase.from('manual_cashflow').insert({ ...rec, user_id: req.userId });
+      if (error) throw error;
+    } else {
+      const i = memManual.findIndex((m) => m.user_id === req.userId && m.year === year && m.month === month);
+      if (i >= 0) memManual.splice(i, 1);
+      memManual.push({ id: makeId(), ...rec, user_id: req.userId });
+    }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao salvar.' }); }
+});
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 
