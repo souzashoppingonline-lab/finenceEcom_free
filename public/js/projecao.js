@@ -6,7 +6,7 @@ const HORIZON = 90;
 let caixaAtual = 0;
 let days = []; // [{date, entradas, saidas, saldo, real, projected, inItems, outItems}]
 
-const money = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+// `money` vem de dre-core.js (carregado antes). Não redeclarar aqui.
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const todayStr = () => new Date().toLocaleDateString('en-CA');
 const WD = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
