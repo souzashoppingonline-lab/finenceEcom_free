@@ -105,3 +105,80 @@ alter table public.stores  add column if not exists marketplace text;
 alter table public.boletos add column if not exists kind text not null default 'boleto';
 alter table public.boletos add column if not exists bank text;
 alter table public.boletos add column if not exists marketplace text;
+
+-- ---------- Cartoes de credito ----------
+create table if not exists public.cartoes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  name text not null,
+  closing_day integer not null default 1,
+  due_day integer not null default 10,
+  card_limit numeric(14,2) default 0,
+  color text default '#6b46c1'
+);
+create index if not exists idx_cartoes_user on public.cartoes (user_id);
+alter table public.cartoes enable row level security;
+
+create table if not exists public.parcelas_cartao (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  cartao_id uuid references public.cartoes(id) on delete cascade,
+  description text not null, empresa text,
+  value numeric(14,2) not null default 0,
+  installment_no integer not null default 1,
+  installments_total integer not null default 1,
+  purchase_date date not null, fatura_mes text not null,
+  status text not null default 'pendente',
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_parcelas_user on public.parcelas_cartao (user_id, cartao_id, fatura_mes);
+alter table public.parcelas_cartao enable row level security;
+
+create table if not exists public.fatura_pagamentos (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  cartao_id uuid references public.cartoes(id) on delete cascade,
+  fatura_mes text not null, data_pagamento date not null,
+  valor_pago numeric(14,2) not null default 0,
+  parcelas_count integer not null default 0,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_fatpag_user on public.fatura_pagamentos (user_id, data_pagamento desc);
+alter table public.fatura_pagamentos enable row level security;
+
+-- ---------- Despesas (custos fixos/operacionais) ----------
+create table if not exists public.expenses (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  date date not null, description text not null, category text,
+  type text not null default 'fixed',
+  value numeric(14,2) not null default 0,
+  recurring boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_expenses_user on public.expenses (user_id, date);
+alter table public.expenses enable row level security;
+
+-- ---------- Alerta diario de boletos por e-mail ----------
+create table if not exists public.boleto_alerts (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  email text, hour integer not null default 8,
+  enabled boolean not null default false
+);
+alter table public.boleto_alerts enable row level security;
+
+-- ---------- Fluxo de caixa anual (extrato bancario manual) ----------
+create table if not exists public.manual_cashflow (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  year integer not null, month integer not null,
+  day1 numeric(14,2) not null default 0,
+  bank_in numeric(14,2) not null default 0,
+  bank_out numeric(14,2) not null default 0,
+  unique (user_id, year, month)
+);
+create index if not exists idx_manual_user on public.manual_cashflow (user_id, year);
+alter table public.manual_cashflow enable row level security;
+
+-- CNPJ atrelado ao boleto
+alter table public.boletos add column if not exists cnpj text;

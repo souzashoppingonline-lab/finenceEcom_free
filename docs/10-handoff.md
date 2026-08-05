@@ -100,7 +100,12 @@ Vendedor (Bearer JWT, `requireUser`, scoped por user_id):
 | `/vendas.html` | 3 abas: Lançamento Manual · Mercado Turbo (CSV) · Relatórios | Supabase |
 | `/fluxo.html` | Fluxo de Caixa: lançamentos, badges Boleto/Cartão, resumo empresa, previsão | Supabase |
 | `/recebimentos.html` | Recebíveis por marketplace→empresa, agrupados por dia | Supabase |
-| `/boletos.html` | Cadastrar Dívida (form esq. + tabela dir. com filtros) | Supabase |
+| `/boletos.html` | Cadastrar Dívida (CNPJ/empresa) + tabela com filtros + config e-mail de alerta | Supabase |
+| `/cartoes.html` | Cartões de crédito: Compras/Faturas/Gerenciar; Pagar Fatura agrupa por empresa → FC | Supabase |
+| `/despesas.html` | Despesas fixas/operacionais (recorrentes) → DRE | Supabase |
+| `/dre.html` | DRE analítico com animações + Ponto de Equilíbrio | Supabase |
+| `/projecao.html` | Projeção de caixa 90 dias + Fluxo de Caixa Anual (extrato bancário manual) | Supabase |
+| `/metas.html` | Metas de faturamento (geral + por empresa) | Supabase |
 | `/importar.html` | redireciona para `/vendas.html` | — |
 
 Shell logado: `js/app-shell.js` (sidebar recolhível, tema claro/escuro, sessão, logout,
@@ -120,23 +125,32 @@ helper `authHeader()`). Lista global de marketplaces: `js/marketplaces.js`.
 ## 10. FEITO vs PENDENTE
 ### ✅ Feito
 Landing+captação; painel dono (leads/visitas/gráfico/saúde servidor/WhatsApp);
-Auth SaaS (OTP+senha+MFA) + Resend; multi-tenant; Dashboard; Empresas (multi-marketplace);
-Vendas & Custos (manual + Mercado Turbo + relatórios); Fluxo de Caixa; Boletos & Dívidas
-(sync automático com FC); Recebimentos por marketplace; listas (fornecedor/categoria);
-menu recolhível + tema; deploy Render + domínio Cloudflare.
+Auth SaaS (OTP+senha+MFA) + Resend; multi-tenant (RLS em todas as tabelas); Dashboard;
+Empresas (multi-marketplace, CNPJ obrigatório); Vendas & Custos (manual + Mercado Turbo +
+relatórios); Fluxo de Caixa; Boletos & Dívidas (sync automático com FC, **CNPJ atrelado**);
+Recebimentos por marketplace; **Cartões de crédito** (parcelas + Pagar Fatura agrupando por
+empresa → FC); **Despesas & DRE** (fixas/operacionais recorrentes); **DRE analítico** +
+Ponto de Equilíbrio; **Projeção de Caixa 90 dias**; **Fluxo de Caixa Anual** (extrato
+bancário manual, compara com faturamento/lucro); **Metas** (geral + por empresa);
+**Alerta diário de boletos por e-mail** (Resend, digest hoje/amanhã/7 dias, e-mail+hora
+configuráveis, scheduler por hora de Brasília); **Exportações XLSX/PDF**; **gráficos**
+(donut/tendência SVG animados); **animações modernas** em todas as páginas; **rate limiting**
+(brute-force lockout no admin + limiters por rota); security headers; listas
+(fornecedor/categoria); menu recolhível + tema; branding azul + logo;
+deploy Render + domínio Cloudflare; UptimeRobot (mantém o app acordado).
 
-### ⚠️ Pendente
-1. **Config manual Supabase** por conta do usuário: rodar todos os SQL de `supabase/`;
-   SMTP Resend + templates `{{ .Token }}` (feito) — conferir.
-2. **Atrelar CNPJ nos boletos** (usar a empresa/CNPJ como referência estruturada).
-3. ~~Módulo de Cartão de Crédito~~ ✅ FEITO — página `/cartoes.html` (abas Compras/Faturas/
-   Gerenciar). Endpoints `/api/cards`, `/api/parcelas` (+/purchase), `/api/faturas` (+/pay),
-   `/api/fatura-pagamentos`. Pagar Fatura agrupa parcelas por empresa → 1 lançamento/empresa
-   no FC (category 'Cartão de Crédito'). Compra parcelada distribui em faturas por dia de
-   fechamento do cartão. Falta (opcional): faturas virtuais dentro da tabela de Boletos.
-4. Exportações XLSX/PDF (hoje só CSV); gráficos ricos (donut, AG Grid); metas por loja
-   (StoreGoalCard); comparativos semana/mês nos MonthlyTotals; WeekdayComparison.
-5. Testar entrega do e-mail de notificação de lead.
+Endpoints principais: `/api/leads`, `/api/stores`, `/api/sales`, `/api/goals`,
+`/api/imports`, `/api/cashflow`, `/api/boletos`, `/api/lists`, `/api/cards`,
+`/api/parcelas` (+/purchase), `/api/faturas` (+/pay), `/api/fatura-pagamentos`,
+`/api/expenses`, `/api/boleto-alert`, `/api/manual-cashflow` (GET/PUT year-scoped).
+
+### ⚠️ Pendente / manual do usuário
+1. **Config manual Supabase**: rodar `supabase/00_run_all.sql` (consolidado, idempotente —
+   inclui todas as tabelas: leads, stores, sales, goals, imports, boletos, cash_flow_entries,
+   lists, cartoes, parcelas_cartao, fatura_pagamentos, expenses, boleto_alerts,
+   **manual_cashflow**, CNPJ em boletos). SMTP Resend + templates `{{ .Token }}`.
+2. Testar entrega do e-mail de notificação de lead.
+3. Opcional: faturas virtuais dentro da tabela de Boletos; comparativos semana/mês.
 
 ## 11. Rodar local / deploy
 `npm install` → `cp .env.example .env` → `npm start` (porta 3000; sem SUPABASE_* = memória).
