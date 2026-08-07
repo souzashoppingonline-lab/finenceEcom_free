@@ -19,42 +19,20 @@
     <div id="ml-status"></div>
 
     <div class="tabs">
-      <button class="tab is-active" data-tab="caca">🎯 Caça Oportunidade</button>
+      <button class="tab is-active" data-tab="caca">📈 Inteligência da Categoria</button>
       <button class="tab" data-tab="tend">🔥 Tendências</button>
     </div>
 
-    <!-- ABA CAÇA OPORTUNIDADE -->
+    <!-- ABA INTELIGÊNCIA DA CATEGORIA -->
     <section class="tab-panel" data-panel="caca">
       <div class="card" style="margin-bottom:18px">
-        <p class="muted">Encontre produtos <b>novos que já vendem muito</b> (ranking por vendas/dia). Categoria e palavra-chave são opcionais — mas preencha ao menos um.</p>
-        <form id="op-form">
-          <div class="op-filters">
-            <label>Criados há menos de
-              <select id="op-age" class="filter-inp">
-                <option value="30">30 dias</option>
-                <option value="60">60 dias</option>
-                <option value="90" selected>90 dias</option>
-              </select>
-            </label>
-            <label>Quantidade de vendas
-              <select id="op-sales" class="filter-inp">
-                <option value="0">Qualquer</option>
-                <option value="50">+50</option>
-                <option value="100" selected>+100</option>
-                <option value="500">+500</option>
-                <option value="1000">+1000</option>
-              </select>
-            </label>
-            <label>Categoria (opcional)
-              <input id="op-cat" placeholder="Ex.: rações" />
-            </label>
-            <label>Palavra-chave (opcional)
-              <input id="op-q" placeholder="Ex.: ração gato castrado" />
-            </label>
-          </div>
-          <button type="submit" class="btn-cadastrar" style="max-width:220px;margin-top:14px">🎯 Buscar oportunidades</button>
-          <p id="op-msg" class="muted" style="margin-top:8px"></p>
+        <p class="muted">Veja o <b>ranking de mais vendidos</b> e a <b>faixa de preço vencedora</b> de uma categoria. Preencha a categoria ou uma palavra-chave.</p>
+        <form id="op-form" class="op-filters" style="grid-template-columns:1fr 1fr auto;align-items:end">
+          <label>Categoria (opcional)<input id="op-cat" placeholder="Ex.: rações" /></label>
+          <label>Palavra-chave (opcional)<input id="op-q" placeholder="Ex.: ração gato castrado" /></label>
+          <button type="submit" class="btn-cadastrar" style="max-width:200px;margin:0">📈 Analisar categoria</button>
         </form>
+        <p id="op-msg" class="muted" style="margin-top:8px"></p>
       </div>
       <div id="op-results"></div>
     </section>

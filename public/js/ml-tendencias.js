@@ -70,40 +70,60 @@ document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () 
   document.querySelectorAll('.tab-panel').forEach((p) => { p.hidden = p.dataset.panel !== t.dataset.tab; });
 }));
 
-// ---------- Caça Oportunidade ----------
-function opCard(x) {
-  const novo = x.ageDays <= 30;
+// ---------- Inteligência da Categoria ----------
+function rankCard(x) {
   return `<a class="op-card" href="${esc(x.link || '#')}" target="_blank" rel="noopener">
+    <span class="op-rank">${x.rank}</span>
     <div class="op-thumb">${x.thumb ? `<img src="${esc(x.thumb)}" alt="" loading="lazy"/>` : ''}</div>
     <div class="op-info">
       <div class="op-title">${esc((x.title || '').slice(0, 80))}</div>
       <div class="op-badges">
-        <span class="op-vd">🔥 ${x.vendasDia}/dia</span>
-        ${novo ? '<span class="op-new">🆕 novo</span>' : ''}
+        <span class="op-vd">${x.price != null ? money(x.price) : '—'}</span>
         ${x.full ? '<span class="op-full">FULL</span>' : ''}
-      </div>
-      <div class="op-meta">
-        <span>💰 ${x.price != null ? money(x.price) : '—'}</span>
-        <span>📦 ${x.sold} vendas</span>
-        <span>🗓️ ${x.ageDays} dias</span>
+        ${x.sold ? `<span class="op-new">${x.sold} vendas</span>` : ''}
       </div>
     </div>
   </a>`;
+}
+
+function faixasHtml(faixas, stats) {
+  if (!faixas || !faixas.length) return '';
+  const maxC = Math.max(...faixas.map((f) => f.count), 1);
+  const sweet = faixas.reduce((a, b) => (b.count > a.count ? b : a), faixas[0]);
+  const bars = faixas.map((f) => {
+    const isSweet = f === sweet && f.count > 0;
+    return `<div class="fx-row">
+      <span class="fx-label">${money(f.lo)}–${money(f.hi)}</span>
+      <div class="fx-bar-wrap"><div class="fx-bar ${isSweet ? 'fx-sweet' : ''}" style="width:${(f.count / maxC * 100).toFixed(0)}%"></div></div>
+      <span class="fx-count">${f.count}</span>
+    </div>`;
+  }).join('');
+  const kpi = (l, v) => `<div class="fin-kpi"><span>${l}</span><b>${v}</b></div>`;
+  return `
+    <div class="fin-grid" style="grid-template-columns:repeat(4,1fr);max-width:640px">
+      ${kpi('Menor', money(stats.min))}${kpi('Mediana', money(stats.median))}${kpi('Média', money(stats.media))}${kpi('Maior', money(stats.max))}
+    </div>
+    <p class="muted" style="margin:12px 0 6px">🎯 <b>Faixa vencedora:</b> ${money(sweet.lo)}–${money(sweet.hi)} concentra ${sweet.count} dos ${stats.count} campeões.</p>
+    <div class="fx-chart">${bars}</div>`;
 }
 
 $('op-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const cat = $('op-cat').value.trim(), q = $('op-q').value.trim();
   if (!cat && !q) { $('op-msg').textContent = 'Preencha ao menos a categoria ou a palavra-chave.'; return; }
-  const age = $('op-age').value, minSales = $('op-sales').value;
   $('op-msg').textContent = '';
-  $('op-results').innerHTML = '<p class="muted">Buscando e calculando vendas/dia… (pode levar alguns segundos)</p>';
+  $('op-results').innerHTML = '<p class="muted">Analisando a categoria… (pode levar alguns segundos)</p>';
   try {
-    const p = new URLSearchParams({ q, category: cat, age, minSales });
-    const r = await api('/api/ml/opportunities?' + p.toString());
-    if (!r.itens.length) { $('op-results').innerHTML = '<p class="muted">Nenhum anúncio bateu os filtros. Tente afrouxar (mais dias ou menos vendas).</p>'; return; }
-    const head = `<p class="muted" style="margin-bottom:10px">${r.total} oportunidades${r.categoria ? ' · categoria <b>' + esc(r.categoria.nome || r.categoria.id) + '</b>' : ''} · ordenado por vendas/dia</p>`;
-    $('op-results').innerHTML = head + '<div class="op-grid">' + r.itens.map(opCard).join('') + '</div>';
+    const p = new URLSearchParams({ q, category: cat });
+    const r = await api('/api/ml/category-intel?' + p.toString());
+    let html = `<p class="muted" style="margin-bottom:12px">Categoria: <b>${esc(r.categoria.nome || r.categoria.id)}</b></p>`;
+    if (r.stats) {
+      html += `<h3 class="v-section-title">💰 Faixa de preço vencedora</h3><div class="card" style="margin-bottom:18px">${faixasHtml(r.faixas, r.stats)}</div>`;
+    }
+    html += `<h3 class="v-section-title">🏆 Ranking de mais vendidos (${r.ranking.length})</h3>`;
+    html += r.ranking.length ? '<div class="op-grid">' + r.ranking.map(rankCard).join('') + '</div>'
+      : '<p class="muted">O Mercado Livre não expôs o ranking desta categoria. Tente uma categoria mais específica.</p>';
+    $('op-results').innerHTML = html;
   } catch (err) { $('op-results').innerHTML = `<p class="c-danger">${esc(err.message)}</p>`; }
 });
 

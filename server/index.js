@@ -2564,6 +2564,42 @@ app.get('/api/ml/opportunities', requireUser, async (req, res) => {
   } catch (e) { console.error('ml/opportunities:', e.message); return res.status(502).json({ error: e.message }); }
 });
 
+// Inteligência da categoria: ranking de mais vendidos + sweet spot de preço
+app.get('/api/ml/category-intel', requireUser, async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  const catText = String(req.query.category || '').trim();
+  if (!q && !catText) return res.status(400).json({ error: 'Informe uma categoria ou uma palavra-chave.' });
+  try {
+    const categoria = await catFromText(catText || q);
+    if (!categoria) return res.status(404).json({ error: 'Nao identifiquei a categoria. Tente outra palavra.' });
+    const ck = 'ci:' + categoria.id;
+    let items = mlCacheGet(ck);
+    if (!items) { items = await highlightItems(categoria.id, 40); mlCacheSet(ck, items, 3 * 3600 * 1000); }
+
+    const ranking = items.filter((b) => b.title).slice(0, 20).map((b, i) => ({
+      rank: i + 1, title: b.title, price: b.price, sold: b.sold_quantity,
+      thumb: b.thumbnail, link: b.permalink,
+      full: b.shipping && b.shipping.logistic_type === 'fulfillment',
+    }));
+    const precos = ranking.map((r) => Number(r.price)).filter((v) => v > 0).sort((a, b) => a - b);
+
+    let stats = null; const faixas = [];
+    if (precos.length) {
+      const min = precos[0], max = precos[precos.length - 1];
+      const median = precos[Math.floor(precos.length / 2)];
+      const media = precos.reduce((a, b) => a + b, 0) / precos.length;
+      stats = { min, max, median, media: +media.toFixed(2), count: precos.length };
+      const N = 6, step = (max - min) / N || 1;
+      for (let i = 0; i < N; i++) {
+        const lo = min + step * i, hi = i === N - 1 ? max : min + step * (i + 1);
+        const count = precos.filter((p) => p >= lo && (i === N - 1 ? p <= hi : p < hi)).length;
+        faixas.push({ lo: +lo.toFixed(2), hi: +hi.toFixed(2), count });
+      }
+    }
+    return res.json({ categoria, ranking, stats, faixas });
+  } catch (e) { console.error('ml/category-intel:', e.message); return res.status(502).json({ error: e.message }); }
+});
+
 app.get('/health', (req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => {
