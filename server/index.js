@@ -1833,8 +1833,12 @@ function retryNextModel(status, err) {
   return false; // 401 (chave), 429/insufficient (credito), etc -> propaga
 }
 
-async function anthropicTry(key, model, prompt, maxTokens = 1500, system) {
-  const body = { model, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] };
+async function anthropicTry(key, model, prompt, maxTokens = 1500, system, images) {
+  let content = prompt;
+  if (Array.isArray(images) && images.length) {
+    content = [{ type: 'text', text: prompt }, ...images.map((url) => ({ type: 'image', source: { type: 'url', url } }))];
+  }
+  const body = { model, max_tokens: maxTokens, messages: [{ role: 'user', content }] };
   if (system) body.system = system;
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -1857,10 +1861,10 @@ async function anthropicListModels(key) {
   } catch (_) { return []; }
 }
 
-async function callAnthropic(key, prompt, maxTokens = 1500, system) {
+async function callAnthropic(key, prompt, maxTokens = 1500, system, images) {
   let lastErr = 'sem modelo disponivel';
   for (const model of ANTHROPIC_MODELS) {
-    const { r, data } = await anthropicTry(key, model, prompt, maxTokens, system);
+    const { r, data } = await anthropicTry(key, model, prompt, maxTokens, system, images);
     if (r.ok) return { text: (data.content || []).map((c) => c.text || '').join('\n').trim(), model, provider: 'anthropic', input_tokens: data.usage?.input_tokens || 0, output_tokens: data.usage?.output_tokens || 0 };
     lastErr = data?.error?.message || `Anthropic HTTP ${r.status}`;
     if (!retryNextModel(r.status, data?.error)) throw new Error(lastErr);
@@ -1868,7 +1872,7 @@ async function callAnthropic(key, prompt, maxTokens = 1500, system) {
   // fallback: pergunta a propria conta quais modelos existem e tenta o 1o
   const models = await anthropicListModels(key);
   for (const model of models.slice(0, 4)) {
-    const { r, data } = await anthropicTry(key, model, prompt, maxTokens, system);
+    const { r, data } = await anthropicTry(key, model, prompt, maxTokens, system, images);
     if (r.ok) return { text: (data.content || []).map((c) => c.text || '').join('\n').trim(), model, provider: 'anthropic', input_tokens: data.usage?.input_tokens || 0, output_tokens: data.usage?.output_tokens || 0 };
     lastErr = data?.error?.message || lastErr;
   }
@@ -1876,10 +1880,13 @@ async function callAnthropic(key, prompt, maxTokens = 1500, system) {
   throw new Error(`nenhum modelo Claude respondeu (${lastErr})`);
 }
 
-async function callOpenAI(key, prompt, maxTokens = 1500, system) {
+async function callOpenAI(key, prompt, maxTokens = 1500, system, images) {
   let lastErr = 'sem modelo disponivel';
   for (const model of OPENAI_MODELS) {
-    const msgs = system ? [{ role: 'system', content: system }, { role: 'user', content: prompt }] : [{ role: 'user', content: prompt }];
+    const userContent = (Array.isArray(images) && images.length)
+      ? [{ type: 'text', text: prompt }, ...images.map((url) => ({ type: 'image_url', image_url: { url } }))]
+      : prompt;
+    const msgs = system ? [{ role: 'system', content: system }, { role: 'user', content: userContent }] : [{ role: 'user', content: userContent }];
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
@@ -2236,7 +2243,7 @@ app.get('/api/analise/monitor/:mlb', requireUser, async (req, res) => {
 // ===========================================================================
 const SYSTEM_CRIATIVOS = `Voce e diretor de arte de e-commerce. Gera BRIEFS DE IMAGEM (criativos) para anunciar um produto no Mercado Livre. Cada criativo foca UM angulo de persuasao (sem repetir), escolhendo os 7 mais fortes entre: Gancho, Proposta de valor, Beneficios, Provas, Quebra de objecoes, Autoridade, Diferenciais, Clareza, Urgencia, Confianca, Especificacoes, CTA implicito. Base: elogios das avaliacoes viram Provas/Beneficios; reclamacoes viram Quebra de objecoes; dados dos concorrentes viram Diferenciais.
 
-IMPORTANTE - IDENTIDADE VISUAL: o contexto traz "imagens_referencia" (URLs das fotos de capa dos anuncios do mesmo produto/categoria). Todo criativo deve MANTER a caracteristica visual real do produto mostrada nessas capas (formato da embalagem, cores, proporcoes, tipo de produto) — NAO invente um produto diferente. Em "composicao.detalhe_produto" descreva preservando fielmente essas caracteristicas e cite que deve usar as fotos de referencia. Em cada objeto inclua o campo "imagens_referencia" com as URLs que servem de base para aquele criativo.
+IMPORTANTE - IDENTIDADE VISUAL: as fotos de capa dos anuncios do mesmo produto estao ANEXADAS a esta mensagem (voce CONSEGUE VE-LAS). Observe cor, formato da embalagem, material, proporcoes e tipo do produto e MANTENHA essas caracteristicas reais em todos os criativos — NAO invente um produto diferente. Em "composicao.detalhe_produto" descreva fielmente o que voce ve nas imagens (cores exatas, formato) e peca para preservar essa identidade. Em cada objeto inclua "imagens_referencia" com as URLs correspondentes (fornecidas no contexto em texto).
 
 Responda SOMENTE com JSON valido (sem markdown, sem texto fora do JSON), EXATAMENTE assim:
 {"criativos":[ 7 objetos ]}
@@ -2349,11 +2356,15 @@ app.post('/api/analise/products/:id/creatives', requireUser, async (req, res) =>
     if (!key) return res.status(400).json({ error: 'Configure seu token de IA para gerar criativos.' });
 
     const context = buildCreativesContext(product, ads);
+    // visão: até 3 imagens de capa reais para a IA "ver" o produto
+    const capas = (ads || []).map((a) => firstFotoUrl(a.fotos)).filter(Boolean).slice(0, 3);
+    const run = (imgs) => keys.provider === 'openai'
+      ? callOpenAI(key, context, 4096, SYSTEM_CRIATIVOS, imgs)
+      : callAnthropic(key, context, 4096, SYSTEM_CRIATIVOS, imgs);
     let out;
     try {
-      out = keys.provider === 'openai'
-        ? await callOpenAI(key, context, 4096, SYSTEM_CRIATIVOS)
-        : await callAnthropic(key, context, 4096, SYSTEM_CRIATIVOS);
+      try { out = await run(capas); }           // com visão (imagens reais)
+      catch (visErr) { out = await run(undefined); } // fallback sem imagens
     } catch (e) { return res.status(502).json({ error: `A IA retornou erro: ${e.message}` }); }
     const text = out.text;
     await logUsage(req.userId, 'criativos', out);
