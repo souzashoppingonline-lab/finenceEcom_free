@@ -347,31 +347,71 @@ function bindSimulator() {
   calc();
 }
 
-// Baixar a análise em PDF (abre janela de impressão -> salvar como PDF)
+// Baixar a análise em PDF (paisagem, com cabeçalho e tabela de concorrentes)
 function exportAnalysisPDF(titleText) {
   const rep = document.querySelector('.ia-report');
   if (!rep) return;
   const clone = rep.cloneNode(true);
   clone.querySelectorAll('.no-print').forEach((el) => el.remove());
+
+  // tabela de concorrentes a partir dos dados carregados
+  const ads = lastAds || [];
+  const compRows = ads.map((a) => `<tr>
+    <td>${esc((a.titulo || a.ml_id || '—')).slice(0, 60)}</td>
+    <td>${a.preco != null ? money2(a.preco) : '—'}</td>
+    <td>${a.nota ? '⭐ ' + a.nota : '—'}</td>
+    <td>${a.comentarios || '—'}</td>
+    <td>${a.vendas_30d != null ? a.vendas_30d : '—'}</td>
+    <td>${a.is_full ? 'FULL' : ''}</td>
+    <td>${esc(a.vendedor || '—')}</td>
+    <td>${esc(a.cidade ? a.cidade + (a.estado ? '/' + a.estado : '') : '—')}</td>
+  </tr>`).join('');
+  const compTable = ads.length ? `
+    <h2 class="pdf-h2">Concorrentes monitorados (${ads.length})</h2>
+    <table class="pdf-table">
+      <thead><tr><th>Anúncio</th><th>Preço</th><th>Nota</th><th>Avaliações</th><th>Vendas 30d</th><th>Envio</th><th>Vendedor</th><th>Local</th></tr></thead>
+      <tbody>${compRows}</tbody>
+    </table>` : '';
+
+  const when = new Date().toLocaleString('pt-BR');
   const w = window.open('', '_blank');
   if (!w) { alert('Permita pop-ups para baixar o PDF.'); return; }
   w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
-    <title>${esc(titleText)}</title>
+    <title>Análise — ${esc(titleText)}</title>
     <link rel="stylesheet" href="${location.origin}/css/style.css">
-    <style>@page{size:A4;margin:12mm}body{background:#fff;padding:0}
+    <style>
+      @page{size:A4 landscape;margin:10mm}
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      body{background:#fff;padding:0;color:#1c2434}
+      .pdf-head{display:flex;align-items:center;gap:12px;border-bottom:2px solid #1e6fff;padding-bottom:10px;margin-bottom:14px}
+      .pdf-head img{width:38px;height:38px}
+      .pdf-head h1{font-size:18px;margin:0}
+      .pdf-head .sub{font-size:11px;color:#6b7686}
+      .pdf-head .when{margin-left:auto;font-size:11px;color:#6b7686;text-align:right}
       .ia-report{box-shadow:none;border:none;padding:0}
-      .ia-cols{grid-template-columns:1fr 1fr 1fr}
-      h1{font-size:18px;margin:0 0 12px}</style>
+      .ia-cols{grid-template-columns:1fr 1fr 1fr;gap:14px}
+      .ia-col{background:#f4f7fb!important;break-inside:avoid}
+      .no-print{display:none!important}
+      .pdf-h2{font-size:14px;margin:18px 0 8px;color:#1e6fff}
+      .pdf-table{width:100%;border-collapse:collapse;font-size:11px}
+      .pdf-table th{background:#eef2f7;text-align:left;padding:6px 8px;border:1px solid #e2e6ee}
+      .pdf-table td{padding:5px 8px;border:1px solid #e2e6ee}
+      .ia-report-actions{display:none}
+    </style>
     </head><body>
-    <h1>🔎 Análise de Produto — ${esc(titleText)}</h1>
+    <div class="pdf-head">
+      <img src="${location.origin}/img/logo-mark.svg" alt="">
+      <div><h1>Análise de Produto — ${esc(titleText)}</h1><div class="sub">FinanceEcom · Inteligência de Concorrência</div></div>
+      <div class="when">Gerado em<br>${esc(when)}</div>
+    </div>
     <div class="ia-report">${clone.innerHTML}</div>
+    ${compTable}
     </body></html>`);
   w.document.close();
   w.focus();
   const go = () => { try { w.print(); } catch (_) {} };
-  if (w.document.readyState === 'complete') setTimeout(go, 400); else w.onload = () => setTimeout(go, 400);
+  if (w.document.readyState === 'complete') setTimeout(go, 500); else w.onload = () => setTimeout(go, 500);
 }
-window.__pdfTitle = '';
 
 async function runAnalysis(productId, btn) {
   if (!iaReady()) { alert('Configure seu token de IA nas Configurações acima.'); return; }
