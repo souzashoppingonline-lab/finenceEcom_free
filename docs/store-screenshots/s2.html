@@ -1,0 +1,50 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+html,body{height:100%}
+html{background:linear-gradient(120deg,#0a1428,#12224a)}
+body{width:1280px;height:100%;display:flex;align-items:center;justify-content:center}
+.modal{width:820px;background:#fff;border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden}
+.head{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid #e2e6ee}
+.head h3{font-size:19px;color:#1c2434}
+.head small{color:#6b7686;font-weight:400}
+.body{padding:20px 26px 26px}
+svg{width:100%;display:block}
+.kpis{display:flex;gap:12px;margin-top:18px}
+.kpi{background:#f4f7fb;border:1px solid #e2e6ee;border-radius:10px;padding:10px 16px;flex:1}
+.kpi span{color:#6b7686;font-size:12px;display:block}
+.kpi b{font-size:18px;color:#1c2434}
+.x{width:34px;height:34px;border-radius:8px;background:#f0f2f7;display:flex;align-items:center;justify-content:center;color:#6b7686;font-size:16px}
+</style></head><body>
+<div class="modal">
+  <div class="head"><h3>📈 Histórico de preço <small>— Ração Quatree Supreme 3kg</small></h3><div class="x">✕</div></div>
+  <div class="body">
+    <svg viewBox="0 0 720 300">
+      <defs>
+        <linearGradient id="f" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1e6fff" stop-opacity="0.35"/><stop offset="100%" stop-color="#22d3ee" stop-opacity="0.03"/></linearGradient>
+        <linearGradient id="s" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#1e6fff"/><stop offset="100%" stop-color="#22d3ee"/></linearGradient>
+      </defs>
+      <g stroke="#e2e6ee" stroke-width="1" stroke-dasharray="3 4">
+        <line x1="64" y1="40" x2="700" y2="40"/><line x1="64" y1="100" x2="700" y2="100"/><line x1="64" y1="160" x2="700" y2="160"/><line x1="64" y1="220" x2="700" y2="220"/>
+      </g>
+      <g fill="#6b7686" font-size="12" text-anchor="end">
+        <text x="56" y="44">R$ 82</text><text x="56" y="104">R$ 78</text><text x="56" y="164">R$ 74</text><text x="56" y="224">R$ 70</text>
+      </g>
+      <path d="M64,220 L64,150 L170,168 L276,120 L382,96 L488,150 L594,110 L700,72 L700,220 Z" fill="url(#f)"/>
+      <path d="M64,150 L170,168 L276,120 L382,96 L488,150 L594,110 L700,72" fill="none" stroke="url(#s)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <g fill="#fff" stroke="#1e6fff" stroke-width="2.5">
+        <circle cx="64" cy="150" r="4.5"/><circle cx="170" cy="168" r="4.5"/><circle cx="276" cy="120" r="4.5"/><circle cx="382" cy="96" r="4.5"/><circle cx="488" cy="150" r="4.5"/><circle cx="594" cy="110" r="4.5"/><circle cx="700" cy="72" r="4.5"/>
+      </g>
+      <g fill="#6b7686" font-size="12" text-anchor="middle">
+        <text x="64" y="250">01/08</text><text x="170" y="250">03/08</text><text x="276" y="250">05/08</text><text x="382" y="250">07/08</text><text x="488" y="250">09/08</text><text x="594" y="250">11/08</text><text x="700" y="250">13/08</text>
+      </g>
+    </svg>
+    <div class="kpis">
+      <div class="kpi"><span>Atual</span><b>R$ 76,53</b></div>
+      <div class="kpi"><span>Variação</span><b>🔺 subiu R$ 2,10</b></div>
+      <div class="kpi"><span>Menor</span><b>R$ 72,00</b></div>
+      <div class="kpi"><span>Maior</span><b>R$ 79,90</b></div>
+      <div class="kpi"><span>Dias</span><b>13</b></div>
+    </div>
+  </div>
+</div>
+</body></html>
