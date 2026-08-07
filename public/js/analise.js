@@ -317,7 +317,10 @@ function renderAds(productId, ads) {
   $('detail-ads').innerHTML = `
     <div class="dash-head-row" style="margin-top:18px">
       <h3 style="margin:0">Concorrentes (${ads.length}/10)</h3>
-      <button id="ad-new" class="btn-inline">+ Adicionar concorrente</button>
+      <div class="head-actions" style="gap:8px">
+        <button id="ad-refresh" class="btn-ghost">🔄 Atualizar</button>
+        <button id="ad-new" class="btn-inline">+ Adicionar concorrente</button>
+      </div>
     </div>
     <form id="ad-form" class="card" hidden style="margin-top:12px">
       <h4>Novo concorrente</h4>
@@ -358,6 +361,7 @@ function renderAds(productId, ads) {
     ${ads.length === 0 ? '<p class="muted" style="margin-top:12px">Nenhum concorrente salvo ainda. Clique em “+ Adicionar concorrente”.</p>'
       : `<div class="ad-grid">${ads.map(adCard).join('')}</div>`}`;
 
+  $('ad-refresh').addEventListener('click', () => openDetail(productId));
   $('ad-new').addEventListener('click', () => { $('ad-form').hidden = false; });
   $('ad-cancel').addEventListener('click', () => { $('ad-form').hidden = true; });
   $('ad-form').addEventListener('submit', async (e) => {
