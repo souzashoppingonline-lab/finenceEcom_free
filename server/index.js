@@ -1701,7 +1701,7 @@ app.post('/api/analise/products/:id/ads', requireUser, async (req, res) => {
   // campos ricos: imagens, ficha tecnica, Full/Flex, vendas reais
   if (b.is_full !== undefined) rec.is_full = !!b.is_full;
   if (b.is_flex !== undefined) rec.is_flex = !!b.is_flex;
-  ['vendas_7d', 'vendas_15d', 'vendas_21d', 'vendas_30d'].forEach((k) => { if (b[k] !== undefined && b[k] !== '') rec[k] = Number(b[k]) || 0; });
+  ['vendas_7d', 'vendas_15d', 'vendas_21d', 'vendas_30d', 'preco_medio_7d', 'preco_medio_15d', 'preco_medio_21d', 'preco_medio_30d'].forEach((k) => { if (b[k] !== undefined && b[k] !== '') rec[k] = Number(b[k]) || 0; });
   if (b.foto) rec.fotos = [String(b.foto).trim()];
   else if (Array.isArray(b.fotos)) rec.fotos = b.fotos;
   if (b.ficha) rec.highlights = String(b.ficha).split('\n').map((s) => s.trim()).filter(Boolean);
@@ -1732,7 +1732,7 @@ app.put('/api/analise/ads/:adId', requireUser, async (req, res) => {
   ['titulo', 'link', 'vendedor', 'cidade', 'estado', 'reputacao', 'vendas', 'descricao', 'comentarios_texto', 'observacoes', 'aval_dist', 'data_criacao'].forEach((k) => {
     if (b[k] !== undefined) patch[k] = String(b[k] || '').trim() || null;
   });
-  ['preco', 'preco_original', 'nota', 'comentarios', 'vendas_7d', 'vendas_15d', 'vendas_21d', 'vendas_30d'].forEach((k) => { if (b[k] !== undefined) patch[k] = (b[k] === '' ? null : Number(b[k]) || 0); });
+  ['preco', 'preco_original', 'nota', 'comentarios', 'vendas_7d', 'vendas_15d', 'vendas_21d', 'vendas_30d', 'preco_medio_7d', 'preco_medio_15d', 'preco_medio_21d', 'preco_medio_30d'].forEach((k) => { if (b[k] !== undefined) patch[k] = (b[k] === '' ? null : Number(b[k]) || 0); });
   if (b.is_full !== undefined) patch.is_full = !!b.is_full;
   if (b.is_flex !== undefined) patch.is_flex = !!b.is_flex;
   try {
@@ -1878,7 +1878,7 @@ function buildContext(product, ads) {
   let temVendasReais = false;
   const concorrentes = list.map((a) => {
     const vr = {};
-    ['vendas_7d', 'vendas_15d', 'vendas_21d', 'vendas_30d'].forEach((k) => { if (a[k] != null && a[k] !== '') { vr[k] = Number(a[k]); temVendasReais = true; } });
+    ['vendas_7d', 'vendas_15d', 'vendas_21d', 'vendas_30d', 'preco_medio_7d', 'preco_medio_15d', 'preco_medio_21d', 'preco_medio_30d'].forEach((k) => { if (a[k] != null && a[k] !== '') { vr[k] = Number(a[k]); if (k.startsWith('vendas_')) temVendasReais = true; } });
     const o = {
       titulo: a.titulo || a.ml_id || null,
       preco: a.preco != null ? Number(a.preco) : null,

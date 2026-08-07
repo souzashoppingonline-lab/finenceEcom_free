@@ -485,6 +485,40 @@ async function loadHistory(mlId, container) {
   } catch (e) { container.innerHTML = `<p class="c-danger">${esc(e.message)}</p>`; }
 }
 
+// Modal de vendas reais (7/15/21/30 dias) — quantidade + valor médio
+function openVendas(adId, productId) {
+  const a = (lastAds || []).find((x) => String(x.id) === String(adId)) || {};
+  const row = (l, qk, pk) => `<tr>
+    <td>${l}</td>
+    <td><input type="number" min="0" id="v_${qk}" value="${a[qk] != null ? a[qk] : ''}" placeholder="un." /></td>
+    <td><input type="number" min="0" step="0.01" id="v_${pk}" value="${a[pk] != null ? a[pk] : ''}" placeholder="R$" /></td>
+  </tr>`;
+  const html = `
+    <p class="muted">Preencha as vendas dos últimos períodos (do Shopping de Preço). Isso dá <b>peso máximo</b> à análise da IA — ela avalia a tendência de vendas.</p>
+    <div class="table-wrap"><table class="vendas-table">
+      <thead><tr><th>Período</th><th>Qtd. de vendas</th><th>Valor médio por venda</th></tr></thead>
+      <tbody>
+        ${row('Últimos 7 dias', 'vendas_7d', 'preco_medio_7d')}
+        ${row('Últimos 15 dias', 'vendas_15d', 'preco_medio_15d')}
+        ${row('Últimos 21 dias', 'vendas_21d', 'preco_medio_21d')}
+        ${row('Últimos 30 dias', 'vendas_30d', 'preco_medio_30d')}
+      </tbody>
+    </table></div>
+    <button class="btn-cadastrar" id="vendas-save" style="max-width:220px">Salvar vendas</button>
+    <p id="vendas-msg" class="form-msg"></p>`;
+  openModal('📊 Vendas dos últimos 30 dias', html);
+  $('vendas-save').addEventListener('click', async () => {
+    const body = {};
+    ['vendas_7d', 'vendas_15d', 'vendas_21d', 'vendas_30d', 'preco_medio_7d', 'preco_medio_15d', 'preco_medio_21d', 'preco_medio_30d'].forEach((k) => { body[k] = $('v_' + k).value; });
+    $('vendas-save').disabled = true;
+    try {
+      await api(`/api/analise/ads/${adId}`, { method: 'PUT', body: JSON.stringify(body) });
+      $('ia-modal').hidden = true;
+      openDetail(productId);
+    } catch (e) { $('vendas-msg').textContent = e.message; $('vendas-msg').className = 'form-msg c-danger'; $('vendas-save').disabled = false; }
+  });
+}
+
 function adCard(a) {
   const foto = firstFoto(a.fotos);
   const kws = seoKeywords(a.titulo);
@@ -527,9 +561,11 @@ function adCard(a) {
         <button class="btn-ghost" data-review-cancel="${a.id}">Cancelar</button>
       </div>
     </div>
+    ${(a.vendas_30d != null || a.vendas_7d != null) ? `<div class="ad-sec ad-vendas"><b>📊 Vendas:</b> ${[['7d', a.vendas_7d], ['15d', a.vendas_15d], ['21d', a.vendas_21d], ['30d', a.vendas_30d]].filter(([, v]) => v != null).map(([l, v]) => `${l}: <b>${v}</b>`).join(' · ')}</div>` : ''}
     <div class="ad-actions">
       <label class="switch-sm"><input type="checkbox" data-mon="${a.id}" ${a.monitorar ? 'checked' : ''}/> atualizar 1×/dia</label>
       <div class="head-actions" style="gap:6px">
+        <button class="btn-ghost" data-vendas="${a.id}">📊 Vendas 30d</button>
         ${a.ml_id ? `<button class="btn-ghost" data-hist-btn="${esc(a.ml_id)}" data-hist-title="${esc(a.titulo || a.ml_id)}">📈 Preço</button>` : ''}
         <button class="btn-ghost" data-review-btn="${a.id}">💬 Avaliações</button>
         <button class="btn-ghost" data-del-ad="${a.id}">Remover</button>
@@ -595,15 +631,7 @@ function renderAds(productId, ads) {
         <label>Estado (UF)<input name="estado" placeholder="Ex.: SP" maxlength="2" /></label>
       </div>
       <label>Data de criação do anúncio<input name="data_criacao" placeholder="Ex.: 07/08/2026" /></label>
-      <span class="field-label">📊 Vendas reais (Shopping de Preço) — dão PESO MÁXIMO à análise</span>
-      <div class="two-col">
-        <label>Vendas 7 dias<input name="vendas_7d" type="number" min="0" placeholder="un." /></label>
-        <label>Vendas 15 dias<input name="vendas_15d" type="number" min="0" placeholder="un." /></label>
-      </div>
-      <div class="two-col">
-        <label>Vendas 21 dias<input name="vendas_21d" type="number" min="0" placeholder="un." /></label>
-        <label>Vendas 30 dias<input name="vendas_30d" type="number" min="0" placeholder="un." /></label>
-      </div>
+      <p class="muted" style="margin-top:8px">💡 As vendas dos últimos 7/15/21/30 dias você preenche depois, no botão <b>📊 Vendas 30d</b> de cada card.</p>
       <label class="checkbox" style="display:inline-flex;margin-right:18px"><input type="checkbox" name="is_full" /> <span>Full</span></label>
       <label class="checkbox" style="display:inline-flex"><input type="checkbox" name="is_flex" /> <span>Flex</span></label>
       <label>Ficha técnica (uma por linha, ex.: "Peso: 3kg")<textarea name="ficha" rows="3" placeholder="Marca: Quatree&#10;Peso: 3kg&#10;Indicação: Gatos castrados"></textarea></label>
@@ -633,7 +661,7 @@ function renderAds(productId, ads) {
   $('ad-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const f = e.target; const body = {};
-    ['titulo', 'ml_id', 'link', 'preco', 'nota', 'vendedor', 'vendas', 'reputacao', 'cidade', 'estado', 'data_criacao', 'vendas_7d', 'vendas_15d', 'vendas_21d', 'vendas_30d', 'comentarios_texto', 'descricao', 'observacoes'].forEach((k) => { if (f[k].value) body[k] = f[k].value; });
+    ['titulo', 'ml_id', 'link', 'preco', 'nota', 'vendedor', 'vendas', 'reputacao', 'cidade', 'estado', 'data_criacao', 'comentarios_texto', 'descricao', 'observacoes'].forEach((k) => { if (f[k].value) body[k] = f[k].value; });
     if (f.foto.value.trim()) body.foto = f.foto.value.trim();
     if (f.ficha.value.trim()) body.ficha = f.ficha.value.trim();
     body.is_full = f.is_full.checked; body.is_flex = f.is_flex.checked;
@@ -650,6 +678,8 @@ function renderAds(productId, ads) {
     await api(`/api/analise/ads/${b.dataset.delAd}`, { method: 'DELETE' });
     openDetail(productId);
   }));
+  // modal de vendas (7/15/21/30 dias) por card
+  $('detail-ads').querySelectorAll('[data-vendas]').forEach((b) => b.addEventListener('click', () => openVendas(b.dataset.vendas, productId)));
   // editor de avaliações por card
   $('detail-ads').querySelectorAll('[data-review-btn]').forEach((b) => b.addEventListener('click', () => {
     const w = $('detail-ads').querySelector(`[data-edit-wrap="${b.dataset.reviewBtn}"]`);

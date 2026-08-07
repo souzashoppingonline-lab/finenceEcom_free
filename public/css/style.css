@@ -787,3 +787,9 @@ tbody tr:hover { background: #f7f9fc; }
 .crea-tag{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--primary);background:#eef4ff;padding:2px 8px;border-radius:20px}
 .crea-obj{font-size:.85rem;margin:8px 0 4px}
 .crea-copy{width:auto;margin:0;padding:5px 10px;font-size:.75rem}
+
+/* modal de vendas */
+.vendas-table{min-width:0;width:100%}
+.vendas-table th,.vendas-table td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;font-size:.88rem}
+.vendas-table input{margin-top:0}
+.ad-vendas{font-size:.85rem}

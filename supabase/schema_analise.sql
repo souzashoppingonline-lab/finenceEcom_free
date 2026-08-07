@@ -97,3 +97,9 @@ alter table public.analise_product_ads add column if not exists vendas_7d intege
 alter table public.analise_product_ads add column if not exists vendas_15d integer;
 alter table public.analise_product_ads add column if not exists vendas_21d integer;
 alter table public.analise_product_ads add column if not exists vendas_30d integer;
+
+-- Valor medio por venda por periodo (Shopping de Preco)
+alter table public.analise_product_ads add column if not exists preco_medio_7d numeric(14,2);
+alter table public.analise_product_ads add column if not exists preco_medio_15d numeric(14,2);
+alter table public.analise_product_ads add column if not exists preco_medio_21d numeric(14,2);
+alter table public.analise_product_ads add column if not exists preco_medio_30d numeric(14,2);
