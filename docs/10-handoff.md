@@ -139,6 +139,33 @@ configuráveis, scheduler por hora de Brasília); **Exportações XLSX/PDF**; **
 (fornecedor/categoria); menu recolhível + tema; branding azul + logo;
 deploy Render + domínio Cloudflare; UptimeRobot (mantém o app acordado).
 
+**Análise de Produtos** (`/analise.html`) + **extensão Chrome** (`extension/`):
+- Dossiê do concorrente do Mercado Livre: preço (com "último preço"), preço original,
+  nota + quantidade de avaliações + distribuição de estrelas (auto), SEO (palavras-chave do
+  título), ficha técnica, descrição, imagem, vendedor, localidade (cidade/UF), reputação,
+  Full, data de criação do anúncio. Campo manual p/ colar textos de avaliações.
+- Coleta manual (1 clique via extensão, botão "Salvar na análise") + recoleta automática
+  1×/dia (service worker, abas ocultas, alarme 15 min) que grava snapshot de preço.
+- **Histórico de preço**: botão "📈 Preço" abre modal com gráfico SVG animado/colorido
+  (área gradiente, linha draw, eixos data×preço, KPIs, tabela).
+- Filtro (Todos/Só FULL) + ordenação (mais barato/caro, melhor nota, mais avaliações);
+  botão "🔄 Atualizar" (recarrega sem F5); limites 10 produtos × 10 concorrentes.
+- **IA opcional** ("cereja do bolo"): cada cliente cola o PRÓPRIO token (Claude/Anthropic
+  ou ChatGPT/OpenAI), criptografado AES-256-GCM (`TOKEN_ENC_KEY`). Botão "Analisar com IA"
+  → Raio-X 0-100 (12 pilares + pesos). Sem token, botão desabilitado.
+- **Token da extensão** por cliente (resolve `user_id` nas rotas `/extension/*`, header
+  `x-ext-token`). Extensão é build única/global; o que muda por cliente é só o token.
+- Tabelas: `user_ai_settings`, `analise_products`, `analise_active_collection`,
+  `analise_product_ads`, `analise_monitor_snapshots` (RLS). Ver `supabase/schema_analise.sql`.
+- Endpoints: `/api/ai-settings` (GET/PUT/regen-token), `/api/analise/products` (CRUD +
+  /activate /finalize /ads), `/api/analise/ads/:id` (PUT/DELETE + /monitorar),
+  `/api/analise/products/:id/analyze`, `/api/analise/monitor/:mlb`;
+  públicas: `/extension/produto-ativo`, `/extension/anuncio`,
+  `/extension/monitoramento/proximos`, `/extension/monitoramento`, `/extension/monitor/:mlb`.
+- Modelos IA configuráveis: `ANTHROPIC_MODEL`, `OPENAI_MODEL`.
+- **Publicação na Chrome Web Store**: ver `docs/11-extensao-chrome-store.md` +
+  política de privacidade em `public/privacidade-extensao.html`.
+
 Endpoints principais: `/api/leads`, `/api/stores`, `/api/sales`, `/api/goals`,
 `/api/imports`, `/api/cashflow`, `/api/boletos`, `/api/lists`, `/api/cards`,
 `/api/parcelas` (+/purchase), `/api/faturas` (+/pay), `/api/fatura-pagamentos`,
@@ -146,11 +173,14 @@ Endpoints principais: `/api/leads`, `/api/stores`, `/api/sales`, `/api/goals`,
 
 ### ⚠️ Pendente / manual do usuário
 1. **Config manual Supabase**: rodar `supabase/00_run_all.sql` (consolidado, idempotente —
-   inclui todas as tabelas: leads, stores, sales, goals, imports, boletos, cash_flow_entries,
-   lists, cartoes, parcelas_cartao, fatura_pagamentos, expenses, boleto_alerts,
-   **manual_cashflow**, CNPJ em boletos). SMTP Resend + templates `{{ .Token }}`.
-2. Testar entrega do e-mail de notificação de lead.
-3. Opcional: faturas virtuais dentro da tabela de Boletos; comparativos semana/mês.
+   inclui todas as tabelas, agora também as de análise: `user_ai_settings`,
+   `analise_products`, `analise_active_collection`, `analise_product_ads`,
+   `analise_monitor_snapshots`). SMTP Resend + templates `{{ .Token }}`.
+2. **Render (env vars)**: `TOKEN_ENC_KEY` (criptografa tokens de IA dos clientes — NÃO trocar
+   depois que houver tokens salvos). Opcional: `ANTHROPIC_MODEL`, `OPENAI_MODEL`.
+3. **Fase 5 — Chrome Web Store**: seguir `docs/11-extensao-chrome-store.md` (conta dev US$5,
+   política de privacidade já pronta, screenshots, justificativa de permissões, revisão).
+4. Testar entrega do e-mail de notificação de lead.
 
 ## 11. Rodar local / deploy
 `npm install` → `cp .env.example .env` → `npm start` (porta 3000; sem SUPABASE_* = memória).

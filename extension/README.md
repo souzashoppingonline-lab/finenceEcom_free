@@ -31,9 +31,10 @@ Salva anúncios de concorrentes do Mercado Livre direto no painel FinanceEcom e 
 
 ## Publicar na Chrome Web Store (Fase 5)
 
-Requer conta de desenvolvedor (US$ 5 única), política de privacidade, ícones,
-screenshots e revisão do Google. A build é única e global; cada cliente usa o
-próprio token — nada muda no código por cliente.
+Passo a passo completo em `docs/11-extensao-chrome-store.md`.
+Política de privacidade (obrigatória): https://app.financeecom.com.br/privacidade-extensao.html
+Requer conta de desenvolvedor (US$ 5 única), screenshots e revisão do Google.
+A build é única e global; cada cliente usa o próprio token — nada muda no código por cliente.
 
 ## Limitações (inerentes)
 
