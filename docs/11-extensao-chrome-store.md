@@ -39,6 +39,13 @@ Guia prático para colocar a extensão “FinanceEcom — Análise de Produtos�
 **Categoria:** Produtividade (ou Compras)
 **Idioma:** Português (Brasil)
 
+**Propósito único (campo “Single purpose”):**
+> Salvar anúncios do Mercado Livre, que o usuário escolhe, no painel FinanceEcom do próprio
+> usuário, para acompanhar preço, ficha técnica e informações públicas desses anúncios.
+
+(EN) Save Mercado Livre product listings that the user selects into the user's own FinanceEcom
+dashboard, to track price, specifications and public listing information.
+
 ## 4. Justificativa de permissões (campo “Privacy practices”)
 Preencha o propósito de cada permissão (textos prontos):
 - **storage** — Armazenar localmente o token do usuário e as preferências da extensão.
