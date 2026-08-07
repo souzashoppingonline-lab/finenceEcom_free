@@ -175,10 +175,14 @@ function ul(items) {
 }
 
 // Renderiza o painel estruturado (schema: comentarios/financeiro/decisao/score)
-function analysisHtml(d, when) {
+function analysisHtml(d, when, prod) {
   const dec = d.decisao || {};
   const f = d.financeiro || {};
   const com = d.comentarios || {};
+  // custo direto vem do PRODUTO (fonte confiável): compra + frete + embalagem
+  const compra = Number(prod?.preco_compra) || 0, frete = Number(prod?.frete_entrada) || 0, emb = Number(prod?.embalagem) || 0;
+  const custoReal = prod ? (compra + frete + emb) : (Number(f.custo_total) || 0);
+  const breakdown = prod ? `<p class="ia-p" style="font-size:.78rem;margin-top:6px;color:var(--muted)">Compra ${money2(compra)} + Frete ${money2(frete)} + Embalagem ${money2(emb)}</p>` : '';
   const score = (d.score && d.score.valor != null) ? d.score.valor : (typeof d.score === 'number' ? d.score : 0);
   const verd = {
     VALE: { t: 'Vale a pena', c: 'v-ok', i: '✅' },
@@ -207,11 +211,12 @@ function analysisHtml(d, when) {
     <div class="ia-col">
       <h4>💰 Financeiro</h4>
       <div class="fin-grid">
-        ${kpi('Custo total', money2(f.custo_total))}
+        ${kpi('Custo total', money2(custoReal))}
         ${kpi('Preço sugerido', money2(f.preco_sugerido))}
         ${kpi('Margem líq.', (Number(f.margem_liquida_pct) || 0).toFixed(2) + '%')}
         ${kpi('Lucro/un.', money2(f.lucro_unitario))}
       </div>
+      ${breakdown}
       <p class="ia-p" style="margin-top:10px">${esc(f.explicacao || '')}</p>
     </div>
     <div class="ia-col">
@@ -351,7 +356,7 @@ async function openDetail(id) {
     let data = null;
     try { data = JSON.parse(p.analise_ia); } catch (_) {}
     const inner = (data && data.decisao)
-      ? analysisHtml(data, when)
+      ? analysisHtml(data, when, p)
       : `<div class="dash-head-row"><h3 style="margin:0">🤖 Análise por IA</h3><small class="muted">${when}</small></div>
          <p class="muted">Esta análise foi gerada numa versão anterior e ficou incompleta. Clique em <b>🤖 Analisar com IA</b> para gerar de novo no novo formato.</p>`;
     $('detail-head').insertAdjacentHTML('beforeend', `<div class="ia-report">${inner}</div>`);
