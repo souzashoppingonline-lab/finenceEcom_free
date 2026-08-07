@@ -388,9 +388,18 @@ function adCard(a) {
 }
 
 let adFilter = 'all';
+let adSort = 'default';
 function renderAds(productId, ads) {
   lastAds = ads; lastProductId = productId;
-  const shown = ads.filter((a) => adFilter === 'full' ? a.is_full : adFilter === 'flex' ? a.is_flex : true);
+  let shown = ads.filter((a) => adFilter === 'full' ? a.is_full : adFilter === 'flex' ? a.is_flex : true);
+  const num = (v) => (v == null ? NaN : Number(v));
+  const cmp = {
+    cheap: (a, b) => (num(a.preco) || Infinity) - (num(b.preco) || Infinity),
+    exp: (a, b) => (num(b.preco) || -Infinity) - (num(a.preco) || -Infinity),
+    rating: (a, b) => (num(b.nota) || -1) - (num(a.nota) || -1),
+    reviews: (a, b) => (num(b.comentarios) || -1) - (num(a.comentarios) || -1),
+  }[adSort];
+  if (cmp) shown = [...shown].sort(cmp);
   $('detail-ads').innerHTML = `
     <div class="dash-head-row" style="margin-top:18px">
       <h3 style="margin:0">Concorrentes (${shown.length}/${ads.length})</h3>
@@ -399,6 +408,13 @@ function renderAds(productId, ads) {
           <option value="all"${adFilter === 'all' ? ' selected' : ''}>Todos</option>
           <option value="full"${adFilter === 'full' ? ' selected' : ''}>Só FULL</option>
           <option value="flex"${adFilter === 'flex' ? ' selected' : ''}>Só FLEX</option>
+        </select>
+        <select id="ad-sort" class="filter-inp">
+          <option value="default"${adSort === 'default' ? ' selected' : ''}>Ordenar…</option>
+          <option value="cheap"${adSort === 'cheap' ? ' selected' : ''}>💲 Mais barato</option>
+          <option value="exp"${adSort === 'exp' ? ' selected' : ''}>💲 Mais caro</option>
+          <option value="rating"${adSort === 'rating' ? ' selected' : ''}>⭐ Melhor nota</option>
+          <option value="reviews"${adSort === 'reviews' ? ' selected' : ''}>💬 Mais avaliações</option>
         </select>
         <button id="ad-refresh" class="btn-ghost">🔄 Atualizar</button>
         <button id="ad-new" class="btn-inline">+ Adicionar concorrente</button>
@@ -446,6 +462,7 @@ function renderAds(productId, ads) {
       : `<div class="ad-grid">${shown.map(adCard).join('')}</div>`}`;
 
   $('ad-filter').addEventListener('change', (e) => { adFilter = e.target.value; renderAds(lastProductId, lastAds); });
+  $('ad-sort').addEventListener('change', (e) => { adSort = e.target.value; renderAds(lastProductId, lastAds); });
   $('ad-refresh').addEventListener('click', () => openDetail(productId));
   // histórico de preço: abre modal com gráfico animado
   $('detail-ads').querySelectorAll('[data-hist-btn]').forEach((b) => b.addEventListener('click', () => {
