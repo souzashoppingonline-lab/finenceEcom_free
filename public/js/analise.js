@@ -464,7 +464,8 @@ async function runCreatives(productId, btn) {
   const out = $('crea-out');
   if (out) out.innerHTML = '<p class="muted">A IA está montando os briefs (quebrando as objeções dos comentários)…</p>';
   try {
-    const r = await api(`/api/analise/products/${productId}/creatives`, { method: 'POST' });
+    const vision = $('crea-vision') ? $('crea-vision').checked : true;
+    const r = await api(`/api/analise/products/${productId}/creatives`, { method: 'POST', body: JSON.stringify({ vision }) });
     if (out) { out.innerHTML = creativesHtml(r.criativos); bindCreativeCopies(); }
     loadUsage();
   } catch (e) {
@@ -563,7 +564,10 @@ async function openDetail(id) {
           <h3>✨ Criativos p/ imagem <span class="muted">(${n} JSONs pro ChatGPT)</span></h3>
           <p class="muted">Cada JSON quebra uma objeção dos comentários. Clique em <b>Copiar</b> e cole no ChatGPT (com suas fotos) pra gerar a imagem.</p>
         </div>
-        <button class="crea-gen" data-creatives="${p.id}">✨ Gerar ${n} criativos</button>
+        <div class="crea-actions">
+          <label class="crea-vis"><input type="checkbox" id="crea-vision" checked /> 👁️ Usar imagens (visão) <span class="muted">— mais fiel, gasta mais</span></label>
+          <button class="crea-gen" data-creatives="${p.id}">✨ Gerar ${n} criativos</button>
+        </div>
       </div>
       <div id="crea-out">${saved ? creativesHtml(saved) : ''}</div>`);
     $('detail-head').querySelector('[data-creatives]').addEventListener('click', (e) => runCreatives(p.id, e.target));

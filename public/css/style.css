@@ -865,3 +865,9 @@ tbody tr:hover { background: #f7f9fc; }
 .slider-row b{font-size:.95rem}
 .slider-warn{font-size:.82rem;color:#b7791f;background:#fff7e8;border:1px solid #f5dca6;border-radius:9px;padding:8px 12px;margin-top:10px}
 :root[data-theme="dark"] .slider-warn{background:#2a2412;border-color:#5a4a1e;color:#e8c76b}
+
+/* checkbox de visão nos criativos */
+.crea-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.crea-vis{display:flex;align-items:center;gap:6px;font-size:.82rem;color:#dfe6f2;cursor:pointer;white-space:nowrap}
+.crea-vis input{width:auto;margin:0}
+.crea-vis .muted{color:#9fb3d0}

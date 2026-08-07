@@ -2356,8 +2356,9 @@ app.post('/api/analise/products/:id/creatives', requireUser, async (req, res) =>
     if (!key) return res.status(400).json({ error: 'Configure seu token de IA para gerar criativos.' });
 
     const context = buildCreativesContext(product, ads);
-    // visão: até 3 imagens de capa reais para a IA "ver" o produto
-    const capas = (ads || []).map((a) => firstFotoUrl(a.fotos)).filter(Boolean).slice(0, 3);
+    // visão: até 3 imagens de capa reais para a IA "ver" o produto (opcional)
+    const useVision = req.body?.vision !== false;
+    const capas = useVision ? (ads || []).map((a) => firstFotoUrl(a.fotos)).filter(Boolean).slice(0, 3) : [];
     const run = (imgs) => keys.provider === 'openai'
       ? callOpenAI(key, context, 4096, SYSTEM_CRIATIVOS, imgs)
       : callAnthropic(key, context, 4096, SYSTEM_CRIATIVOS, imgs);
