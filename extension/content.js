@@ -133,32 +133,14 @@
   }
 
   function getReviews() {
-    // distribuição de estrelas (5..1)
+    // SÓ quantidade + distribuição de estrelas (5..1). Textos ficam no campo manual.
     const dist = [];
-    $$('.ui-review-capability-histogram__bar, .ui-review-capability-filters__pill').forEach((el) => {
-      const t = txt(el).replace(/\s+/g, ' ');
-      const m = t.match(/(\d)\s*estrela.*?(\d+)/i) || t.match(/(\d).*?\((\d+)\)/);
-      if (m) dist.push(`${m[1]}★: ${m[2]}`);
+    $$('.ui-review-capability-histogram__bar, .ui-review-capability-filters__pill, [class*="histogram"] [class*="bar"]').forEach((el) => {
+      const t = (el.getAttribute('aria-label') || txt(el)).replace(/\s+/g, ' ');
+      const m = t.match(/(\d)\s*estrela.*?(\d+)/i) || t.match(/(\d).*?\((\d+)\)/) || t.match(/(\d)\D+(\d+)/);
+      if (m && Number(m[1]) >= 1 && Number(m[1]) <= 5) dist.push(`${m[1]}★: ${m[2]}`);
     });
-    // textos das avaliações (pega estrela quando disponível)
-    const texts = [];
-    const nodes = $$('.ui-review-capability-comments__comment, article.ui-review-capability-comments__comment, [data-testid="comment-component"]');
-    for (const n of nodes) {
-      const body = txt(n.querySelector('.ui-review-capability-comments__comment__content, [data-testid="comment-content-component"], p'));
-      if (!body || body.length < 3) continue;
-      let stars = '';
-      const sEl = n.querySelector('[class*="rating"] , .ui-review-capability-comments__comment__rating');
-      const sTxt = sEl ? (sEl.getAttribute('aria-label') || txt(sEl)) : '';
-      const sm = sTxt.match(/(\d)\s*(de 5|estrela|star)/i) || sTxt.match(/^([1-5])$/);
-      if (sm) stars = sm[1] + '★ ';
-      texts.push((stars + body).slice(0, 300));
-      if (texts.length >= 20) break;
-    }
-    return {
-      count: getReviewsCount(),
-      dist,
-      texto: texts.length ? (dist.length ? '[Distribuição] ' + dist.join(' · ') + '\n\n' : '') + texts.map((t) => '• ' + t).join('\n') : null,
-    };
+    return { count: getReviewsCount(), dist: dist.length ? dist.join(' · ') : null };
   }
 
   function collectAll() {
@@ -176,7 +158,7 @@
       vendas: getVendas(),
       perguntas: null,
       comentarios: reviews.count,
-      comentarios_texto: reviews.texto,
+      aval_dist: reviews.dist,
       vendedor: getSeller(),
       cidade: loc.cidade,
       estado: loc.estado,

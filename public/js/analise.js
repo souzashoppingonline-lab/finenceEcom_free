@@ -278,7 +278,7 @@ function adCard(a) {
         <div class="ad-title">${a.link ? `<a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.titulo || a.ml_id || 'Concorrente')}</a>` : esc(a.titulo || a.ml_id || 'Concorrente')}</div>
         <div class="ad-price">${a.preco != null ? money(a.preco) : '—'} ${a.preco_original && a.preco_original > a.preco ? `<s class="muted">${money(a.preco_original)}</s>` : ''}</div>
         <div class="ad-meta">
-          ${a.nota && a.nota > 0 ? `<span>⭐ ${a.nota}</span>` : ''}
+          ${a.nota && a.nota > 0 ? `<span>⭐ ${a.nota}${a.comentarios ? ` (${a.comentarios})` : ''}</span>` : (a.comentarios ? `<span>💬 ${a.comentarios} avaliações</span>` : '')}
           ${a.vendas ? `<span>📦 ${esc(a.vendas)}</span>` : ''}
           ${a.vendedor ? `<span>🏷️ ${esc(a.vendedor)}</span>` : ''}
           ${a.cidade ? `<span>📍 ${esc(a.cidade)}${a.estado ? '/' + esc(a.estado) : ''}</span>` : ''}
@@ -289,7 +289,8 @@ function adCard(a) {
     <div class="ad-sections">
       ${kws.length ? `<div class="ad-sec"><b>🔑 SEO / palavras-chave</b><div class="ad-kws">${kws.map((k) => `<span class="kw">${esc(k)}</span>`).join('')}</div></div>` : ''}
       ${ficha.length ? `<details class="ad-sec"><summary><b>📋 Ficha técnica</b> (${ficha.length})</summary><ul class="ad-ficha">${ficha.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></details>` : ''}
-      ${a.comentarios_texto ? `<details class="ad-sec"><summary><b>⭐ Avaliações</b>${a.comentarios ? ` (${a.comentarios})` : ''}</summary><div class="ad-desc">${esc(a.comentarios_texto).replace(/\n/g, '<br>')}</div></details>` : ''}
+      ${a.aval_dist ? `<div class="ad-sec"><b>⭐ Avaliações:</b> ${a.nota ? a.nota + ' · ' : ''}${a.comentarios || 0} no total<div class="ad-kws" style="margin-top:5px">${esc(a.aval_dist).split('·').map((d) => `<span class="kw">${esc(d.trim())}</span>`).join('')}</div></div>` : ''}
+      ${a.comentarios_texto ? `<details class="ad-sec"><summary><b>💬 Avaliações (texto)</b></summary><div class="ad-desc">${esc(a.comentarios_texto).replace(/\n/g, '<br>')}</div></details>` : ''}
       ${a.descricao ? `<details class="ad-sec"><summary><b>📝 Descrição do anúncio</b></summary><div class="ad-desc">${esc(a.descricao).replace(/\n/g, '<br>')}</div></details>` : ''}
       ${a.observacoes ? `<div class="ad-sec"><b>🗒️ Minhas anotações:</b> ${esc(a.observacoes)}</div>` : ''}
     </div>

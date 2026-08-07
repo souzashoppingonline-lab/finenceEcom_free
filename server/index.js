@@ -1778,8 +1778,8 @@ function buildAnalysisPrompt(product, ads) {
         `${a.nota ? `, nota ${a.nota}` : ''}${a.vendedor ? `, vendedor ${a.vendedor}` : ''}` +
         `${a.vendas ? `, ${a.vendas}` : ''}${a.reputacao ? `, reputacao ${a.reputacao}` : ''}` +
         `${a.is_full ? ', FULL' : ''}${a.is_flex ? ', FLEX' : ''}` +
-        `${a.comentarios ? `, ${a.comentarios} avaliacoes` : ''}` +
-        `${a.comentarios_texto ? `\n     avaliacoes: ${String(a.comentarios_texto).slice(0, 600).replace(/\n/g, ' | ')}` : ''}`).join('\n')
+        `${a.comentarios ? `, ${a.comentarios} avaliacoes` : ''}${a.aval_dist ? ` (${a.aval_dist})` : ''}` +
+        `${a.comentarios_texto ? `\n     avaliacoes (texto): ${String(a.comentarios_texto).slice(0, 800).replace(/\n/g, ' | ')}` : ''}`).join('\n')
     : '  (nenhum concorrente cadastrado ainda)';
 
   return `Voce e um especialista em Mercado Livre (Brasil) que faz o "Raio-X" de anuncios, no nivel de ferramentas como Nubimetrics e Joopulse. Sua missao e diagnosticar o anuncio e dar uma NOTA DE 0 A 100, com problemas e acoes priorizadas por impacto. Responda em portugues do Brasil, com markdown.
@@ -1938,7 +1938,7 @@ function resolveAdPayload(rawData) {
     vendas: e.vendas || null,
     perguntas: e.perguntas != null ? Number(e.perguntas) || 0 : null,
     comentarios: e.comentarios != null ? Number(e.comentarios) || 0 : null,
-    comentarios_texto: e.comentarios_texto || null,
+    aval_dist: e.aval_dist || null,
     vendedor: e.vendedor || null,
     cidade: e.cidade || null,
     estado: e.estado || null,

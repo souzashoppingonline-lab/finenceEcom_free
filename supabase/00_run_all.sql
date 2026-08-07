@@ -262,3 +262,4 @@ alter table public.analise_monitor_snapshots enable row level security;
 -- Analise por IA salva (Fase 2)
 alter table public.analise_products add column if not exists analise_ia text;
 alter table public.analise_products add column if not exists analise_ia_at timestamptz;
+alter table public.analise_product_ads add column if not exists aval_dist text;
