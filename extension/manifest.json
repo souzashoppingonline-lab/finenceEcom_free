@@ -1,12 +1,10 @@
 {
   "manifest_version": 3,
   "name": "FinanceEcom — Análise de Produtos",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Salve anúncios do Mercado Livre no seu painel FinanceEcom e acompanhe preço, ficha técnica e concorrência.",
-  "permissions": ["storage", "tabs", "scripting", "alarms"],
+  "permissions": ["storage", "alarms"],
   "host_permissions": [
-    "https://produto.mercadolivre.com.br/*",
-    "https://www.mercadolivre.com.br/*",
     "https://*.mercadolivre.com.br/*",
     "https://app.financeecom.com.br/*"
   ],
