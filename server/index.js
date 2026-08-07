@@ -2486,15 +2486,27 @@ app.get('/api/ml/trends', requireUser, async (req, res) => {
     const trends = await mlFetch(categoria ? `/trends/MLB/${categoria.id}` : '/trends/MLB');
 
     let mais_vendidos = [];
-    if (categoria) {
+    const httpsThumb = (u) => String(u || '').replace(/^http:/, 'https:');
+    // 1) busca por categoria (traz titulo, preco e imagem reais)
+    try {
+      const path = categoria ? `/sites/MLB/search?category=${categoria.id}&limit=12` : `/sites/MLB/search?q=${encodeURIComponent(q)}&limit=12`;
+      const s = await mlFetch(path);
+      mais_vendidos = (s.results || []).slice(0, 12).map((r) => ({
+        title: r.title, price: r.price, sold: r.sold_quantity,
+        thumb: r.thumbnail_id ? `https://http2.mlstatic.com/D_${r.thumbnail_id}-O.jpg` : httpsThumb(r.thumbnail),
+        link: r.permalink,
+      }));
+    } catch (_) { /* busca pode estar restrita; tenta highlights abaixo */ }
+    // 2) fallback: highlights -> items
+    if (!mais_vendidos.length && categoria) {
       try {
         const hi = await mlFetch(`/highlights/MLB/category/${categoria.id}`);
-        const ids = (hi.content || []).filter((x) => x.id && /^MLB\d+/.test(x.id)).slice(0, 12).map((x) => x.id);
+        const ids = (hi.content || []).filter((x) => x.id && /^MLB\d+$/.test(x.id)).slice(0, 12).map((x) => x.id);
         if (ids.length) {
           const items = await mlFetch(`/items?ids=${ids.join(',')}&attributes=id,title,price,sold_quantity,thumbnail,permalink`);
-          mais_vendidos = (items || []).map((w) => w.body).filter(Boolean).map((b) => ({ title: b.title, price: b.price, sold: b.sold_quantity, thumb: b.thumbnail, link: b.permalink }));
+          mais_vendidos = (items || []).map((w) => w.body).filter((b) => b && b.title).map((b) => ({ title: b.title, price: b.price, sold: b.sold_quantity, thumb: httpsThumb(b.thumbnail), link: b.permalink }));
         }
-      } catch (_) { /* highlights pode nao existir p/ a categoria */ }
+      } catch (_) {}
     }
     const out = { categoria, trends: (trends || []).slice(0, 30), mais_vendidos };
     mlCacheSet(ck, out);
