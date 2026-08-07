@@ -241,56 +241,113 @@ async function openDetail(id) {
   renderAds(id, ads);
 }
 
-function renderAds(productId, ads) {
-  const rows = ads.map((a) => `<tr>
-    <td>${a.link ? `<a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.titulo || a.ml_id || '—')}</a>` : esc(a.titulo || a.ml_id || '—')}</td>
-    <td>${a.preco != null ? money(a.preco) : '—'}</td>
-    <td>${a.nota != null && a.nota > 0 ? '⭐ ' + a.nota : '—'}</td>
-    <td>${esc(a.vendedor || '—')}</td>
-    <td>${esc(a.vendas || '—')}</td>
-    <td><label class="switch-sm"><input type="checkbox" data-mon="${a.id}" ${a.monitorar ? 'checked' : ''}/> monitorar</label></td>
-    <td><button class="btn-ghost" data-del-ad="${a.id}">✕</button></td>
-  </tr>`).join('');
+// Palavras-chave do título (SEO) — remove ruído e conta as principais
+function seoKeywords(titulo) {
+  const stop = new Set(['de', 'da', 'do', 'para', 'com', 'e', 'a', 'o', 'os', 'as', 'em', 'un', 'kit', 'the', 'un.']);
+  return String(titulo || '').toLowerCase().replace(/[^\wà-ú\s]/gi, ' ').split(/\s+/)
+    .filter((w) => w.length >= 3 && !stop.has(w)).slice(0, 12);
+}
 
+function fichaList(highlights) {
+  let arr = highlights;
+  if (typeof arr === 'string') { try { arr = JSON.parse(arr); } catch (_) { arr = arr.split('\n'); } }
+  if (!Array.isArray(arr)) return [];
+  return arr.map((x) => (typeof x === 'object' ? `${x.name || x.key || ''}: ${x.value || ''}` : String(x))).filter(Boolean);
+}
+
+function firstFoto(fotos) {
+  let arr = fotos;
+  if (typeof arr === 'string') { try { arr = JSON.parse(arr); } catch (_) { return arr; } }
+  if (Array.isArray(arr) && arr.length) return typeof arr[0] === 'object' ? (arr[0].url || arr[0].src) : arr[0];
+  return null;
+}
+
+function adCard(a) {
+  const foto = firstFoto(a.fotos);
+  const kws = seoKeywords(a.titulo);
+  const ficha = fichaList(a.highlights);
+  const badges = [
+    a.is_full ? '<span class="ad-badge b-full">FULL</span>' : '',
+    a.is_flex ? '<span class="ad-badge b-flex">FLEX</span>' : '',
+    a.reputacao ? `<span class="ad-badge">${esc(a.reputacao)}</span>` : '',
+  ].filter(Boolean).join('');
+  return `<div class="ad-card">
+    <div class="ad-card-top">
+      <div class="ad-thumb">${foto ? `<img src="${esc(foto)}" alt="" loading="lazy" />` : '<span class="ad-noimg">sem imagem</span>'}</div>
+      <div class="ad-info">
+        <div class="ad-title">${a.link ? `<a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.titulo || a.ml_id || 'Concorrente')}</a>` : esc(a.titulo || a.ml_id || 'Concorrente')}</div>
+        <div class="ad-price">${a.preco != null ? money(a.preco) : '—'} ${a.preco_original && a.preco_original > a.preco ? `<s class="muted">${money(a.preco_original)}</s>` : ''}</div>
+        <div class="ad-meta">
+          ${a.nota && a.nota > 0 ? `<span>⭐ ${a.nota}</span>` : ''}
+          ${a.vendas ? `<span>📦 ${esc(a.vendas)}</span>` : ''}
+          ${a.vendedor ? `<span>🏷️ ${esc(a.vendedor)}</span>` : ''}
+          ${a.cidade ? `<span>📍 ${esc(a.cidade)}${a.estado ? '/' + esc(a.estado) : ''}</span>` : ''}
+        </div>
+        <div class="ad-badges">${badges}</div>
+      </div>
+    </div>
+    <div class="ad-sections">
+      ${kws.length ? `<div class="ad-sec"><b>🔑 SEO / palavras-chave</b><div class="ad-kws">${kws.map((k) => `<span class="kw">${esc(k)}</span>`).join('')}</div></div>` : ''}
+      ${ficha.length ? `<details class="ad-sec"><summary><b>📋 Ficha técnica</b> (${ficha.length})</summary><ul class="ad-ficha">${ficha.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></details>` : ''}
+      ${a.descricao ? `<details class="ad-sec"><summary><b>📝 Descrição do anúncio</b></summary><div class="ad-desc">${esc(a.descricao).replace(/\n/g, '<br>')}</div></details>` : ''}
+      ${a.observacoes ? `<div class="ad-sec"><b>🗒️ Minhas anotações:</b> ${esc(a.observacoes)}</div>` : ''}
+    </div>
+    <div class="ad-actions">
+      <label class="switch-sm"><input type="checkbox" data-mon="${a.id}" ${a.monitorar ? 'checked' : ''}/> monitorar 1×/dia</label>
+      <button class="btn-ghost" data-del-ad="${a.id}">Remover</button>
+    </div>
+  </div>`;
+}
+
+function renderAds(productId, ads) {
   $('detail-ads').innerHTML = `
     <div class="dash-head-row" style="margin-top:18px">
       <h3 style="margin:0">Concorrentes (${ads.length}/10)</h3>
       <button id="ad-new" class="btn-inline">+ Adicionar concorrente</button>
     </div>
     <form id="ad-form" class="card" hidden style="margin-top:12px">
-      <h4>Novo concorrente (manual)</h4>
-      <p class="muted">Na Fase 3, isso será feito com 1 clique pela extensão. Por enquanto, adicione à mão.</p>
+      <h4>Novo concorrente</h4>
+      <p class="muted">Com a extensão (Fase 3) isso será 1 clique dentro do anúncio. Manualmente, preencha o que tiver.</p>
       <div class="two-col">
-        <label>Título<input name="titulo" placeholder="Nome do anúncio" /></label>
+        <label>Título do anúncio (SEO)<input name="titulo" placeholder="Título completo do concorrente" /></label>
         <label>MLB<input name="ml_id" placeholder="MLB1234567890" /></label>
       </div>
       <label>Link do anúncio<input name="link" placeholder="https://produto.mercadolivre.com.br/MLB-..." /></label>
       <div class="two-col">
         <label>Preço (R$)<input name="preco" type="number" min="0" step="0.01" placeholder="0,00" /></label>
-        <label>Nota<input name="nota" type="number" min="0" max="5" step="0.1" placeholder="0-5" /></label>
+        <label>Nota do anúncio<input name="nota" type="number" min="0" max="5" step="0.1" placeholder="0-5" /></label>
       </div>
       <div class="two-col">
-        <label>Vendedor<input name="vendedor" placeholder="Opcional" /></label>
+        <label>Vendedor<input name="vendedor" placeholder="Nome do vendedor" /></label>
         <label>Vendas<input name="vendas" placeholder="Ex.: +1000 vendidos" /></label>
       </div>
+      <div class="two-col">
+        <label>Reputação<input name="reputacao" placeholder="Ex.: MercadoLíder Platinum" /></label>
+        <label>URL da imagem principal<input name="foto" placeholder="https://..." /></label>
+      </div>
+      <label class="checkbox" style="display:inline-flex;margin-right:18px"><input type="checkbox" name="is_full" /> <span>Full</span></label>
+      <label class="checkbox" style="display:inline-flex"><input type="checkbox" name="is_flex" /> <span>Flex</span></label>
+      <label>Ficha técnica (uma por linha, ex.: "Peso: 3kg")<textarea name="ficha" rows="3" placeholder="Marca: Quatree&#10;Peso: 3kg&#10;Indicação: Gatos castrados"></textarea></label>
+      <label>Descrição do anúncio<textarea name="descricao" rows="4" placeholder="Cole aqui a descrição do concorrente"></textarea></label>
+      <label>Minhas anotações<input name="observacoes" placeholder="O que ele faz de diferente pra vender mais?" /></label>
       <div class="head-actions">
-        <button type="submit" class="btn-cadastrar" style="max-width:200px">Adicionar</button>
+        <button type="submit" class="btn-cadastrar" style="max-width:200px">Salvar concorrente</button>
         <button type="button" id="ad-cancel" class="btn-ghost">Cancelar</button>
       </div>
       <p id="ad-msg" class="form-msg"></p>
     </form>
-    ${ads.length === 0 ? '<p class="muted" style="margin-top:12px">Nenhum concorrente salvo ainda.</p>' : `
-    <div class="table-wrap" style="margin-top:12px"><table>
-      <thead><tr><th>Anúncio</th><th>Preço</th><th>Nota</th><th>Vendedor</th><th>Vendas</th><th></th><th></th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table></div>`}`;
+    ${ads.length === 0 ? '<p class="muted" style="margin-top:12px">Nenhum concorrente salvo ainda. Clique em “+ Adicionar concorrente”.</p>'
+      : `<div class="ad-grid">${ads.map(adCard).join('')}</div>`}`;
 
   $('ad-new').addEventListener('click', () => { $('ad-form').hidden = false; });
   $('ad-cancel').addEventListener('click', () => { $('ad-form').hidden = true; });
   $('ad-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const f = e.target; const body = {};
-    ['titulo', 'ml_id', 'link', 'preco', 'nota', 'vendedor', 'vendas'].forEach((k) => { if (f[k].value) body[k] = f[k].value; });
+    ['titulo', 'ml_id', 'link', 'preco', 'nota', 'vendedor', 'vendas', 'reputacao', 'descricao', 'observacoes'].forEach((k) => { if (f[k].value) body[k] = f[k].value; });
+    if (f.foto.value.trim()) body.foto = f.foto.value.trim();
+    if (f.ficha.value.trim()) body.ficha = f.ficha.value.trim();
+    body.is_full = f.is_full.checked; body.is_flex = f.is_flex.checked;
     try {
       await api(`/api/analise/products/${productId}/ads`, { method: 'POST', body: JSON.stringify(body) });
       openDetail(productId);

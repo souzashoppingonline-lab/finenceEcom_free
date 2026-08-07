@@ -1689,7 +1689,7 @@ app.post('/api/analise/products/:id/finalize', requireUser, async (req, res) => 
 });
 
 // Concorrente manual (add). Fase 3-4 fara via extensao.
-const AD_FIELDS = ['ml_id', 'link', 'titulo', 'preco', 'preco_original', 'nota', 'vendas', 'vendedor', 'cidade', 'estado', 'reputacao', 'observacoes'];
+const AD_FIELDS = ['ml_id', 'link', 'titulo', 'preco', 'preco_original', 'nota', 'vendas', 'vendedor', 'cidade', 'estado', 'reputacao', 'observacoes', 'descricao'];
 app.post('/api/analise/products/:id/ads', requireUser, async (req, res) => {
   const id = req.params.id; const b = req.body || {};
   const rec = {};
@@ -1698,6 +1698,13 @@ app.post('/api/analise/products/:id/ads', requireUser, async (req, res) => {
     if (['preco', 'preco_original', 'nota'].includes(k)) rec[k] = Number(b[k]) || 0;
     else rec[k] = String(b[k] || '').trim() || null;
   });
+  // campos ricos: imagens, ficha tecnica, Full/Flex
+  if (b.is_full !== undefined) rec.is_full = !!b.is_full;
+  if (b.is_flex !== undefined) rec.is_flex = !!b.is_flex;
+  if (b.foto) rec.fotos = [String(b.foto).trim()];
+  else if (Array.isArray(b.fotos)) rec.fotos = b.fotos;
+  if (b.ficha) rec.highlights = String(b.ficha).split('\n').map((s) => s.trim()).filter(Boolean);
+  else if (Array.isArray(b.highlights)) rec.highlights = b.highlights;
   if (!rec.titulo && !rec.ml_id) return res.status(400).json({ error: 'Informe ao menos o titulo ou o MLB do concorrente.' });
   try {
     let count;
