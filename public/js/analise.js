@@ -7,6 +7,8 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 
 let products = [];
 let activeId = null;
+let lastAds = [];
+let lastProductId = null;
 let aiState = { provider: 'anthropic', has_anthropic: false, has_openai: false };
 
 async function api(path, options = {}) {
@@ -385,11 +387,19 @@ function adCard(a) {
   </div>`;
 }
 
+let adFilter = 'all';
 function renderAds(productId, ads) {
+  lastAds = ads; lastProductId = productId;
+  const shown = ads.filter((a) => adFilter === 'full' ? a.is_full : adFilter === 'flex' ? a.is_flex : true);
   $('detail-ads').innerHTML = `
     <div class="dash-head-row" style="margin-top:18px">
-      <h3 style="margin:0">Concorrentes (${ads.length}/10)</h3>
-      <div class="head-actions" style="gap:8px">
+      <h3 style="margin:0">Concorrentes (${shown.length}/${ads.length})</h3>
+      <div class="head-actions" style="gap:8px;flex-wrap:wrap">
+        <select id="ad-filter" class="filter-inp">
+          <option value="all"${adFilter === 'all' ? ' selected' : ''}>Todos</option>
+          <option value="full"${adFilter === 'full' ? ' selected' : ''}>Só FULL</option>
+          <option value="flex"${adFilter === 'flex' ? ' selected' : ''}>Só FLEX</option>
+        </select>
         <button id="ad-refresh" class="btn-ghost">🔄 Atualizar</button>
         <button id="ad-new" class="btn-inline">+ Adicionar concorrente</button>
       </div>
@@ -432,8 +442,10 @@ function renderAds(productId, ads) {
       <p id="ad-msg" class="form-msg"></p>
     </form>
     ${ads.length === 0 ? '<p class="muted" style="margin-top:12px">Nenhum concorrente salvo ainda. Clique em “+ Adicionar concorrente”.</p>'
-      : `<div class="ad-grid">${ads.map(adCard).join('')}</div>`}`;
+      : shown.length === 0 ? '<p class="muted" style="margin-top:12px">Nenhum concorrente com esse filtro.</p>'
+      : `<div class="ad-grid">${shown.map(adCard).join('')}</div>`}`;
 
+  $('ad-filter').addEventListener('change', (e) => { adFilter = e.target.value; renderAds(lastProductId, lastAds); });
   $('ad-refresh').addEventListener('click', () => openDetail(productId));
   // histórico de preço: abre modal com gráfico animado
   $('detail-ads').querySelectorAll('[data-hist-btn]').forEach((b) => b.addEventListener('click', () => {
