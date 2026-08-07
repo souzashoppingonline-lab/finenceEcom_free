@@ -828,3 +828,18 @@ tbody tr:hover { background: #f7f9fc; }
 .usage-item b{color:var(--text)}
 .usage-total{margin-left:auto;font-size:.95rem;color:var(--text)}
 .usage-total b{color:var(--primary)}
+
+/* barra de preço — versão largura total */
+.pb-card{margin-top:16px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 26px}
+.pb-title{font-size:.95rem;font-weight:700;margin-bottom:44px}
+.pb-track{position:relative;height:12px;background:linear-gradient(90deg,#22c55e,#f5b301,#ef4444);border-radius:20px;margin:0 8px}
+.pb-dot{position:absolute;top:50%;width:11px;height:11px;background:#fff;border:2px solid #47536b;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.pb-mark{position:absolute;top:50%;width:3px;height:26px;transform:translate(-50%,-50%);border-radius:2px}
+.pb-mark.pb-p{background:#1e6fff}
+.pb-mark.pb-be{background:#47536b}
+.pb-lbl{position:absolute;left:50%;transform:translateX(-50%);font-size:.72rem;font-weight:600;white-space:nowrap;text-align:center;color:var(--text);line-height:1.2}
+.pb-lbl b{font-size:.82rem}
+.pb-lbl.pb-top{bottom:20px}
+.pb-lbl.pb-bot{top:20px;color:var(--muted)}
+.pb-ends{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);margin-top:44px}
+.pb-note{font-size:.85rem;color:var(--text);margin-top:10px}

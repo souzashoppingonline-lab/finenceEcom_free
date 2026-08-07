@@ -177,21 +177,27 @@ function ul(items) {
 // Renderiza o painel estruturado (schema: comentarios/financeiro/decisao/score)
 // Barra mostrando onde o preço sugerido cai no range dos concorrentes
 function priceBar(ads, P, breakEven) {
-  const prices = (ads || []).map((a) => Number(a.preco)).filter((v) => v > 0);
+  const prices = (ads || []).map((a) => Number(a.preco)).filter((v) => v > 0).sort((a, b) => a - b);
   if (prices.length < 2) return '';
-  const min = Math.min(...prices), max = Math.max(...prices);
-  const span = max - min || 1;
+  const min = prices[0], max = prices[prices.length - 1], span = max - min || 1;
+  const media = prices.reduce((a, b) => a + b, 0) / prices.length;
   const pos = (v) => Math.max(0, Math.min(100, (v - min) / span * 100));
-  const dots = prices.map((v) => `<span class="pb-dot" style="left:${pos(v)}%" title="${money2(v)}"></span>`).join('');
-  const marker = (v, cls, label) => (v > 0 ? `<span class="pb-mark ${cls}" style="left:${pos(v)}%"><span class="pb-lbl">${label}<br>${money2(v)}</span></span>` : '');
-  return `<div class="pb-wrap">
-    <div class="pb-head"><span>💲 Seu preço vs concorrentes</span></div>
+  const dots = prices.map((v) => `<span class="pb-dot" style="left:${pos(v)}%" title="Concorrente: ${money2(v)}"></span>`).join('');
+  // marcadores acima (sugerido) e abaixo (equilíbrio) pra não colidir
+  const markTop = (v, cls, label) => (v > 0 ? `<span class="pb-mark ${cls}" style="left:${pos(v)}%"><span class="pb-lbl pb-top">${label}<br><b>${money2(v)}</b></span></span>` : '');
+  const markBot = (v, cls, label) => (v > 0 ? `<span class="pb-mark ${cls}" style="left:${pos(v)}%"><span class="pb-lbl pb-bot"><b>${money2(v)}</b><br>${label}</span></span>` : '');
+  // posição do seu preço vs mercado
+  let situa = 'no meio da faixa';
+  if (P) { if (P <= media * 0.97) situa = 'mais barato que a média'; else if (P >= media * 1.03) situa = 'mais caro que a média'; }
+  return `<div class="pb-card">
+    <div class="pb-title">💲 Seu preço vs. concorrentes <span class="muted">— ${prices.length} anúncios · média ${money2(media)}</span></div>
     <div class="pb-track">
       ${dots}
-      ${marker(breakEven, 'pb-be', 'Equilíbrio')}
-      ${marker(P, 'pb-p', 'Sugerido')}
+      ${markTop(P, 'pb-p', 'Sugerido')}
+      ${markBot(breakEven, 'pb-be', 'Equilíbrio')}
     </div>
-    <div class="pb-ends"><span>${money2(min)}</span><span>${money2(max)}</span></div>
+    <div class="pb-ends"><span>menor ${money2(min)}</span><span>maior ${money2(max)}</span></div>
+    ${P ? `<p class="pb-note">Seu preço sugerido (${money2(P)}) está <b>${situa}</b>.</p>` : ''}
   </div>`;
 }
 
@@ -224,7 +230,6 @@ function analysisHtml(d, when, prod, ads) {
       <div class="be-box"><span>⚖️ Preço de equilíbrio</span><b>${money2(breakEven)}</b><small>margem 0% (nem lucro nem prejuízo)</small></div>
       <div class="be-box"><span>🎯 Preço p/ margem ${ALVO}%</span><b>${money2(precoAlvo)}</b><small>lucro de ${money2(precoAlvo * ALVO / 100)}/un.</small></div>
     </div>
-    ${priceBar(ads, P, breakEven)}
     <div class="sim no-print" data-custo="${custoFixo}" data-taxa="${taxaPct}" data-imp="${impPct}">
       <label>🧮 Simular preço de venda
         <input type="number" id="sim-preco" min="0" step="0.01" value="${P ? P.toFixed(2) : ''}" placeholder="Digite um preço" />
@@ -276,7 +281,8 @@ function analysisHtml(d, when, prod, ads) {
       <h5 class="ia-sub sub-bad">Riscos</h5>${ul(dec.riscos)}
       <h5 class="ia-sub sub-op">Próximos passos</h5>${ul(dec.proximos_passos)}
     </div>
-  </div>`;
+  </div>
+  ${priceBar(ads, P, breakEven)}`;
 }
 
 // Simulador de preço: recalcula lucro/margem ao vivo (sem IA)
