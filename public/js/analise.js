@@ -262,6 +262,36 @@ function firstFoto(fotos) {
   return null;
 }
 
+// Mini-gráfico SVG (sparkline) do histórico de preço
+function sparkline(points) {
+  if (points.length < 2) return '';
+  const w = 260, h = 60, pad = 6;
+  const vals = points.map((p) => p.preco);
+  const min = Math.min(...vals), max = Math.max(...vals), range = max - min || 1;
+  const x = (i) => pad + (i * (w - 2 * pad)) / (points.length - 1);
+  const y = (v) => h - pad - ((v - min) / range) * (h - 2 * pad);
+  const d = points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.preco).toFixed(1)}`).join(' ');
+  const dots = points.map((p, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(p.preco).toFixed(1)}" r="2.5" fill="#1e6fff"/>`).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" style="max-width:${w}px">
+    <path d="${d}" fill="none" stroke="#1e6fff" stroke-width="2"/>${dots}</svg>`;
+}
+
+async function loadHistory(mlId, container) {
+  container.innerHTML = '<span class="muted">carregando…</span>';
+  try {
+    const r = await api(`/api/analise/monitor/${encodeURIComponent(mlId)}`);
+    const h = (r.historico || []).map((s) => ({ ...s, preco: Number(s.preco) }));
+    if (!h.length) { container.innerHTML = '<span class="muted">Sem histórico ainda. A cada dia que a extensão recoletar, um ponto é gravado aqui.</span>'; return; }
+    const first = h[0].preco, last = h[h.length - 1].preco;
+    const delta = last - first;
+    const deltaTxt = delta === 0 ? 'estável' : (delta > 0 ? `▲ ${money(delta)}` : `▼ ${money(-delta)}`);
+    const rows = h.slice(-14).reverse().map((s) => `<tr><td>${new Date(s.snap_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</td><td>${money(s.preco)}</td></tr>`).join('');
+    container.innerHTML = `${sparkline(h)}
+      <p class="muted" style="margin:4px 0">${h.length} dias · variação ${deltaTxt}</p>
+      <div class="table-wrap"><table class="hist-table"><thead><tr><th>Data</th><th>Preço</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  } catch (e) { container.innerHTML = `<span class="c-danger">${esc(e.message)}</span>`; }
+}
+
 function adCard(a) {
   const foto = firstFoto(a.fotos);
   const kws = seoKeywords(a.titulo);
@@ -282,6 +312,7 @@ function adCard(a) {
           ${a.vendas ? `<span>📦 ${esc(a.vendas)}</span>` : ''}
           ${a.vendedor ? `<span>🏷️ ${esc(a.vendedor)}</span>` : ''}
           ${a.cidade ? `<span>📍 ${esc(a.cidade)}${a.estado ? '/' + esc(a.estado) : ''}</span>` : ''}
+          ${a.data_criacao ? `<span>🗓️ criado ${esc(a.data_criacao)}</span>` : ''}
         </div>
         <div class="ad-badges">${badges}</div>
       </div>
@@ -289,6 +320,7 @@ function adCard(a) {
     <div class="ad-sections">
       ${kws.length ? `<div class="ad-sec"><b>🔑 SEO / palavras-chave</b><div class="ad-kws">${kws.map((k) => `<span class="kw">${esc(k)}</span>`).join('')}</div></div>` : ''}
       ${ficha.length ? `<details class="ad-sec"><summary><b>📋 Ficha técnica</b> (${ficha.length})</summary><ul class="ad-ficha">${ficha.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></details>` : ''}
+      ${a.ml_id ? `<details class="ad-sec" data-hist="${esc(a.ml_id)}"><summary><b>📈 Histórico de preço</b></summary><div class="ad-hist muted">clique para carregar…</div></details>` : ''}
       ${a.aval_dist ? `<div class="ad-sec"><b>⭐ Avaliações:</b> ${a.nota ? a.nota + ' · ' : ''}${a.comentarios || 0} no total<div class="ad-kws" style="margin-top:5px">${esc(a.aval_dist).split('·').map((d) => `<span class="kw">${esc(d.trim())}</span>`).join('')}</div></div>` : ''}
       ${a.comentarios_texto ? `<details class="ad-sec"><summary><b>💬 Avaliações (texto)</b></summary><div class="ad-desc">${esc(a.comentarios_texto).replace(/\n/g, '<br>')}</div></details>` : ''}
       ${a.descricao ? `<details class="ad-sec"><summary><b>📝 Descrição do anúncio</b></summary><div class="ad-desc">${esc(a.descricao).replace(/\n/g, '<br>')}</div></details>` : ''}
@@ -346,6 +378,7 @@ function renderAds(productId, ads) {
         <label>Cidade do vendedor<input name="cidade" placeholder="Ex.: Franca" /></label>
         <label>Estado (UF)<input name="estado" placeholder="Ex.: SP" maxlength="2" /></label>
       </div>
+      <label>Data de criação do anúncio<input name="data_criacao" placeholder="Ex.: 07/08/2026" /></label>
       <label class="checkbox" style="display:inline-flex;margin-right:18px"><input type="checkbox" name="is_full" /> <span>Full</span></label>
       <label class="checkbox" style="display:inline-flex"><input type="checkbox" name="is_flex" /> <span>Flex</span></label>
       <label>Ficha técnica (uma por linha, ex.: "Peso: 3kg")<textarea name="ficha" rows="3" placeholder="Marca: Quatree&#10;Peso: 3kg&#10;Indicação: Gatos castrados"></textarea></label>
@@ -362,12 +395,16 @@ function renderAds(productId, ads) {
       : `<div class="ad-grid">${ads.map(adCard).join('')}</div>`}`;
 
   $('ad-refresh').addEventListener('click', () => openDetail(productId));
+  // histórico de preço: carrega ao abrir o details (uma vez)
+  $('detail-ads').querySelectorAll('details[data-hist]').forEach((d) => d.addEventListener('toggle', () => {
+    if (d.open && !d.dataset.loaded) { d.dataset.loaded = '1'; loadHistory(d.dataset.hist, d.querySelector('.ad-hist')); }
+  }));
   $('ad-new').addEventListener('click', () => { $('ad-form').hidden = false; });
   $('ad-cancel').addEventListener('click', () => { $('ad-form').hidden = true; });
   $('ad-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const f = e.target; const body = {};
-    ['titulo', 'ml_id', 'link', 'preco', 'nota', 'vendedor', 'vendas', 'reputacao', 'cidade', 'estado', 'comentarios_texto', 'descricao', 'observacoes'].forEach((k) => { if (f[k].value) body[k] = f[k].value; });
+    ['titulo', 'ml_id', 'link', 'preco', 'nota', 'vendedor', 'vendas', 'reputacao', 'cidade', 'estado', 'data_criacao', 'comentarios_texto', 'descricao', 'observacoes'].forEach((k) => { if (f[k].value) body[k] = f[k].value; });
     if (f.foto.value.trim()) body.foto = f.foto.value.trim();
     if (f.ficha.value.trim()) body.ficha = f.ficha.value.trim();
     body.is_full = f.is_full.checked; body.is_flex = f.is_flex.checked;

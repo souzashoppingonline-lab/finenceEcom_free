@@ -84,3 +84,6 @@ alter table public.analise_products add column if not exists analise_ia_at times
 
 -- Distribuicao de estrelas das avaliacoes (auto) — Fase 3
 alter table public.analise_product_ads add column if not exists aval_dist text;
+
+-- Data de criacao do anuncio (Fase 4)
+alter table public.analise_product_ads add column if not exists data_criacao text;

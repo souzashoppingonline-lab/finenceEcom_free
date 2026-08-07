@@ -1689,7 +1689,7 @@ app.post('/api/analise/products/:id/finalize', requireUser, async (req, res) => 
 });
 
 // Concorrente manual (add). Fase 3-4 fara via extensao.
-const AD_FIELDS = ['ml_id', 'link', 'titulo', 'preco', 'preco_original', 'nota', 'vendas', 'vendedor', 'cidade', 'estado', 'reputacao', 'observacoes', 'descricao', 'comentarios_texto'];
+const AD_FIELDS = ['ml_id', 'link', 'titulo', 'preco', 'preco_original', 'nota', 'vendas', 'vendedor', 'cidade', 'estado', 'reputacao', 'observacoes', 'descricao', 'comentarios_texto', 'data_criacao'];
 app.post('/api/analise/products/:id/ads', requireUser, async (req, res) => {
   const id = req.params.id; const b = req.body || {};
   const rec = {};
@@ -1728,7 +1728,7 @@ app.post('/api/analise/products/:id/ads', requireUser, async (req, res) => {
 app.put('/api/analise/ads/:adId', requireUser, async (req, res) => {
   const adId = req.params.adId; const b = req.body || {};
   const patch = {};
-  ['titulo', 'link', 'vendedor', 'cidade', 'estado', 'reputacao', 'vendas', 'descricao', 'comentarios_texto', 'observacoes', 'aval_dist'].forEach((k) => {
+  ['titulo', 'link', 'vendedor', 'cidade', 'estado', 'reputacao', 'vendas', 'descricao', 'comentarios_texto', 'observacoes', 'aval_dist', 'data_criacao'].forEach((k) => {
     if (b[k] !== undefined) patch[k] = String(b[k] || '').trim() || null;
   });
   ['preco', 'preco_original', 'nota', 'comentarios'].forEach((k) => { if (b[k] !== undefined) patch[k] = Number(b[k]) || 0; });
@@ -1800,6 +1800,7 @@ function buildAnalysisPrompt(product, ads) {
         `${a.nota ? `, nota ${a.nota}` : ''}${a.vendedor ? `, vendedor ${a.vendedor}` : ''}` +
         `${a.vendas ? `, ${a.vendas}` : ''}${a.reputacao ? `, reputacao ${a.reputacao}` : ''}` +
         `${a.is_full ? ', FULL' : ''}${a.is_flex ? ', FLEX' : ''}` +
+        `${a.data_criacao ? `, anuncio criado em ${a.data_criacao}` : ''}` +
         `${a.comentarios ? `, ${a.comentarios} avaliacoes` : ''}${a.aval_dist ? ` (${a.aval_dist})` : ''}` +
         `${a.comentarios_texto ? `\n     avaliacoes (texto): ${String(a.comentarios_texto).slice(0, 800).replace(/\n/g, ' | ')}` : ''}`).join('\n')
     : '  (nenhum concorrente cadastrado ainda)';
@@ -1961,6 +1962,7 @@ function resolveAdPayload(rawData) {
     perguntas: e.perguntas != null ? Number(e.perguntas) || 0 : null,
     comentarios: e.comentarios != null ? Number(e.comentarios) || 0 : null,
     aval_dist: e.aval_dist || null,
+    data_criacao: e.data_criacao || null,
     vendedor: e.vendedor || null,
     cidade: e.cidade || null,
     estado: e.estado || null,

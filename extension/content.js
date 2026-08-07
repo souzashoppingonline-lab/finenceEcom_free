@@ -132,6 +132,14 @@
     return out.slice(0, 40);
   }
 
+  function getCreationDate(jsonLd) {
+    // 1) JSON-LD (releaseDate/productionDate) quando disponível
+    if (jsonLd && (jsonLd.releaseDate || jsonLd.productionDate)) return String(jsonLd.releaseDate || jsonLd.productionDate).slice(0, 10);
+    // 2) texto "criado em DD/MM/AAAA" / "Publicado em ..." na página
+    const m = (document.body.innerText || '').match(/(?:criado|publicado|anunciado)\s*(?:em|desde)?\s*:?\s*(\d{2}\/\d{2}\/\d{4})/i);
+    return m ? m[1] : null;
+  }
+
   function getReviews() {
     // SÓ quantidade + distribuição de estrelas (5..1). Textos ficam no campo manual.
     const dist = [];
@@ -159,6 +167,7 @@
       perguntas: null,
       comentarios: reviews.count,
       aval_dist: reviews.dist,
+      data_criacao: getCreationDate(jsonLd),
       vendedor: getSeller(),
       cidade: loc.cidade,
       estado: loc.estado,

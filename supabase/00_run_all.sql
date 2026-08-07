@@ -263,3 +263,4 @@ alter table public.analise_monitor_snapshots enable row level security;
 alter table public.analise_products add column if not exists analise_ia text;
 alter table public.analise_products add column if not exists analise_ia_at timestamptz;
 alter table public.analise_product_ads add column if not exists aval_dist text;
+alter table public.analise_product_ads add column if not exists data_criacao text;
