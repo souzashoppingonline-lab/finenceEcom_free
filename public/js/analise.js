@@ -341,9 +341,12 @@ async function openDetail(id) {
   // ANÁLISE POR IA — aparece acima dos cards, com todos os detalhes
   if (p.analise_ia) {
     const when = p.analise_ia_at ? new Date(p.analise_ia_at).toLocaleString('pt-BR') : '';
-    let inner; let data = null;
+    let data = null;
     try { data = JSON.parse(p.analise_ia); } catch (_) {}
-    inner = (data && data.veredito) ? analysisHtml(data, when) : `<div class="dash-head-row"><h3 style="margin:0">🤖 Análise por IA</h3><small class="muted">${when}</small></div><div class="ia-modal-body">${mdToHtml(p.analise_ia)}</div>`;
+    const inner = (data && data.veredito)
+      ? analysisHtml(data, when)
+      : `<div class="dash-head-row"><h3 style="margin:0">🤖 Análise por IA</h3><small class="muted">${when}</small></div>
+         <p class="muted">Esta análise foi gerada numa versão anterior e ficou incompleta. Clique em <b>🤖 Analisar com IA</b> para gerar de novo no novo formato.</p>`;
     $('detail-head').insertAdjacentHTML('beforeend', `<div class="ia-report">${inner}</div>`);
   }
   // CRIATIVOS p/ imagem — banner (opcional, gasta crédito)

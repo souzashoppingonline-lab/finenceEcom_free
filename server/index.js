@@ -1896,12 +1896,14 @@ REGRA DE CUSTO: taxa MP e imposto sao PERCENTUAIS sobre o preco de venda P. Lucr
 
 SCORE (0-100) ponderado: Conversao 25%, CTR 15%, SEO 15%, Conteudo 10%, Oferta 10%, Logistica 10%, Publicidade 5%, Estoque 5%, Reputacao 5%. Sem dados de um pilar, estime conservador.
 
+Use os 12 pilares apenas como RACIOCINIO INTERNO. NAO escreva "RAIO-X", NAO liste os pilares, NAO escreva textos longos — o JSON precisa caber inteiro e ser valido. Seja curto e direto em todos os campos.
+
 Responda APENAS com JSON valido (sem markdown, sem texto fora do JSON), neste schema exato:
 {
   "veredito": "vale_a_pena" | "avaliar" | "evitar",
   "score": <inteiro 0-100>,
-  "resumo": "<1-2 frases diretas>",
-  "detalhe": "<paragrafo com pontos positivos e negativos>",
+  "resumo": "<no maximo 2 frases>",
+  "detalhe": "<no maximo 3 frases curtas com os principais pontos positivos e negativos; NAO liste pilares>",
   "financeiro": {
     "custo": <numero>, "preco_sugerido": <numero>, "margem_pct": <numero>, "lucro_un": <numero>,
     "explicacao": "<como chegou no preco/margem, comparando com a faixa dos concorrentes>"
@@ -1914,7 +1916,7 @@ Responda APENAS com JSON valido (sem markdown, sem texto fora do JSON), neste sc
   "proximos_passos": ["<acao pratica e priorizada>", "..."]
 }
 
-Regras: use os custos para calcular financeiro (margem_pct e lucro_un liquidos, ja descontando taxa MP% e imposto%); preco_sugerido competitivo vs concorrentes. elogios/reclamacoes vem das avaliacoes fornecidas (se nao houver, deixe [] e cite em reclamacoes que faltam avaliacoes). 3 a 6 itens por lista. Numeros sem "R$" (apenas o valor). Nunca invente metricas nao fornecidas.`;
+Regras: use os custos para calcular financeiro (margem_pct e lucro_un liquidos, ja descontando taxa MP% e imposto%); preco_sugerido competitivo vs concorrentes. elogios/reclamacoes vem das avaliacoes fornecidas (se nao houver, deixe [] e cite em reclamacoes que faltam avaliacoes). Cada lista tem de 3 a 6 itens CURTOS (frases de ate ~12 palavras). Numeros sem "R$" (apenas o valor). Nunca invente metricas nao fornecidas.`;
 }
 
 app.post('/api/analise/products/:id/analyze', requireUser, async (req, res) => {
@@ -1940,15 +1942,18 @@ app.post('/api/analise/products/:id/analyze', requireUser, async (req, res) => {
     const prompt = buildAnalysisPrompt(product, ads);
     let text;
     try {
-      text = keys.provider === 'openai' ? await callOpenAI(key, prompt) : await callAnthropic(key, prompt);
+      text = keys.provider === 'openai' ? await callOpenAI(key, prompt, 2500) : await callAnthropic(key, prompt, 2500);
     } catch (e) {
       return res.status(502).json({ error: `A IA retornou erro: ${e.message}. Verifique se o token esta correto e com creditos.` });
     }
     if (!text) return res.status(502).json({ error: 'A IA nao retornou conteudo.' });
 
-    // espera JSON estruturado; se vier texto solto, guarda como fallback
+    // espera JSON estruturado; se vier incompleto/invalido, avisa para refazer
     const parsed = extractJson(text);
-    const toStore = parsed ? JSON.stringify(parsed) : text;
+    if (!parsed || !parsed.veredito) {
+      return res.status(502).json({ error: 'A analise veio incompleta. Clique em Analisar novamente (aumentamos o limite).' });
+    }
+    const toStore = JSON.stringify(parsed);
 
     const stamp = new Date().toISOString();
     try {
