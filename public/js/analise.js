@@ -230,20 +230,22 @@ async function runAnalysis(productId, btn) {
 }
 
 // ---- Criativos (opcional, gasta crédito) ----
+const CREATIVES_N = 7;
 function creativesHtml(list) {
   if (!Array.isArray(list) || !list.length) return '<p class="muted">Nenhum criativo.</p>';
-  return list.map((c, i) => {
+  return `<div class="crea-grid">` + list.map((c, i) => {
     const json = JSON.stringify(c, null, 2);
     const cp = c.elementos_visual_copy || {};
     return `<div class="crea-card">
-      <div class="dash-head-row"><b>Criativo ${i + 1} · formato ${esc(c.formato || '1:1')}</b>
-        <button class="btn-ghost crea-copy" data-json='${esc(json)}'>📋 Copiar JSON</button></div>
+      <div class="dash-head-row"><span class="crea-tag">Criativo ${i + 1}</span>
+        <button class="btn-ghost crea-copy" data-json='${esc(json)}'>📋 Copiar</button></div>
+      ${c.objecao ? `<p class="crea-obj">🎯 Quebra: <b>${esc(c.objecao)}</b></p>` : ''}
       ${cp.texto_principal ? `<p class="crea-h">“${esc(cp.texto_principal)}”</p>` : ''}
-      ${cp.texto_secundario ? `<p class="muted">${esc(cp.texto_secundario)}</p>` : ''}
-      <details style="margin-top:8px"><summary class="muted">Ver briefing completo (JSON)</summary>
+      ${cp.texto_secundario ? `<p class="muted" style="font-size:.82rem">${esc(cp.texto_secundario)}</p>` : ''}
+      <details style="margin-top:8px"><summary class="muted">Ver JSON completo</summary>
         <pre class="crea-json">${esc(json)}</pre></details>
     </div>`;
-  }).join('');
+  }).join('') + `</div>`;
 }
 
 function bindCreativeCopies() {
@@ -255,16 +257,16 @@ function bindCreativeCopies() {
 
 async function runCreatives(productId, btn) {
   if (!iaReady()) { alert('Configure seu token de IA nas Configurações acima.'); return; }
-  if (!confirm('Gerar criativos usa a IA e consome créditos da sua chave. Deseja continuar?')) return;
+  if (!confirm(`Gerar ${CREATIVES_N} criativos usa a IA e consome créditos da sua chave. Deseja continuar?`)) return;
   const original = btn ? btn.textContent : '';
-  if (btn) { btn.disabled = true; btn.textContent = '🎨 Gerando…'; }
-  openModal('🎨 Criando criativos', '<p class="muted">A IA está montando os briefs de imagem, aguarde…</p>');
+  if (btn) { btn.disabled = true; btn.textContent = '✨ Gerando…'; }
+  const out = $('crea-out');
+  if (out) out.innerHTML = '<p class="muted">A IA está montando os briefs (quebrando as objeções dos comentários)…</p>';
   try {
     const r = await api(`/api/analise/products/${productId}/creatives`, { method: 'POST' });
-    openModal('🎨 Criativos gerados', creativesHtml(r.criativos));
-    bindCreativeCopies();
+    if (out) { out.innerHTML = creativesHtml(r.criativos); bindCreativeCopies(); }
   } catch (e) {
-    openModal('🎨 Criar Criativos', `<p class="c-danger">${esc(e.message)}</p>`);
+    if (out) out.innerHTML = `<p class="c-danger">${esc(e.message)}</p>`;
   }
   if (btn) { btn.disabled = false; btn.textContent = original; }
 }
@@ -312,8 +314,7 @@ async function openDetail(id) {
       <h2 style="margin:0">${esc(p.produto)}</h2>
       <div class="head-actions" style="flex-wrap:wrap;gap:8px">
         ${iaReady()
-          ? `<button class="btn-inline" data-ia="${p.id}">🤖 Analisar com IA</button>
-             <button class="btn-ghost" data-creatives="${p.id}" title="Gera briefs de imagem (usa créditos de IA)">🎨 Criar Criativos</button>`
+          ? `<button class="btn-inline" data-ia="${p.id}">🤖 Analisar com IA</button>`
           : '<button class="btn-ghost" disabled title="Configure seu token de IA acima">🤖 IA (configure o token)</button>'}
         ${isActive
           ? `<button class="btn-ghost" data-finalize="${p.id}">⏹ Finalizar coleta</button>`
@@ -335,7 +336,6 @@ async function openDetail(id) {
     backToList();
   });
   $('detail-head').querySelector('[data-ia]')?.addEventListener('click', (e) => runAnalysis(p.id, e.target));
-  $('detail-head').querySelector('[data-creatives]')?.addEventListener('click', (e) => runCreatives(p.id, e.target));
 
   // ANÁLISE POR IA — aparece acima dos cards, com todos os detalhes
   if (p.analise_ia) {
@@ -345,14 +345,22 @@ async function openDetail(id) {
     inner = (data && data.veredito) ? analysisHtml(data, when) : `<div class="dash-head-row"><h3 style="margin:0">🤖 Análise por IA</h3><small class="muted">${when}</small></div><div class="ia-modal-body">${mdToHtml(p.analise_ia)}</div>`;
     $('detail-head').insertAdjacentHTML('beforeend', `<div class="ia-report">${inner}</div>`);
   }
-  // CRIATIVOS gerados (se houver)
-  if (p.creativos_json) {
-    try {
-      const cr = JSON.parse(p.creativos_json).criativos || [];
-      const when = p.creativos_at ? new Date(p.creativos_at).toLocaleString('pt-BR') : '';
-      $('detail-head').insertAdjacentHTML('beforeend', `<div class="card ia-saved"><div class="dash-head-row"><h3 style="margin:0">🎨 Criativos gerados</h3><small class="muted">${when}</small></div>${creativesHtml(cr)}</div>`);
-      bindCreativeCopies();
-    } catch (_) {}
+  // CRIATIVOS p/ imagem — banner (opcional, gasta crédito)
+  if (iaReady()) {
+    let saved = null;
+    try { saved = p.creativos_json ? (JSON.parse(p.creativos_json).criativos || []) : null; } catch (_) {}
+    const n = CREATIVES_N;
+    $('detail-head').insertAdjacentHTML('beforeend', `
+      <div class="crea-banner" id="crea-banner">
+        <div class="crea-bn-txt">
+          <h3>✨ Criativos p/ imagem <span class="muted">(${n} JSONs pro ChatGPT)</span></h3>
+          <p class="muted">Cada JSON quebra uma objeção dos comentários. Clique em <b>Copiar</b> e cole no ChatGPT (com suas fotos) pra gerar a imagem.</p>
+        </div>
+        <button class="crea-gen" data-creatives="${p.id}">✨ Gerar ${n} criativos</button>
+      </div>
+      <div id="crea-out">${saved ? creativesHtml(saved) : ''}</div>`);
+    $('detail-head').querySelector('[data-creatives]').addEventListener('click', (e) => runCreatives(p.id, e.target));
+    bindCreativeCopies();
   }
 
   renderAds(id, ads);

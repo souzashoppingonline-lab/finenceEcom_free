@@ -1788,11 +1788,11 @@ function retryNextModel(status, err) {
   return false; // 401 (chave), 429/insufficient (credito), etc -> propaga
 }
 
-async function anthropicTry(key, model, prompt) {
+async function anthropicTry(key, model, prompt, maxTokens = 1500) {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model, max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
+    body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] }),
   });
   const data = await r.json().catch(() => ({}));
   return { r, data };
@@ -1810,10 +1810,10 @@ async function anthropicListModels(key) {
   } catch (_) { return []; }
 }
 
-async function callAnthropic(key, prompt) {
+async function callAnthropic(key, prompt, maxTokens = 1500) {
   let lastErr = 'sem modelo disponivel';
   for (const model of ANTHROPIC_MODELS) {
-    const { r, data } = await anthropicTry(key, model, prompt);
+    const { r, data } = await anthropicTry(key, model, prompt, maxTokens);
     if (r.ok) return (data.content || []).map((c) => c.text || '').join('\n').trim();
     lastErr = data?.error?.message || `Anthropic HTTP ${r.status}`;
     if (!retryNextModel(r.status, data?.error)) throw new Error(lastErr);
@@ -1829,13 +1829,13 @@ async function callAnthropic(key, prompt) {
   throw new Error(`nenhum modelo Claude respondeu (${lastErr})`);
 }
 
-async function callOpenAI(key, prompt) {
+async function callOpenAI(key, prompt, maxTokens = 1500) {
   let lastErr = 'sem modelo disponivel';
   for (const model of OPENAI_MODELS) {
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ model, max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] }),
     });
     const data = await r.json().catch(() => ({}));
     if (r.ok) return (data.choices?.[0]?.message?.content || '').trim();
@@ -2209,15 +2209,16 @@ DADOS DOS CONCORRENTES (use como referencia de mercado e do que valorizar):
 ${insumos || '- (sem concorrentes cadastrados)'}
 
 Responda APENAS com JSON valido (sem texto fora do JSON, sem markdown), no formato:
-{"criativos":[ CRIATIVO, CRIATIVO ]}
-Gere 2 criativos. Cada CRIATIVO segue EXATAMENTE este schema:
+{"criativos":[ CRIATIVO x7 ]}
+Gere 7 criativos. IMPORTANTE: cada criativo deve QUEBRAR UMA OBJECAO diferente que aparece (ou apareceria) nos comentarios/avaliacoes dos clientes — ex.: "sera que dura?", "e dificil de usar?", "vale o preco?", "chega rapido?", "e original?", "serve pro meu caso?", "faz sujeira?". Use as reclamacoes reais das avaliacoes quando existirem; se faltarem, use as objecoes de compra mais comuns da categoria. Cada CRIATIVO segue EXATAMENTE este schema:
 {
+  "objecao": "<a objecao/duvida do cliente que este criativo resolve>",
   "composicao": {"cenario":"","sujeito":"","detalhe_produto":"","camera":""},
   "direcao_de_arte": {"iluminacao":"","paleta_cores":"","estilo_visual":""},
   "elementos_visual_copy": {"texto_principal":"","texto_secundario":"","posicao_texto":"","estilo_texto":"","grafismo":"","selo":""},
   "formato": "1:1"
 }
-Regras: textos de copy curtos e persuasivos em pt-BR baseados nos beneficios reais; "detalhe_produto" deve pedir para preservar a identidade visual do produto conforme fotos de referencia; estilo_visual fotorealista premium para e-commerce (8k, sharp focus, depth of field). Nao invente selos falsos de certificacao.`;
+Regras: textos de copy curtos e persuasivos em pt-BR, cada um focado em vencer a objecao daquele criativo; "detalhe_produto" deve pedir para preservar a identidade visual do produto conforme fotos de referencia; estilo_visual fotorealista premium para e-commerce (8k, sharp focus, depth of field). Nao invente selos falsos de certificacao.`;
 }
 
 function extractJson(text) {
@@ -2249,7 +2250,7 @@ app.post('/api/analise/products/:id/creatives', requireUser, async (req, res) =>
     const prompt = buildCreativesPrompt(product, ads);
     let text;
     try {
-      text = keys.provider === 'openai' ? await callOpenAI(key, prompt) : await callAnthropic(key, prompt);
+      text = keys.provider === 'openai' ? await callOpenAI(key, prompt, 3000) : await callAnthropic(key, prompt, 3000);
     } catch (e) { return res.status(502).json({ error: `A IA retornou erro: ${e.message}` }); }
 
     const parsed = extractJson(text);
