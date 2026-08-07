@@ -2429,6 +2429,36 @@ async function mlFetch(path) {
   return d;
 }
 
+// descobre a categoria a partir de um texto livre
+async function catFromText(text) {
+  if (!text) return null;
+  const disc = await mlFetch(`/sites/MLB/domain_discovery/search?limit=1&q=${encodeURIComponent(text)}`);
+  return (Array.isArray(disc) && disc[0] && disc[0].category_id) ? { id: disc[0].category_id, nome: disc[0].category_name || '' } : null;
+}
+
+// mais vendidos de uma categoria (highlights) resolvidos em itens/produtos reais
+async function highlightItems(catId, max = 40) {
+  const httpsThumb = (u) => String(u || '').replace(/^http:/, 'https:');
+  const hi = await mlFetch(`/highlights/MLB/category/${catId}`);
+  const content = (hi.content || []).slice(0, max);
+  const itemIds = content.filter((c) => c.type === 'ITEM' && /^MLB\d+$/.test(c.id)).map((c) => c.id);
+  const prodIds = content.filter((c) => c.type === 'PRODUCT').map((c) => c.id);
+  const out = [];
+  for (let i = 0; i < itemIds.length; i += 20) {
+    try {
+      const items = await mlFetch(`/items?ids=${itemIds.slice(i, i + 20).join(',')}&attributes=id,title,price,sold_quantity,date_created,thumbnail,permalink,shipping`);
+      (items || []).forEach((w) => { if (w.body && w.body.id) out.push({ ...w.body, thumbnail: httpsThumb(w.body.thumbnail), _type: 'ITEM' }); });
+    } catch (_) {}
+  }
+  for (const pid of prodIds.slice(0, 15)) {
+    try {
+      const p = await mlFetch(`/products/${pid}`);
+      out.push({ id: pid, title: p.name, price: p.buy_box_winner && p.buy_box_winner.price, sold_quantity: null, date_created: null, thumbnail: httpsThumb(p.pictures && p.pictures[0] && p.pictures[0].url), permalink: p.permalink || `https://www.mercadolivre.com.br/p/${pid}`, _type: 'PRODUCT' });
+    } catch (_) {}
+  }
+  return out;
+}
+
 // cache simples em memoria (6h) — respeita rate limit
 const mlCache = new Map();
 const mlCacheGet = (k) => { const v = mlCache.get(k); return v && v.exp > Date.now() ? v.data : null; };
@@ -2486,27 +2516,11 @@ app.get('/api/ml/trends', requireUser, async (req, res) => {
     const trends = await mlFetch(categoria ? `/trends/MLB/${categoria.id}` : '/trends/MLB');
 
     let mais_vendidos = [];
-    const httpsThumb = (u) => String(u || '').replace(/^http:/, 'https:');
-    // 1) busca por categoria (traz titulo, preco e imagem reais)
-    try {
-      const path = categoria ? `/sites/MLB/search?category=${categoria.id}&limit=12` : `/sites/MLB/search?q=${encodeURIComponent(q)}&limit=12`;
-      const s = await mlFetch(path);
-      mais_vendidos = (s.results || []).slice(0, 12).map((r) => ({
-        title: r.title, price: r.price, sold: r.sold_quantity,
-        thumb: r.thumbnail_id ? `https://http2.mlstatic.com/D_${r.thumbnail_id}-O.jpg` : httpsThumb(r.thumbnail),
-        link: r.permalink,
-      }));
-    } catch (_) { /* busca pode estar restrita; tenta highlights abaixo */ }
-    // 2) fallback: highlights -> items
-    if (!mais_vendidos.length && categoria) {
+    if (categoria) {
       try {
-        const hi = await mlFetch(`/highlights/MLB/category/${categoria.id}`);
-        const ids = (hi.content || []).filter((x) => x.id && /^MLB\d+$/.test(x.id)).slice(0, 12).map((x) => x.id);
-        if (ids.length) {
-          const items = await mlFetch(`/items?ids=${ids.join(',')}&attributes=id,title,price,sold_quantity,thumbnail,permalink`);
-          mais_vendidos = (items || []).map((w) => w.body).filter((b) => b && b.title).map((b) => ({ title: b.title, price: b.price, sold: b.sold_quantity, thumb: httpsThumb(b.thumbnail), link: b.permalink }));
-        }
-      } catch (_) {}
+        const items = await highlightItems(categoria.id, 15);
+        mais_vendidos = items.filter((b) => b.title).slice(0, 12).map((b) => ({ title: b.title, price: b.price, sold: b.sold_quantity, thumb: b.thumbnail, link: b.permalink }));
+      } catch (_) { /* highlights pode nao existir p/ a categoria */ }
     }
     const out = { categoria, trends: (trends || []).slice(0, 30), mais_vendidos };
     mlCacheSet(ck, out);
@@ -2525,25 +2539,10 @@ app.get('/api/ml/opportunities', requireUser, async (req, res) => {
     const ck = `op:${q.toLowerCase()}|${catText.toLowerCase()}`;
     let base = mlCacheGet(ck);
     if (!base) {
-      let categoria = null;
-      if (catText) {
-        const disc = await mlFetch(`/sites/MLB/domain_discovery/search?limit=1&q=${encodeURIComponent(catText)}`);
-        if (Array.isArray(disc) && disc[0] && disc[0].category_id) categoria = { id: disc[0].category_id, nome: disc[0].category_name || '' };
-      }
-      let path = '/sites/MLB/search?limit=50';
-      if (q) path += `&q=${encodeURIComponent(q)}`;
-      if (categoria) path += `&category=${categoria.id}`;
-      const s = await mlFetch(path);
-      const ids = (s.results || []).map((r) => r.id).filter(Boolean).slice(0, 50);
-      // detalhes em lotes de 20 (para pegar date_created e sold_quantity)
-      const detalhes = [];
-      for (let i = 0; i < ids.length; i += 20) {
-        const chunk = ids.slice(i, i + 20).join(',');
-        try {
-          const items = await mlFetch(`/items?ids=${chunk}&attributes=id,title,price,sold_quantity,date_created,thumbnail,permalink,shipping`);
-          (items || []).forEach((w) => { if (w.body && w.body.id) detalhes.push(w.body); });
-        } catch (_) {}
-      }
+      // descobre categoria pela categoria OU pela palavra-chave
+      const categoria = await catFromText(catText || q);
+      if (!categoria) return res.status(404).json({ error: 'Nao identifiquei a categoria. Tente outra palavra.' });
+      const detalhes = (await highlightItems(categoria.id, 50)).filter((b) => b._type === 'ITEM' && b.date_created);
       base = { categoria, detalhes };
       mlCacheSet(ck, base, 3 * 3600 * 1000);
     }
