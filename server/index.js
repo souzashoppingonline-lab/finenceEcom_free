@@ -1881,6 +1881,230 @@ app.post('/api/analise/products/:id/analyze', requireUser, async (req, res) => {
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao analisar produto.' }); }
 });
 
+// ===========================================================================
+// API PÚBLICA DA EXTENSÃO (Fase 3-4) — autenticada pelo token do cliente
+// A extensão é externa: usa header x-ext-token (nao o JWT do Supabase).
+// ===========================================================================
+const extLimiter = makeLimiter({ windowMs: 60 * 1000, max: 120, message: 'Muitas requisicoes da extensao.' });
+
+// CORS liberado apenas para as rotas /extension (a extensao roda em outra origem)
+app.use('/extension', (req, res, next) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, x-ext-token');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+app.use('/extension', extLimiter);
+
+async function requireExtToken(req, res, next) {
+  const token = req.headers['x-ext-token'] || '';
+  if (!token) return res.status(401).json({ error: 'Token da extensao ausente. Cole seu token nas Configuracoes.' });
+  try {
+    let userId = null;
+    if (supabase) {
+      const { data } = await supabase.from('user_ai_settings').select('user_id').eq('ext_token', token).maybeSingle();
+      userId = data?.user_id || null;
+    } else {
+      userId = (memAiSettings.find((s) => s.ext_token === token) || {}).user_id || null;
+    }
+    if (!userId) return res.status(401).json({ error: 'Token invalido. Gere um novo na pagina de Analise.' });
+    req.userId = userId;
+    next();
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro de autenticacao.' }); }
+}
+
+// Extrai o MLB de uma URL/pagina do Mercado Livre
+function extractMlId(rawData) {
+  const src = `${rawData?.url || ''} ${rawData?.extracted?.ml_id || ''} ${rawData?.extracted?.link || ''}`;
+  const m = src.match(/MLB-?(\d{6,})/i);
+  return m ? 'MLB' + m[1] : (rawData?.extracted?.ml_id || null);
+}
+
+// Monta o registro do concorrente a partir do rawData enviado pela extensao
+function resolveAdPayload(rawData) {
+  const e = rawData?.extracted || {};
+  const num = (v) => { const n = Number(String(v ?? '').replace(/[^\d.,-]/g, '').replace(/\.(?=\d{3})/g, '').replace(',', '.')); return isNaN(n) ? null : n; };
+  const ml_id = extractMlId(rawData);
+  return {
+    ml_id,
+    link: e.link || rawData?.url || (ml_id ? `https://produto.mercadolivre.com.br/${ml_id.replace('MLB', 'MLB-')}` : null),
+    titulo: e.titulo || rawData?.title || null,
+    preco: num(e.preco),
+    preco_original: num(e.preco_original),
+    nota: num(e.nota),
+    vendas: e.vendas || null,
+    perguntas: e.perguntas != null ? Number(e.perguntas) || 0 : null,
+    vendedor: e.vendedor || null,
+    cidade: e.cidade || null,
+    estado: e.estado || null,
+    reputacao: e.reputacao || null,
+    is_full: e.is_full != null ? !!e.is_full : null,
+    is_flex: e.is_flex != null ? !!e.is_flex : null,
+    fotos: Array.isArray(e.fotos) ? e.fotos.slice(0, 8) : null,
+    descricao: e.descricao || null,
+    highlights: Array.isArray(e.highlights) ? e.highlights.slice(0, 40) : null,
+  };
+}
+
+// Grava snapshot de preco (1 por dia por MLB) — historico
+async function recordSnapshot(userId, ml_id, preco, preco_original) {
+  if (!ml_id || preco == null) return;
+  const snap_date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+  try {
+    if (supabase) {
+      await supabase.from('analise_monitor_snapshots').delete().eq('ml_id', ml_id).eq('snap_date', snap_date);
+      await supabase.from('analise_monitor_snapshots').insert({ user_id: userId, ml_id, snap_date, preco, preco_original });
+    } else {
+      const i = memAnaliseSnaps.findIndex((s) => s.ml_id === ml_id && s.snap_date === snap_date);
+      if (i >= 0) memAnaliseSnaps.splice(i, 1);
+      memAnaliseSnaps.push({ id: makeId(), user_id: userId, ml_id, snap_date, preco, preco_original });
+    }
+  } catch (err) { console.error('snapshot:', err.message); }
+}
+
+// Upsert do concorrente em UM produto (nao apaga foto/descricao quando vem vazio)
+async function upsertCompetitor(userId, productId, payload) {
+  const coalesce = (nv, ov) => (nv == null || nv === '' ? ov : nv);
+  if (supabase) {
+    const { data: existing } = await supabase.from('analise_product_ads').select('*')
+      .eq('product_id', productId).eq('ml_id', payload.ml_id).eq('user_id', userId).maybeSingle();
+    if (existing) {
+      const merged = {};
+      for (const k of Object.keys(payload)) merged[k] = coalesce(payload[k], existing[k]);
+      merged.last_checked_at = new Date().toISOString();
+      await supabase.from('analise_product_ads').update(merged).eq('id', existing.id);
+      return existing.id;
+    }
+    const { data, error } = await supabase.from('analise_product_ads')
+      .insert({ ...payload, product_id: productId, user_id: userId, monitorar: true, last_checked_at: new Date().toISOString() })
+      .select('id').single();
+    if (error) throw error;
+    return data.id;
+  }
+  const existing = memAnaliseAds.find((a) => String(a.product_id) === String(productId) && a.ml_id === payload.ml_id && a.user_id === userId);
+  if (existing) {
+    for (const k of Object.keys(payload)) existing[k] = coalesce(payload[k], existing[k]);
+    existing.last_checked_at = new Date().toISOString();
+    return existing.id;
+  }
+  const ad = { id: makeId(), ...payload, product_id: productId, user_id: userId, monitorar: true, last_checked_at: new Date().toISOString(), created_at: new Date().toISOString() };
+  memAnaliseAds.push(ad);
+  return ad.id;
+}
+
+// GET produto ativo — a extensao nunca pergunta o alvo
+app.get('/extension/produto-ativo', requireExtToken, async (req, res) => {
+  try {
+    const pid = await activeProductId(req.userId);
+    if (!pid) return res.json({ produto: null });
+    let prod;
+    if (supabase) { const { data } = await supabase.from('analise_products').select('id, produto').eq('id', pid).maybeSingle(); prod = data; }
+    else prod = memAnaliseProducts.find((p) => String(p.id) === String(pid));
+    return res.json({ produto: prod ? { id: prod.id, nome: prod.produto } : null });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro.' }); }
+});
+
+// POST coleta manual ("Salvar na analise") — grava no produto ativo
+app.post('/extension/anuncio', requireExtToken, async (req, res) => {
+  try {
+    const pid = await activeProductId(req.userId);
+    if (!pid) return res.status(400).json({ error: 'Nenhum produto marcado como "Coleta ativa". Ative um produto na pagina de Analise.' });
+    const payload = resolveAdPayload(req.body?.rawData || {});
+    if (!payload.ml_id && !payload.titulo) return res.status(400).json({ error: 'Nao consegui ler o anuncio. Abra a pagina do produto no Mercado Livre.' });
+
+    // limite de 10 concorrentes (a menos que ja exista este MLB)
+    let count, exists = false;
+    if (supabase) {
+      const { data } = await supabase.from('analise_product_ads').select('id, ml_id').eq('product_id', pid).eq('user_id', req.userId);
+      count = (data || []).length; exists = (data || []).some((a) => a.ml_id === payload.ml_id);
+    } else {
+      const list = memAnaliseAds.filter((a) => String(a.product_id) === String(pid) && a.user_id === req.userId);
+      count = list.length; exists = list.some((a) => a.ml_id === payload.ml_id);
+    }
+    if (!exists && count >= ANALISE_MAX_ADS) return res.status(409).json({ error: `Limite de ${ANALISE_MAX_ADS} concorrentes por produto.` });
+
+    const adId = await upsertCompetitor(req.userId, pid, payload);
+    await recordSnapshot(req.userId, payload.ml_id, payload.preco, payload.preco_original);
+    return res.json({ ok: true, ad_id: adId, ml_id: payload.ml_id, titulo: payload.titulo });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao salvar anuncio.' }); }
+});
+
+// GET fila da recoleta automatica (Fase 4) — MLBs monitorados desatualizados (>24h)
+app.get('/extension/monitoramento/proximos', requireExtToken, async (req, res) => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 5, 20);
+    const force = req.query.force === '1';
+    const cutoff = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    let list;
+    if (supabase) {
+      let q = supabase.from('analise_product_ads').select('ml_id, link, last_checked_at')
+        .eq('user_id', req.userId).eq('monitorar', true).not('ml_id', 'is', null);
+      const { data } = await q;
+      list = data || [];
+    } else {
+      list = memAnaliseAds.filter((a) => a.user_id === req.userId && a.monitorar && a.ml_id);
+    }
+    if (!force) list = list.filter((a) => !a.last_checked_at || a.last_checked_at < cutoff);
+    list.sort((a, b) => (a.last_checked_at || '') < (b.last_checked_at || '') ? -1 : 1);
+    const seen = new Set(); const itens = [];
+    for (const a of list) {
+      if (seen.has(a.ml_id)) continue; seen.add(a.ml_id);
+      itens.push({ ml_id: a.ml_id, url: a.link || `https://produto.mercadolivre.com.br/${a.ml_id.replace('MLB', 'MLB-')}` });
+      if (itens.length >= limit) break;
+    }
+    return res.json({ itens });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro.' }); }
+});
+
+// POST recoleta em background (Fase 4) — atualiza o MLB em todos os produtos do usuario
+app.post('/extension/monitoramento', requireExtToken, async (req, res) => {
+  try {
+    const payload = resolveAdPayload(req.body?.rawData || {});
+    if (!payload.ml_id) return res.status(400).json({ error: 'MLB nao identificado.' });
+    let prods;
+    if (supabase) {
+      const { data } = await supabase.from('analise_product_ads').select('product_id').eq('user_id', req.userId).eq('ml_id', payload.ml_id);
+      prods = [...new Set((data || []).map((x) => x.product_id))];
+    } else {
+      prods = [...new Set(memAnaliseAds.filter((a) => a.user_id === req.userId && a.ml_id === payload.ml_id).map((a) => a.product_id))];
+    }
+    for (const pid of prods) await upsertCompetitor(req.userId, pid, payload);
+    await recordSnapshot(req.userId, payload.ml_id, payload.preco, payload.preco_original);
+    return res.json({ ok: true, updated: prods.length });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao recoletar.' }); }
+});
+
+// GET historico de preco de um MLB (mini-grafico no card)
+app.get('/extension/monitor/:mlb', requireExtToken, async (req, res) => {
+  try {
+    const ml_id = req.params.mlb;
+    let hist;
+    if (supabase) {
+      const { data } = await supabase.from('analise_monitor_snapshots').select('snap_date, preco')
+        .eq('user_id', req.userId).eq('ml_id', ml_id).order('snap_date');
+      hist = data || [];
+    } else {
+      hist = memAnaliseSnaps.filter((s) => s.user_id === req.userId && s.ml_id === ml_id).sort((a, b) => a.snap_date < b.snap_date ? -1 : 1);
+    }
+    return res.json({ historico: hist, count: hist.length });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro.' }); }
+});
+
+// Historico de preco tambem para o dashboard (via JWT do usuario)
+app.get('/api/analise/monitor/:mlb', requireUser, async (req, res) => {
+  try {
+    const ml_id = req.params.mlb;
+    let hist;
+    if (supabase) {
+      const { data } = await supabase.from('analise_monitor_snapshots').select('snap_date, preco')
+        .eq('user_id', req.userId).eq('ml_id', ml_id).order('snap_date');
+      hist = data || [];
+    } else hist = memAnaliseSnaps.filter((s) => s.user_id === req.userId && s.ml_id === ml_id).sort((a, b) => a.snap_date < b.snap_date ? -1 : 1);
+    return res.json({ historico: hist, count: hist.length });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro.' }); }
+});
+
 app.get('/health', (req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => {
