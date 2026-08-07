@@ -330,6 +330,7 @@ async function runAnalysis(productId, btn) {
   if (btn) { btn.disabled = true; btn.textContent = '🤖 Analisando…'; }
   try {
     await api(`/api/analise/products/${productId}/analyze`, { method: 'POST' });
+    loadUsage();
     await openDetail(productId); // recarrega -> análise aparece acima dos cards
     document.querySelector('.ia-report')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (e) {
@@ -375,6 +376,7 @@ async function runCreatives(productId, btn) {
   try {
     const r = await api(`/api/analise/products/${productId}/creatives`, { method: 'POST' });
     if (out) { out.innerHTML = creativesHtml(r.criativos); bindCreativeCopies(); }
+    loadUsage();
   } catch (e) {
     if (out) out.innerHTML = `<p class="c-danger">${esc(e.message)}</p>`;
   }
@@ -790,10 +792,27 @@ function backToList() {
 }
 $('back-list').addEventListener('click', backToList);
 
+async function loadUsage() {
+  try {
+    const u = await api('/api/ai-usage');
+    const brl = (usd) => 'US$ ' + (Number(usd) || 0).toFixed(2);
+    if (!u.total.calls) { $('ia-usage').hidden = true; return; }
+    $('ia-usage').hidden = false;
+    $('ia-usage').innerHTML = `
+      <span class="usage-title">💸 Gastos de IA</span>
+      <span class="usage-item"><b>${u.total.calls}</b> chamadas</span>
+      <span class="usage-item">🔍 <b>${u.analises}</b> análises</span>
+      <span class="usage-item">🎨 <b>${u.criativos}</b> criativos</span>
+      <span class="usage-item">📅 mês: <b>${brl(u.mes.cost_usd)}</b></span>
+      <span class="usage-item usage-total">Total: <b>${brl(u.total.cost_usd)}</b></span>`;
+  } catch (_) { $('ia-usage').hidden = true; }
+}
+
 // ---------------------------------------------------------------------------
 (async () => {
   const session = await initShell('analise');
   if (!session) return;
   await loadAiSettings();
+  await loadUsage();
   await loadProducts();
 })();

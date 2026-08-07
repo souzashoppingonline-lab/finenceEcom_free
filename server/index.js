@@ -1516,6 +1516,26 @@ app.get('/api/ai-settings', requireUser, async (req, res) => {
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao carregar configuracoes.' }); }
 });
 
+// GET: resumo de gastos de IA do usuario
+app.get('/api/ai-usage', requireUser, async (req, res) => {
+  try {
+    let rows;
+    if (supabase) {
+      const { data } = await supabase.from('ai_usage_log').select('kind, input_tokens, output_tokens, cost_usd, created_at').eq('user_id', req.userId);
+      rows = data || [];
+    } else rows = memAiUsage.filter((u) => u.user_id === req.userId);
+    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+    const sum = (arr, f) => arr.reduce((a, x) => a + (Number(f(x)) || 0), 0);
+    const mes = rows.filter((r) => new Date(r.created_at || Date.now()) >= monthStart);
+    return res.json({
+      total: { calls: rows.length, input: sum(rows, (r) => r.input_tokens), output: sum(rows, (r) => r.output_tokens), cost_usd: sum(rows, (r) => r.cost_usd) },
+      mes: { calls: mes.length, cost_usd: sum(mes, (r) => r.cost_usd) },
+      analises: rows.filter((r) => r.kind === 'analise').length,
+      criativos: rows.filter((r) => r.kind === 'criativos').length,
+    });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao carregar gastos.' }); }
+});
+
 // PUT: salva provider e/ou chaves. String vazia limpa a chave; ausente mantem.
 app.put('/api/ai-settings', requireUser, async (req, res) => {
   const b = req.body || {};
@@ -1777,6 +1797,28 @@ const OPENAI_MODELS = process.env.OPENAI_MODEL
   ? [process.env.OPENAI_MODEL]
   : ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'];
 
+// Preco aproximado por modelo (US$ por 1M tokens) — [input, output]
+const MODEL_PRICES = {
+  'claude-haiku-4-5': [1.0, 5.0], 'claude-3-5-haiku': [0.8, 4.0], 'claude-3-haiku': [0.25, 1.25],
+  'claude-3-5-sonnet': [3.0, 15.0], 'claude-sonnet-4': [3.0, 15.0],
+  'gpt-4o-mini': [0.15, 0.6], 'gpt-4o': [2.5, 10.0], 'gpt-3.5-turbo': [0.5, 1.5],
+};
+function estimateCost(model, inTok, outTok) {
+  const k = Object.keys(MODEL_PRICES).find((x) => String(model || '').includes(x));
+  const [pi, po] = MODEL_PRICES[k] || [1.0, 5.0];
+  return (inTok / 1e6) * pi + (outTok / 1e6) * po;
+}
+const memAiUsage = [];
+async function logUsage(userId, kind, out) {
+  const cost = estimateCost(out.model, out.input_tokens, out.output_tokens);
+  const rec = { user_id: userId, kind, provider: out.provider, model: out.model, input_tokens: out.input_tokens || 0, output_tokens: out.output_tokens || 0, cost_usd: Number(cost.toFixed(6)) };
+  try {
+    if (supabase) await supabase.from('ai_usage_log').insert(rec);
+    else memAiUsage.push({ id: makeId(), ...rec, created_at: new Date().toISOString() });
+  } catch (err) { console.error('logUsage:', err.message); }
+  return rec;
+}
+
 // Decide se vale tentar o proximo modelo (modelo indisponivel) ou parar
 // (credito/chave). Usa status HTTP + tipo/mensagem do erro.
 function retryNextModel(status, err) {
@@ -1817,15 +1859,15 @@ async function callAnthropic(key, prompt, maxTokens = 1500, system) {
   let lastErr = 'sem modelo disponivel';
   for (const model of ANTHROPIC_MODELS) {
     const { r, data } = await anthropicTry(key, model, prompt, maxTokens, system);
-    if (r.ok) return (data.content || []).map((c) => c.text || '').join('\n').trim();
+    if (r.ok) return { text: (data.content || []).map((c) => c.text || '').join('\n').trim(), model, provider: 'anthropic', input_tokens: data.usage?.input_tokens || 0, output_tokens: data.usage?.output_tokens || 0 };
     lastErr = data?.error?.message || `Anthropic HTTP ${r.status}`;
     if (!retryNextModel(r.status, data?.error)) throw new Error(lastErr);
   }
   // fallback: pergunta a propria conta quais modelos existem e tenta o 1o
   const models = await anthropicListModels(key);
   for (const model of models.slice(0, 4)) {
-    const { r, data } = await anthropicTry(key, model, prompt);
-    if (r.ok) return (data.content || []).map((c) => c.text || '').join('\n').trim();
+    const { r, data } = await anthropicTry(key, model, prompt, maxTokens, system);
+    if (r.ok) return { text: (data.content || []).map((c) => c.text || '').join('\n').trim(), model, provider: 'anthropic', input_tokens: data.usage?.input_tokens || 0, output_tokens: data.usage?.output_tokens || 0 };
     lastErr = data?.error?.message || lastErr;
   }
   if (models.length === 0) throw new Error('a chave nao lista nenhum modelo. Verifique se e uma API Key do console.anthropic.com (nao o token do Claude Code) e se ha creditos em Billing.');
@@ -1842,7 +1884,7 @@ async function callOpenAI(key, prompt, maxTokens = 1500, system) {
       body: JSON.stringify({ model, max_tokens: maxTokens, messages: msgs }),
     });
     const data = await r.json().catch(() => ({}));
-    if (r.ok) return (data.choices?.[0]?.message?.content || '').trim();
+    if (r.ok) return { text: (data.choices?.[0]?.message?.content || '').trim(), model, provider: 'openai', input_tokens: data.usage?.prompt_tokens || 0, output_tokens: data.usage?.completion_tokens || 0 };
     lastErr = data?.error?.message || `OpenAI HTTP ${r.status}`;
     if (!retryNextModel(r.status, data?.error)) throw new Error(lastErr);
   }
@@ -1924,15 +1966,17 @@ app.post('/api/analise/products/:id/analyze', requireUser, async (req, res) => {
     if (!key) return res.status(400).json({ error: 'Configure seu token de IA nas Configuracoes para usar a analise.' });
 
     const context = buildContext(product, ads);
-    let text;
+    let out;
     try {
-      text = keys.provider === 'openai'
+      out = keys.provider === 'openai'
         ? await callOpenAI(key, context, 3000, SYSTEM_ANALISE)
         : await callAnthropic(key, context, 3000, SYSTEM_ANALISE);
     } catch (e) {
       return res.status(502).json({ error: `A IA retornou erro: ${e.message}. Verifique se o token esta correto e com creditos.` });
     }
+    const text = out.text;
     if (!text) return res.status(502).json({ error: 'A IA nao retornou conteudo.' });
+    await logUsage(req.userId, 'analise', out);
 
     const parsed = extractJson(text);
     if (!parsed || !parsed.decisao || !parsed.score) {
@@ -2279,12 +2323,14 @@ app.post('/api/analise/products/:id/creatives', requireUser, async (req, res) =>
     if (!key) return res.status(400).json({ error: 'Configure seu token de IA para gerar criativos.' });
 
     const context = buildCreativesContext(product, ads);
-    let text;
+    let out;
     try {
-      text = keys.provider === 'openai'
+      out = keys.provider === 'openai'
         ? await callOpenAI(key, context, 4096, SYSTEM_CRIATIVOS)
         : await callAnthropic(key, context, 4096, SYSTEM_CRIATIVOS);
     } catch (e) { return res.status(502).json({ error: `A IA retornou erro: ${e.message}` }); }
+    const text = out.text;
+    await logUsage(req.userId, 'criativos', out);
 
     let parsed = extractJson(text);
     // tolera JSON truncado no ultimo criativo: recupera os objetos completos do array

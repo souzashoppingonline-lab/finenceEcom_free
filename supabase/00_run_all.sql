@@ -274,3 +274,13 @@ alter table public.analise_product_ads add column if not exists preco_medio_7d n
 alter table public.analise_product_ads add column if not exists preco_medio_15d numeric(14,2);
 alter table public.analise_product_ads add column if not exists preco_medio_21d numeric(14,2);
 alter table public.analise_product_ads add column if not exists preco_medio_30d numeric(14,2);
+create table if not exists public.ai_usage_log (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  kind text, provider text, model text,
+  input_tokens integer default 0, output_tokens integer default 0,
+  cost_usd numeric(12,6) default 0,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_ai_usage_user on public.ai_usage_log (user_id, created_at desc);
+alter table public.ai_usage_log enable row level security;

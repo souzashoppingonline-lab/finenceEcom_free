@@ -820,3 +820,11 @@ tbody tr:hover { background: #f7f9fc; }
 .pb-ends{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-top:8px}
 .ia-report-actions{display:flex;justify-content:flex-end;margin-bottom:-6px}
 .ia-report-actions .btn-ghost{width:auto;margin:0;padding:6px 12px;font-size:.82rem}
+
+/* barra de gastos de IA */
+.usage-bar{display:flex;flex-wrap:wrap;align-items:center;gap:16px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 18px;margin-bottom:18px;box-shadow:var(--shadow)}
+.usage-title{font-weight:700;font-size:.95rem}
+.usage-item{font-size:.85rem;color:var(--muted)}
+.usage-item b{color:var(--text)}
+.usage-total{margin-left:auto;font-size:.95rem;color:var(--text)}
+.usage-total b{color:var(--primary)}
