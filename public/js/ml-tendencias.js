@@ -116,7 +116,16 @@ $('op-form').addEventListener('submit', async (e) => {
   try {
     const p = new URLSearchParams({ q, category: cat });
     const r = await api('/api/ml/category-intel?' + p.toString());
-    let html = `<p class="muted" style="margin-bottom:12px">Categoria: <b>${esc(r.categoria.nome || r.categoria.id)}</b></p>`;
+    let html = `<div class="ci-head"><span class="muted">Categoria:</span> <b>${esc(r.categoria.nome || r.categoria.id)}</b>`;
+    if (r.total_anuncios != null) html += ` <span class="ci-comp">🏁 ${Number(r.total_anuncios).toLocaleString('pt-BR')} anúncios competindo</span>`;
+    html += `</div>`;
+
+    if (r.marcas && r.marcas.length) {
+      html += `<h3 class="v-section-title">🥇 Marcas que dominam</h3><div class="card" style="margin-bottom:18px"><div class="chips">${r.marcas.map((m) => `<span class="chip-b">${esc(m.nome)} <b>${m.count}</b></span>`).join('')}</div></div>`;
+    }
+    if (r.atributos && r.atributos.length) {
+      html += `<h3 class="v-section-title">🧬 Atributos vencedores <span class="muted" style="font-weight:400;font-size:.85rem">(o que os campeões têm em comum)</span></h3><div class="card" style="margin-bottom:18px"><div class="chips">${r.atributos.map((a) => `<span class="chip-a">${esc(a.k)} <b>${a.count}</b></span>`).join('')}</div></div>`;
+    }
     if (r.stats) {
       html += `<h3 class="v-section-title">💰 Faixa de preço vencedora</h3><div class="card" style="margin-bottom:18px">${faixasHtml(r.faixas, r.stats)}</div>`;
     }

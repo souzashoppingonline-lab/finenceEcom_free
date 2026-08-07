@@ -2446,14 +2446,14 @@ async function highlightItems(catId, max = 40) {
   const out = [];
   for (let i = 0; i < itemIds.length; i += 20) {
     try {
-      const items = await mlFetch(`/items?ids=${itemIds.slice(i, i + 20).join(',')}&attributes=id,title,price,sold_quantity,date_created,thumbnail,permalink,shipping`);
+      const items = await mlFetch(`/items?ids=${itemIds.slice(i, i + 20).join(',')}&attributes=id,title,price,sold_quantity,date_created,thumbnail,permalink,shipping,attributes`);
       (items || []).forEach((w) => { if (w.body && w.body.id) out.push({ ...w.body, thumbnail: httpsThumb(w.body.thumbnail), _type: 'ITEM' }); });
     } catch (_) {}
   }
   for (const pid of prodIds.slice(0, 15)) {
     try {
       const p = await mlFetch(`/products/${pid}`);
-      out.push({ id: pid, title: p.name, price: p.buy_box_winner && p.buy_box_winner.price, sold_quantity: null, date_created: null, thumbnail: httpsThumb(p.pictures && p.pictures[0] && p.pictures[0].url), permalink: p.permalink || `https://www.mercadolivre.com.br/p/${pid}`, _type: 'PRODUCT' });
+      out.push({ id: pid, title: p.name, price: p.buy_box_winner && p.buy_box_winner.price, sold_quantity: null, date_created: null, thumbnail: httpsThumb(p.pictures && p.pictures[0] && p.pictures[0].url), permalink: p.permalink || `https://www.mercadolivre.com.br/p/${pid}`, attributes: p.attributes || [], _type: 'PRODUCT' });
     } catch (_) {}
   }
   return out;
@@ -2576,12 +2576,29 @@ app.get('/api/ml/category-intel', requireUser, async (req, res) => {
     let items = mlCacheGet(ck);
     if (!items) { items = await highlightItems(categoria.id, 40); mlCacheSet(ck, items, 3 * 3600 * 1000); }
 
+    // tamanho da categoria (competicao)
+    let total_anuncios = null;
+    try { const c = await mlFetch(`/categories/${categoria.id}`); total_anuncios = c.total_items_in_this_category ?? null; } catch (_) {}
+
     const ranking = items.filter((b) => b.title).slice(0, 20).map((b, i) => ({
       rank: i + 1, title: b.title, price: b.price, sold: b.sold_quantity,
       thumb: b.thumbnail, link: b.permalink,
       full: b.shipping && b.shipping.logistic_type === 'fulfillment',
     }));
     const precos = ranking.map((r) => Number(r.price)).filter((v) => v > 0).sort((a, b) => a - b);
+
+    // marcas dominantes + atributos vencedores (o que os campeoes tem em comum)
+    const BLOCK = new Set(['MODEL', 'GTIN', 'SELLER_SKU', 'MPN', 'ITEM_CONDITION', 'EMPTY_GTIN_REASON', 'LINE', 'MANUFACTURER', 'ALPHANUMERIC_MODEL', 'PACKAGE_WEIGHT', 'PACKAGE_LENGTH', 'PACKAGE_HEIGHT', 'PACKAGE_WIDTH', 'SELLER_ITEM_CONDITION']);
+    const brandCount = {}, attrCount = {};
+    for (const b of items) {
+      for (const a of (b.attributes || [])) {
+        if (!a.value_name) continue;
+        if (a.id === 'BRAND') brandCount[a.value_name] = (brandCount[a.value_name] || 0) + 1;
+        else if (!BLOCK.has(a.id)) { const k = `${a.name}: ${a.value_name}`; attrCount[k] = (attrCount[k] || 0) + 1; }
+      }
+    }
+    const marcas = Object.entries(brandCount).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([nome, count]) => ({ nome, count }));
+    const atributos = Object.entries(attrCount).filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, count]) => ({ k, count }));
 
     let stats = null; const faixas = [];
     if (precos.length) {
@@ -2596,7 +2613,7 @@ app.get('/api/ml/category-intel', requireUser, async (req, res) => {
         faixas.push({ lo: +lo.toFixed(2), hi: +hi.toFixed(2), count });
       }
     }
-    return res.json({ categoria, ranking, stats, faixas });
+    return res.json({ categoria, total_anuncios, marcas, atributos, ranking, stats, faixas });
   } catch (e) { console.error('ml/category-intel:', e.message); return res.status(502).json({ error: e.message }); }
 });
 

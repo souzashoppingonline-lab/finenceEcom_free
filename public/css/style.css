@@ -909,3 +909,13 @@ tbody tr:hover { background: #f7f9fc; }
 .fx-bar.fx-sweet{background:linear-gradient(90deg,#1e6fff,#22d3ee)}
 .fx-count{text-align:right;font-weight:700}
 :root[data-theme="dark"] .fx-bar-wrap{background:#0f1622}
+
+/* Inteligência da categoria — competição, marcas, atributos */
+.ci-head{margin-bottom:14px;font-size:1rem}
+.ci-comp{background:#fff7e8;color:#b7791f;font-weight:700;font-size:.82rem;padding:3px 10px;border-radius:20px;margin-left:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip-b{background:#eef4ff;color:#1e6fff;font-size:.85rem;padding:5px 12px;border-radius:20px;font-weight:600}
+.chip-b b{color:#0d47c9}
+.chip-a{background:#f4f7fb;color:var(--text);font-size:.82rem;padding:5px 12px;border-radius:20px;border:1px solid var(--border)}
+.chip-a b{color:var(--primary)}
+:root[data-theme="dark"] .chip-a{background:#0f1622}
