@@ -179,10 +179,22 @@ function analysisHtml(d, when, prod) {
   const dec = d.decisao || {};
   const f = d.financeiro || {};
   const com = d.comentarios || {};
-  // custo direto vem do PRODUTO (fonte confiável): compra + frete + embalagem
+  // CÁLCULO DETERMINÍSTICO (não confia na conta da IA)
   const compra = Number(prod?.preco_compra) || 0, frete = Number(prod?.frete_entrada) || 0, emb = Number(prod?.embalagem) || 0;
-  const custoReal = prod ? (compra + frete + emb) : (Number(f.custo_total) || 0);
-  const breakdown = prod ? `<p class="ia-p" style="font-size:.78rem;margin-top:6px;color:var(--muted)">Compra ${money2(compra)} + Frete ${money2(frete)} + Embalagem ${money2(emb)}</p>` : '';
+  const taxaPct = Number(prod?.taxa_mp) || 0, impPct = Number(prod?.imposto) || 0;
+  const custoFixo = compra + frete + emb;                 // custo direto
+  const P = Number(f.preco_sugerido) || 0;                 // preço sugerido pela IA
+  const taxaVal = P * taxaPct / 100;                       // taxa ML sobre a venda
+  const impVal = P * impPct / 100;                         // imposto sobre a venda
+  const lucro = P ? (P - custoFixo - taxaVal - impVal) : 0;
+  const margem = P ? (lucro / P * 100) : 0;
+  const custoReal = custoFixo;
+  const breakdown = prod ? `
+    <p class="ia-p" style="font-size:.78rem;margin-top:8px;color:var(--muted)">
+      <b>Custo fixo</b> = Compra ${money2(compra)} + Frete ${money2(frete)} + Embalagem ${money2(emb)} = ${money2(custoFixo)}<br>
+      <b>Sobre a venda ${money2(P)}</b>: Taxa ML ${taxaPct}% (${money2(taxaVal)}) + Imposto ${impPct}% (${money2(impVal)})<br>
+      <b>Lucro</b> = ${money2(P)} − ${money2(custoFixo)} − ${money2(taxaVal)} − ${money2(impVal)} = <b>${money2(lucro)}</b>
+    </p>` : '';
   const score = (d.score && d.score.valor != null) ? d.score.valor : (typeof d.score === 'number' ? d.score : 0);
   const verd = {
     VALE: { t: 'Vale a pena', c: 'v-ok', i: '✅' },
@@ -212,9 +224,9 @@ function analysisHtml(d, when, prod) {
       <h4>💰 Financeiro</h4>
       <div class="fin-grid">
         ${kpi('Custo total', money2(custoReal))}
-        ${kpi('Preço sugerido', money2(f.preco_sugerido))}
-        ${kpi('Margem líq.', (Number(f.margem_liquida_pct) || 0).toFixed(2) + '%')}
-        ${kpi('Lucro/un.', money2(f.lucro_unitario))}
+        ${kpi('Preço sugerido', money2(P))}
+        ${kpi('Margem líq.', margem.toFixed(2) + '%')}
+        ${kpi('Lucro/un.', money2(lucro))}
       </div>
       ${breakdown}
       <p class="ia-p" style="margin-top:10px">${esc(f.explicacao || '')}</p>
