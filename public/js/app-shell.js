@@ -44,6 +44,7 @@ function renderSidebar(active) {
         ${link('/cartoes.html', 'cartoes', '💳', 'Cartões')}
         ${link('/despesas.html', 'despesas', '🧾', 'Despesas')}
         ${link('/dre.html', 'dre', '📈', 'DRE')}
+        ${link('/analise.html', 'analise', '🔎', 'Análise de Produtos')}
       </nav>
       <div class="side-bottom">
         <button id="theme-toggle" class="side-link side-btn"></button>

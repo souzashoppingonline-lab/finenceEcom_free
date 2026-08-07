@@ -6,6 +6,7 @@ import { statfs } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
+import crypto from 'node:crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -95,8 +96,51 @@ const memCards = [];
 const memParcelas = [];
 const memFaturaPagtos = [];
 
+const memAiSettings = [];       // config de IA + token da extensao por usuario
+const memAnaliseProducts = [];  // produtos em analise
+const memAnaliseActive = [];    // { user_id, product_id }
+const memAnaliseAds = [];       // concorrentes coletados
+const memAnaliseSnaps = [];     // historico de preco
+
 function makeId() {
   return 'mem-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+// ---------------------------------------------------------------------------
+// Criptografia dos tokens de IA do cliente (AES-256-GCM).
+// A chave vem de TOKEN_ENC_KEY (32 bytes em hex/base64) ou deriva do ADMIN_TOKEN.
+// Guardamos "iv:tag:ciphertext" em base64. Nunca gravamos a chave em texto puro.
+// ---------------------------------------------------------------------------
+const ENC_KEY = (() => {
+  const raw = process.env.TOKEN_ENC_KEY || ADMIN_TOKEN || 'financeecom-default-enc-key';
+  return crypto.createHash('sha256').update(String(raw)).digest(); // 32 bytes
+})();
+
+function encryptSecret(plain) {
+  if (!plain) return null;
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', ENC_KEY, iv);
+  const enc = Buffer.concat([cipher.update(String(plain), 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return [iv.toString('base64'), tag.toString('base64'), enc.toString('base64')].join(':');
+}
+
+function decryptSecret(blob) {
+  if (!blob || typeof blob !== 'string' || !blob.includes(':')) return null;
+  try {
+    const [ivB, tagB, dataB] = blob.split(':');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', ENC_KEY, Buffer.from(ivB, 'base64'));
+    decipher.setAuthTag(Buffer.from(tagB, 'base64'));
+    return Buffer.concat([decipher.update(Buffer.from(dataB, 'base64')), decipher.final()]).toString('utf8');
+  } catch (_) { return null; }
+}
+
+// Mascara uma chave para exibir no frontend (sk-ant-...1234)
+function maskKey(plain) {
+  if (!plain) return null;
+  const s = String(plain);
+  if (s.length <= 10) return '••••';
+  return s.slice(0, 6) + '••••••' + s.slice(-4);
 }
 
 app.set('trust proxy', 1); // atras do Cloudflare/Render — usa X-Forwarded-For
@@ -1415,6 +1459,280 @@ app.put('/api/manual-cashflow', requireUser, async (req, res) => {
     }
     return res.json({ ok: true });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao salvar.' }); }
+});
+
+// ===========================================================================
+// CONFIG DE IA + TOKEN DA EXTENSAO (por cliente) — Fase 1
+// ===========================================================================
+async function getAiSettings(userId) {
+  if (supabase) {
+    const { data } = await supabase.from('user_ai_settings').select('*').eq('user_id', userId).maybeSingle();
+    return data || null;
+  }
+  return memAiSettings.find((s) => s.user_id === userId) || null;
+}
+
+async function saveAiSettings(userId, patch) {
+  if (supabase) {
+    await supabase.from('user_ai_settings').delete().eq('user_id', userId);
+    const { data, error } = await supabase.from('user_ai_settings').insert({ user_id: userId, ...patch }).select().single();
+    if (error) throw error;
+    return data;
+  }
+  const i = memAiSettings.findIndex((s) => s.user_id === userId);
+  const rec = { user_id: userId, ...(i >= 0 ? memAiSettings[i] : {}), ...patch, updated_at: new Date().toISOString() };
+  if (i >= 0) memAiSettings[i] = rec; else memAiSettings.push(rec);
+  return rec;
+}
+
+// Retorna as chaves da IA em texto puro (uso interno na Fase 2). Nunca expor via HTTP.
+async function getDecryptedKeys(userId) {
+  const s = await getAiSettings(userId);
+  if (!s) return { provider: 'anthropic', anthropic: null, openai: null };
+  return {
+    provider: s.ai_provider || 'anthropic',
+    anthropic: decryptSecret(s.anthropic_key),
+    openai: decryptSecret(s.openai_key),
+  };
+}
+
+// GET: estado das configuracoes (mascarado — nunca devolve a chave real)
+app.get('/api/ai-settings', requireUser, async (req, res) => {
+  try {
+    const s = await getAiSettings(req.userId);
+    let ext = s?.ext_token;
+    if (!ext) { // gera token da extensao na primeira visita
+      ext = 'fec_' + crypto.randomBytes(20).toString('hex');
+      await saveAiSettings(req.userId, { ...(s || {}), ext_token: ext, ai_provider: s?.ai_provider || 'anthropic' });
+    }
+    return res.json({
+      provider: s?.ai_provider || 'anthropic',
+      anthropic_mask: maskKey(decryptSecret(s?.anthropic_key)),
+      openai_mask: maskKey(decryptSecret(s?.openai_key)),
+      has_anthropic: !!decryptSecret(s?.anthropic_key),
+      has_openai: !!decryptSecret(s?.openai_key),
+      ext_token: ext,
+    });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao carregar configuracoes.' }); }
+});
+
+// PUT: salva provider e/ou chaves. String vazia limpa a chave; ausente mantem.
+app.put('/api/ai-settings', requireUser, async (req, res) => {
+  const b = req.body || {};
+  try {
+    const cur = await getAiSettings(req.userId) || {};
+    const patch = {
+      ai_provider: (b.provider === 'openai' ? 'openai' : 'anthropic'),
+      ext_token: cur.ext_token || ('fec_' + crypto.randomBytes(20).toString('hex')),
+      anthropic_key: cur.anthropic_key || null,
+      openai_key: cur.openai_key || null,
+    };
+    if (b.anthropic_key !== undefined) patch.anthropic_key = b.anthropic_key ? encryptSecret(String(b.anthropic_key).trim()) : null;
+    if (b.openai_key !== undefined) patch.openai_key = b.openai_key ? encryptSecret(String(b.openai_key).trim()) : null;
+    await saveAiSettings(req.userId, patch);
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao salvar configuracoes.' }); }
+});
+
+// Regenera o token da extensao (invalida o antigo)
+app.post('/api/ai-settings/regen-token', requireUser, async (req, res) => {
+  try {
+    const cur = await getAiSettings(req.userId) || {};
+    const ext = 'fec_' + crypto.randomBytes(20).toString('hex');
+    await saveAiSettings(req.userId, { ...cur, ext_token: ext, ai_provider: cur.ai_provider || 'anthropic' });
+    return res.json({ ext_token: ext });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao regenerar token.' }); }
+});
+
+// ===========================================================================
+// ANALISE DE PRODUTOS — CRUD (Fase 1). Coleta/extensao vem nas Fases 3-4.
+// ===========================================================================
+const ANALISE_MAX_PRODUCTS = 10;
+const ANALISE_MAX_ADS = 10;
+
+async function activeProductId(userId) {
+  if (supabase) {
+    const { data } = await supabase.from('analise_active_collection').select('product_id').eq('user_id', userId).maybeSingle();
+    return data?.product_id || null;
+  }
+  return (memAnaliseActive.find((a) => a.user_id === userId) || {}).product_id || null;
+}
+
+async function setActiveProduct(userId, productId) {
+  if (supabase) {
+    await supabase.from('analise_active_collection').delete().eq('user_id', userId);
+    if (productId != null) await supabase.from('analise_active_collection').insert({ user_id: userId, product_id: productId });
+  } else {
+    const i = memAnaliseActive.findIndex((a) => a.user_id === userId);
+    if (i >= 0) memAnaliseActive.splice(i, 1);
+    if (productId != null) memAnaliseActive.push({ user_id: userId, product_id: productId });
+  }
+}
+
+// Lista produtos + qual esta ativo
+app.get('/api/analise/products', requireUser, async (req, res) => {
+  try {
+    let products;
+    if (supabase) {
+      const { data, error } = await supabase.from('analise_products').select('*').eq('user_id', req.userId).order('created_at', { ascending: false });
+      if (error) throw error;
+      products = data;
+    } else {
+      products = memAnaliseProducts.filter((p) => p.user_id === req.userId);
+    }
+    return res.json({ products, active_id: await activeProductId(req.userId) });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao listar produtos.' }); }
+});
+
+// Detalhe do produto + concorrentes
+app.get('/api/analise/products/:id', requireUser, async (req, res) => {
+  const id = req.params.id;
+  try {
+    let product, ads;
+    if (supabase) {
+      const { data: p } = await supabase.from('analise_products').select('*').eq('id', id).eq('user_id', req.userId).maybeSingle();
+      if (!p) return res.status(404).json({ error: 'Produto nao encontrado.' });
+      const { data: a } = await supabase.from('analise_product_ads').select('*').eq('product_id', id).eq('user_id', req.userId).order('created_at');
+      product = p; ads = a || [];
+    } else {
+      product = memAnaliseProducts.find((p) => String(p.id) === String(id) && p.user_id === req.userId);
+      if (!product) return res.status(404).json({ error: 'Produto nao encontrado.' });
+      ads = memAnaliseAds.filter((a) => String(a.product_id) === String(id) && a.user_id === req.userId);
+    }
+    return res.json({ product, ads, active_id: await activeProductId(req.userId) });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao carregar produto.' }); }
+});
+
+const PROD_FIELDS = ['produto', 'fornecedor', 'preco_compra', 'taxa_mp', 'imposto', 'frete_entrada', 'embalagem', 'observacoes'];
+function cleanProduct(b) {
+  const r = {};
+  PROD_FIELDS.forEach((k) => {
+    if (b[k] === undefined) return;
+    if (['produto', 'fornecedor', 'observacoes'].includes(k)) r[k] = String(b[k] || '').trim() || null;
+    else r[k] = Number(b[k]) || 0;
+  });
+  return r;
+}
+
+app.post('/api/analise/products', requireUser, async (req, res) => {
+  const rec = cleanProduct(req.body || {});
+  if (!rec.produto) return res.status(400).json({ error: 'Nome do produto e obrigatorio.' });
+  try {
+    let count;
+    if (supabase) {
+      const { count: c } = await supabase.from('analise_products').select('id', { count: 'exact', head: true }).eq('user_id', req.userId);
+      count = c || 0;
+    } else count = memAnaliseProducts.filter((p) => p.user_id === req.userId).length;
+    if (count >= ANALISE_MAX_PRODUCTS) return res.status(409).json({ error: `Limite de ${ANALISE_MAX_PRODUCTS} produtos atingido.` });
+    if (supabase) {
+      const { data, error } = await supabase.from('analise_products').insert({ ...rec, user_id: req.userId }).select().single();
+      if (error) throw error;
+      return res.status(201).json({ product: data });
+    }
+    const product = { id: makeId(), ...rec, user_id: req.userId, status: 'ativo', created_at: new Date().toISOString() };
+    memAnaliseProducts.push(product);
+    return res.status(201).json({ product });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao criar produto.' }); }
+});
+
+app.put('/api/analise/products/:id', requireUser, async (req, res) => {
+  const id = req.params.id;
+  const patch = cleanProduct(req.body || {});
+  patch.updated_at = new Date().toISOString();
+  try {
+    if (supabase) {
+      const { error } = await supabase.from('analise_products').update(patch).eq('id', id).eq('user_id', req.userId);
+      if (error) throw error;
+    } else {
+      const p = memAnaliseProducts.find((x) => String(x.id) === String(id) && x.user_id === req.userId);
+      if (p) Object.assign(p, patch);
+    }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao editar produto.' }); }
+});
+
+app.delete('/api/analise/products/:id', requireUser, async (req, res) => {
+  const id = req.params.id;
+  try {
+    if (supabase) {
+      await supabase.from('analise_products').delete().eq('id', id).eq('user_id', req.userId);
+    } else {
+      for (let i = memAnaliseAds.length - 1; i >= 0; i--) if (String(memAnaliseAds[i].product_id) === String(id)) memAnaliseAds.splice(i, 1);
+      const i = memAnaliseProducts.findIndex((x) => String(x.id) === String(id) && x.user_id === req.userId);
+      if (i >= 0) memAnaliseProducts.splice(i, 1);
+    }
+    if (String(await activeProductId(req.userId)) === String(id)) await setActiveProduct(req.userId, null);
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao excluir produto.' }); }
+});
+
+// Marca como produto ativo de coleta (e religa monitorar dos concorrentes dele)
+app.post('/api/analise/products/:id/activate', requireUser, async (req, res) => {
+  const id = req.params.id;
+  try {
+    await setActiveProduct(req.userId, id);
+    if (supabase) await supabase.from('analise_product_ads').update({ monitorar: true }).eq('product_id', id).eq('user_id', req.userId);
+    else memAnaliseAds.forEach((a) => { if (String(a.product_id) === String(id)) a.monitorar = true; });
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao ativar coleta.' }); }
+});
+
+// Finaliza a coleta (desliga monitorar dos concorrentes)
+app.post('/api/analise/products/:id/finalize', requireUser, async (req, res) => {
+  const id = req.params.id;
+  try {
+    if (String(await activeProductId(req.userId)) === String(id)) await setActiveProduct(req.userId, null);
+    if (supabase) await supabase.from('analise_product_ads').update({ monitorar: false }).eq('product_id', id).eq('user_id', req.userId);
+    else memAnaliseAds.forEach((a) => { if (String(a.product_id) === String(id)) a.monitorar = false; });
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao finalizar coleta.' }); }
+});
+
+// Concorrente manual (add). Fase 3-4 fara via extensao.
+const AD_FIELDS = ['ml_id', 'link', 'titulo', 'preco', 'preco_original', 'nota', 'vendas', 'vendedor', 'cidade', 'estado', 'reputacao', 'observacoes'];
+app.post('/api/analise/products/:id/ads', requireUser, async (req, res) => {
+  const id = req.params.id; const b = req.body || {};
+  const rec = {};
+  AD_FIELDS.forEach((k) => {
+    if (b[k] === undefined) return;
+    if (['preco', 'preco_original', 'nota'].includes(k)) rec[k] = Number(b[k]) || 0;
+    else rec[k] = String(b[k] || '').trim() || null;
+  });
+  if (!rec.titulo && !rec.ml_id) return res.status(400).json({ error: 'Informe ao menos o titulo ou o MLB do concorrente.' });
+  try {
+    let count;
+    if (supabase) {
+      const { count: c } = await supabase.from('analise_product_ads').select('id', { count: 'exact', head: true }).eq('product_id', id).eq('user_id', req.userId);
+      count = c || 0;
+    } else count = memAnaliseAds.filter((a) => String(a.product_id) === String(id) && a.user_id === req.userId).length;
+    if (count >= ANALISE_MAX_ADS) return res.status(409).json({ error: `Limite de ${ANALISE_MAX_ADS} concorrentes por produto.` });
+    if (supabase) {
+      const { data, error } = await supabase.from('analise_product_ads').insert({ ...rec, product_id: id, user_id: req.userId }).select().single();
+      if (error) throw error;
+      return res.status(201).json({ ad: data });
+    }
+    const ad = { id: makeId(), ...rec, product_id: id, user_id: req.userId, monitorar: true, created_at: new Date().toISOString() };
+    memAnaliseAds.push(ad);
+    return res.status(201).json({ ad });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao adicionar concorrente.' }); }
+});
+
+app.post('/api/analise/ads/:adId/monitorar', requireUser, async (req, res) => {
+  const adId = req.params.adId; const monitorar = !!req.body?.monitorar;
+  try {
+    if (supabase) await supabase.from('analise_product_ads').update({ monitorar }).eq('id', adId).eq('user_id', req.userId);
+    else { const a = memAnaliseAds.find((x) => String(x.id) === String(adId) && x.user_id === req.userId); if (a) a.monitorar = monitorar; }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao alterar monitoramento.' }); }
+});
+
+app.delete('/api/analise/ads/:adId', requireUser, async (req, res) => {
+  const adId = req.params.adId;
+  try {
+    if (supabase) await supabase.from('analise_product_ads').delete().eq('id', adId).eq('user_id', req.userId);
+    else { const i = memAnaliseAds.findIndex((x) => String(x.id) === String(adId) && x.user_id === req.userId); if (i >= 0) memAnaliseAds.splice(i, 1); }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao excluir concorrente.' }); }
 });
 
 app.get('/health', (req, res) => res.json({ ok: true }));

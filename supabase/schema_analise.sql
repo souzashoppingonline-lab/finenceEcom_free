@@ -1,0 +1,79 @@
+-- =====================================================================
+-- FinanceEcom Free - Analise de Produtos (multi-tenant)
+-- Fase 1: paginas + tokens (IA + extensao)
+-- Rode no SQL Editor do Supabase.
+-- =====================================================================
+
+-- ---------- Config de IA + token da extensao (1 linha por usuario) ----------
+create table if not exists public.user_ai_settings (
+  user_id       uuid primary key references auth.users(id) on delete cascade,
+  ai_provider   text not null default 'anthropic',   -- 'anthropic' | 'openai'
+  anthropic_key text,                                 -- criptografada (AES-256-GCM)
+  openai_key    text,                                 -- criptografada
+  ext_token     text,                                 -- token da extensao (aleatorio, nao secreto)
+  updated_at    timestamptz not null default now()
+);
+create unique index if not exists idx_ai_ext_token on public.user_ai_settings (ext_token);
+alter table public.user_ai_settings enable row level security;
+
+-- ---------- Produtos em analise ----------
+create table if not exists public.analise_products (
+  id           bigserial primary key,
+  user_id      uuid not null references auth.users(id) on delete cascade,
+  produto      text not null,
+  fornecedor   text,
+  preco_compra numeric(14,2) default 0,
+  taxa_mp      numeric(14,2) default 0,
+  imposto      numeric(14,2) default 0,
+  frete_entrada numeric(14,2) default 0,
+  embalagem    numeric(14,2) default 0,
+  observacoes  text,
+  status       text not null default 'ativo',
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+create index if not exists idx_analise_prod_user on public.analise_products (user_id);
+alter table public.analise_products enable row level security;
+
+-- ---------- Produto "em coleta" agora (1 linha por usuario) ----------
+create table if not exists public.analise_active_collection (
+  user_id    uuid primary key references auth.users(id) on delete cascade,
+  product_id bigint references public.analise_products(id) on delete set null,
+  updated_at timestamptz not null default now()
+);
+alter table public.analise_active_collection enable row level security;
+
+-- ---------- Concorrentes coletados (watchlist) ----------
+create table if not exists public.analise_product_ads (
+  id             bigserial primary key,
+  user_id        uuid not null references auth.users(id) on delete cascade,
+  product_id     bigint not null references public.analise_products(id) on delete cascade,
+  ml_id          text,
+  link           text,
+  titulo         text, preco numeric(14,2), preco_original numeric(14,2), nota numeric(5,2),
+  vendas         text, perguntas int, comentarios int,
+  vendedor       text, cidade text, estado text, reputacao text,
+  is_full        boolean, is_flex boolean,
+  fotos jsonb, videos jsonb, raw jsonb,
+  observacoes text, comentarios_texto text, descricao text, highlights jsonb,
+  monitorar       boolean not null default true,
+  last_checked_at timestamptz,
+  created_at      timestamptz not null default now(),
+  unique (product_id, ml_id)
+);
+create index if not exists idx_analise_ads_user on public.analise_product_ads (user_id, product_id);
+create index if not exists idx_analise_ads_queue on public.analise_product_ads (monitorar, last_checked_at nulls first) where ml_id is not null;
+alter table public.analise_product_ads enable row level security;
+
+-- ---------- Historico de preco (serie temporal) ----------
+create table if not exists public.analise_monitor_snapshots (
+  id        bigserial primary key,
+  user_id   uuid not null references auth.users(id) on delete cascade,
+  ml_id     text not null,
+  snap_date date not null default current_date,
+  preco     numeric(14,2), preco_original numeric(14,2),
+  created_at timestamptz not null default now(),
+  unique (ml_id, snap_date)
+);
+create index if not exists idx_analise_snap on public.analise_monitor_snapshots (user_id, ml_id, snap_date);
+alter table public.analise_monitor_snapshots enable row level security;

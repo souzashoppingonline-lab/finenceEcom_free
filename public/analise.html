@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Análise de Produtos — FinanceEcom Free</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="app-body">
+  <div id="sidebar-root"></div>
+  <main class="app-content">
+    <div class="dash-head">
+      <h1>🔎 Análise de Produtos</h1>
+      <p class="muted">Monitore concorrentes do Mercado Livre e analise seus produtos com IA.</p>
+    </div>
+
+    <!-- ============ CONFIG DE IA + EXTENSÃO ============ -->
+    <div class="card" id="ia-card" style="margin-bottom:22px">
+      <div class="dash-head-row" style="cursor:pointer" id="ia-toggle">
+        <h3 style="margin:0">⚙️ Configurações de IA e Extensão</h3>
+        <span class="muted" id="ia-status">carregando…</span>
+      </div>
+      <div id="ia-body" hidden style="margin-top:16px">
+        <p class="muted">Cole sua própria chave de IA. O custo do uso é da sua conta na OpenAI/Anthropic. Sem chave, a análise por IA fica desativada.</p>
+
+        <span class="field-label">Qual IA usar</span>
+        <div class="status-select" id="prov-select" style="grid-template-columns:1fr 1fr;max-width:420px">
+          <button type="button" class="status-btn is-active" data-p="anthropic">🔵 Claude (Anthropic)</button>
+          <button type="button" class="status-btn" data-p="openai">🟢 ChatGPT (OpenAI)</button>
+        </div>
+
+        <div class="two-col" style="margin-top:14px">
+          <label>Token Claude (Anthropic)
+            <input type="password" id="key-anthropic" placeholder="sk-ant-..." autocomplete="off" />
+            <small class="muted" id="mask-anthropic"></small>
+          </label>
+          <label>Token ChatGPT (OpenAI)
+            <input type="password" id="key-openai" placeholder="sk-..." autocomplete="off" />
+            <small class="muted" id="mask-openai"></small>
+          </label>
+        </div>
+        <button id="save-ia" class="btn-cadastrar" style="max-width:260px">Salvar configurações</button>
+        <p id="ia-msg" class="form-msg"></p>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:18px 0" />
+        <span class="field-label">🔑 Token da Extensão (cole na extensão do Chrome)</span>
+        <div class="ext-token-row">
+          <input type="text" id="ext-token" readonly />
+          <button id="copy-token" class="btn-ghost">Copiar</button>
+          <button id="regen-token" class="btn-ghost">Gerar novo</button>
+        </div>
+        <small class="muted">Este token liga a extensão à sua conta. Gerar um novo desconecta a extensão antiga.</small>
+      </div>
+    </div>
+
+    <!-- ============ LISTA DE PRODUTOS ============ -->
+    <div id="view-list">
+      <div class="dash-head-row">
+        <h3 style="margin:0">Meus produtos em análise</h3>
+        <button id="btn-new" class="btn-inline">+ Novo produto</button>
+      </div>
+
+      <form id="prod-form" class="card" hidden style="margin-top:14px">
+        <h3 id="prod-form-title">Novo produto</h3>
+        <input type="hidden" name="id" />
+        <label>Nome do produto<input type="text" name="produto" required placeholder="Ex.: Fone Bluetooth XYZ" /></label>
+        <div class="two-col">
+          <label>Fornecedor<input type="text" name="fornecedor" placeholder="Opcional" /></label>
+          <label>Preço de compra (R$)<input type="number" name="preco_compra" min="0" step="0.01" placeholder="0,00" /></label>
+        </div>
+        <div class="two-col">
+          <label>Taxa MP (R$)<input type="number" name="taxa_mp" min="0" step="0.01" placeholder="0,00" /></label>
+          <label>Imposto (R$)<input type="number" name="imposto" min="0" step="0.01" placeholder="0,00" /></label>
+        </div>
+        <div class="two-col">
+          <label>Frete de entrada (R$)<input type="number" name="frete_entrada" min="0" step="0.01" placeholder="0,00" /></label>
+          <label>Embalagem (R$)<input type="number" name="embalagem" min="0" step="0.01" placeholder="0,00" /></label>
+        </div>
+        <label>Observações<input type="text" name="observacoes" placeholder="Opcional" /></label>
+        <div class="head-actions">
+          <button type="submit" class="btn-cadastrar" style="max-width:220px">Salvar</button>
+          <button type="button" id="prod-cancel" class="btn-ghost">Cancelar</button>
+        </div>
+        <p id="prod-msg" class="form-msg"></p>
+      </form>
+
+      <div class="periods-grid" id="prod-grid" style="margin-top:16px"></div>
+    </div>
+
+    <!-- ============ DETALHE DO PRODUTO ============ -->
+    <div id="view-detail" hidden>
+      <button id="back-list" class="btn-ghost">← Voltar</button>
+      <div id="detail-head"></div>
+      <div id="detail-ads"></div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/auth-common.js"></script>
+  <script src="/js/app-shell.js"></script>
+  <script src="/js/analise.js"></script>
+</body>
+</html>

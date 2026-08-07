@@ -668,3 +668,9 @@ tbody tr:hover { background: #f7f9fc; }
   .hero-grid { grid-template-columns: 1fr; }
   .nav-actions .nav-link { display: none; }
 }
+
+/* ---------- Análise de Produtos ---------- */
+.ext-token-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+.ext-token-row input { flex: 1; min-width: 240px; font-family: monospace; font-size: .82rem; }
+.switch-sm { font-size: .8rem; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; }
+#prod-grid .period-card { text-align: left; }
