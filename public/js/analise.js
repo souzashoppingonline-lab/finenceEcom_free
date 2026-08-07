@@ -30,6 +30,7 @@ async function loadAiSettings() {
   // máscaras
   $('mask-anthropic').textContent = s.has_anthropic ? `Salvo: ${s.anthropic_mask}` : 'Nenhuma chave salva.';
   $('mask-openai').textContent = s.has_openai ? `Salvo: ${s.openai_mask}` : 'Nenhuma chave salva.';
+  if ($('ai-level')) { $('ai-level').value = s.ai_level || 3; updateLevelLabel(); }
   $('ext-token').value = s.ext_token || '';
   // status resumo no cabeçalho do card
   const keyOk = (s.provider === 'openai' && s.has_openai) || (s.provider === 'anthropic' && s.has_anthropic);
@@ -46,9 +47,24 @@ document.querySelectorAll('#prov-select .status-btn').forEach((b) => b.addEventL
   b.classList.add('is-active');
 }));
 
+const LEVELS = {
+  1: ['Econômico', 'até 3 concorrentes · menos tokens · mais barato'],
+  2: ['Leve', 'até 5 concorrentes · custo baixo'],
+  3: ['Padrão', 'até 7 concorrentes · equilíbrio (recomendado)'],
+  4: ['Detalhado', 'até 9 concorrentes · mais tokens'],
+  5: ['Profundo', 'até 10 concorrentes · máximo de tokens · mais caro'],
+};
+function updateLevelLabel() {
+  const lv = Number($('ai-level').value) || 3;
+  const [name, desc] = LEVELS[lv];
+  $('level-name').textContent = `Nível ${lv} — ${name}`;
+  $('level-desc').textContent = desc;
+}
+$('ai-level')?.addEventListener('input', updateLevelLabel);
+
 $('save-ia').addEventListener('click', async () => {
   const provider = document.querySelector('#prov-select .status-btn.is-active').dataset.p;
-  const body = { provider };
+  const body = { provider, ai_level: Number($('ai-level').value) || 3 };
   const ak = $('key-anthropic').value.trim();
   const ok = $('key-openai').value.trim();
   if (ak) body.anthropic_key = ak;   // só envia se digitou algo (não apaga o salvo à toa)

@@ -1511,6 +1511,7 @@ app.get('/api/ai-settings', requireUser, async (req, res) => {
       openai_mask: maskKey(decryptSecret(s?.openai_key)),
       has_anthropic: !!decryptSecret(s?.anthropic_key),
       has_openai: !!decryptSecret(s?.openai_key),
+      ai_level: s?.ai_level || 3,
       ext_token: ext,
     });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao carregar configuracoes.' }); }
@@ -1546,6 +1547,7 @@ app.put('/api/ai-settings', requireUser, async (req, res) => {
       ext_token: cur.ext_token || ('fec_' + crypto.randomBytes(20).toString('hex')),
       anthropic_key: cur.anthropic_key || null,
       openai_key: cur.openai_key || null,
+      ai_level: Math.min(5, Math.max(1, Number(b.ai_level) || cur.ai_level || 3)),
     };
     if (b.anthropic_key !== undefined) patch.anthropic_key = b.anthropic_key ? encryptSecret(String(b.anthropic_key).trim()) : null;
     if (b.openai_key !== undefined) patch.openai_key = b.openai_key ? encryptSecret(String(b.openai_key).trim()) : null;
@@ -1913,10 +1915,13 @@ REGRA "VENDAS REAIS = PESO MAXIMO": se tem_vendas_reais=true, ancore preco suger
 Listas com 3 a 6 itens CURTOS (ate ~12 palavras). Numeros sem "R$". Baseie comentarios (reclamacoes/elogios) nas avaliacoes fornecidas; se nao houver avaliacoes, deixe as listas vazias e diga isso no resumo.`;
 
 // Monta o JSON compacto de ENTRADA — so dado real, para economizar token
-function buildContext(product, ads) {
+// level (1..5) escala quantos concorrentes e quanto de comentario entram
+function buildContext(product, ads, level = 3) {
   const p = product;
+  const maxAds = Math.min(ANALISE_MAX_ADS, [null, 3, 5, 7, 9, 10][level] || ANALISE_MAX_ADS);
+  const maxChars = [null, 1200, 2200, 3500, 5000, 7000][level] || ANALISE_MAX_COMMENT_CHARS;
   const custo_total = Number(((Number(p.preco_compra) || 0) + (Number(p.frete_entrada) || 0) + (Number(p.embalagem) || 0)).toFixed(2));
-  const list = [...(ads || [])].sort((a, b) => (Number(b.comentarios) || 0) - (Number(a.comentarios) || 0)).slice(0, ANALISE_MAX_ADS);
+  const list = [...(ads || [])].sort((a, b) => (Number(b.comentarios) || 0) - (Number(a.comentarios) || 0)).slice(0, maxAds);
   let temVendasReais = false;
   const concorrentes = list.map((a) => {
     const vr = {};
@@ -1933,9 +1938,9 @@ function buildContext(product, ads) {
     if (Object.keys(vr).length) o.vendas_reais = vr;
     return o;
   });
-  // comentarios agregados (auto + colados), com teto
+  // comentarios agregados (auto + colados), com teto pelo nivel
   let coment = list.map((a) => a.comentarios_texto).filter(Boolean).join('\n---\n');
-  if (coment.length > ANALISE_MAX_COMMENT_CHARS) coment = coment.slice(0, ANALISE_MAX_COMMENT_CHARS);
+  if (coment.length > maxChars) coment = coment.slice(0, maxChars);
 
   return JSON.stringify({
     produto: { nome: p.produto, custo_aquisicao: custo_total, taxa_mp_pct: Number(p.taxa_mp) || 0, imposto_pct: Number(p.imposto) || 0 },
@@ -1965,12 +1970,17 @@ app.post('/api/analise/products/:id/analyze', requireUser, async (req, res) => {
     const key = keys.provider === 'openai' ? keys.openai : keys.anthropic;
     if (!key) return res.status(400).json({ error: 'Configure seu token de IA nas Configuracoes para usar a analise.' });
 
-    const context = buildContext(product, ads);
+    // Profundidade da analise (1..5) -> mais tokens/dados = mais preciso e mais caro
+    const aiSet = await getAiSettings(req.userId);
+    const level = Math.min(5, Math.max(1, Number(aiSet?.ai_level) || 3));
+    const LEVEL_TOKENS = { 1: 1800, 2: 2500, 3: 3200, 4: 4000, 5: 5000 };
+    const maxTok = LEVEL_TOKENS[level];
+    const context = buildContext(product, ads, level);
     let out;
     try {
       out = keys.provider === 'openai'
-        ? await callOpenAI(key, context, 3000, SYSTEM_ANALISE)
-        : await callAnthropic(key, context, 3000, SYSTEM_ANALISE);
+        ? await callOpenAI(key, context, maxTok, SYSTEM_ANALISE)
+        : await callAnthropic(key, context, maxTok, SYSTEM_ANALISE);
     } catch (e) {
       return res.status(502).json({ error: `A IA retornou erro: ${e.message}. Verifique se o token esta correto e com creditos.` });
     }

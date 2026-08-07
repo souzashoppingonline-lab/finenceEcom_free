@@ -854,3 +854,14 @@ tbody tr:hover { background: #f7f9fc; }
 .help-list code,.help-box code{background:#eef2f7;padding:1px 5px;border-radius:4px;font-size:.82rem}
 .help-box{background:#f4f7fb;border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:.85rem;line-height:1.6;margin-top:8px}
 :root[data-theme="dark"] .help-list code,:root[data-theme="dark"] .help-box{background:#0f1622}
+
+/* slider de profundidade da IA (estilo moderno) */
+.slider-wrap{max-width:460px;margin-top:6px}
+.ui-slider{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:20px;background:linear-gradient(90deg,#22c55e,#f5b301,#ef4444);outline:none;margin:8px 0;padding:0}
+.ui-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--primary);box-shadow:0 2px 6px rgba(0,0,0,.25);cursor:pointer;transition:transform .1s}
+.ui-slider::-webkit-slider-thumb:hover{transform:scale(1.12)}
+.ui-slider::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--primary);cursor:pointer}
+.slider-row{display:flex;align-items:baseline;gap:10px;margin-top:4px}
+.slider-row b{font-size:.95rem}
+.slider-warn{font-size:.82rem;color:#b7791f;background:#fff7e8;border:1px solid #f5dca6;border-radius:9px;padding:8px 12px;margin-top:10px}
+:root[data-theme="dark"] .slider-warn{background:#2a2412;border-color:#5a4a1e;color:#e8c76b}
