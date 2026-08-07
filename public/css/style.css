@@ -956,3 +956,7 @@ tbody tr:hover { background: #f7f9fc; }
 :root[data-theme="dark"] .dor-item{background:#1a1113}
 :root[data-theme="dark"] .bb-2nd{background:#0f1622}
 @media(max-width:720px){.dor-cols{grid-template-columns:1fr}}
+.intel-pdf-bar{display:flex;justify-content:flex-end;margin:6px 0 12px}
+.btn-pdf{background:#eef4ff;color:#1e6fff;border:1px solid #cfe0ff;border-radius:8px;padding:8px 16px;font-weight:600;font-size:.85rem;cursor:pointer}
+.btn-pdf:hover{background:#dce9ff}
+:root[data-theme="dark"] .btn-pdf{background:#12203a;border-color:#1e3a6a;color:#7db0ff}

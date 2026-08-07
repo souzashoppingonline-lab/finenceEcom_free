@@ -142,12 +142,60 @@ $('op-form').addEventListener('submit', async (e) => {
 const catHead = (cat, extra = '') =>
   `<div class="ci-head"><span class="muted">Categoria:</span> <b>${esc((cat && (cat.nome || cat.id)) || '—')}</b>${extra}</div>`;
 
+const pdfBtn = (titulo) =>
+  `<div class="intel-pdf-bar no-print"><button type="button" class="btn-pdf intel-pdf" data-title="${esc(titulo)}">📄 Exportar PDF</button></div>`;
+
+function printIntelPDF(titulo, innerHtml) {
+  const when = new Date().toLocaleString('pt-BR');
+  const w = window.open('', '_blank');
+  if (!w) { alert('Permita pop-ups para baixar o PDF.'); return; }
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+    <title>${esc(titulo)} — FinanceEcom</title>
+    <link rel="stylesheet" href="${location.origin}/css/style.css">
+    <style>
+      @page{size:A4 landscape;margin:10mm}
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      body{background:#fff;padding:0;color:#1c2434}
+      .pdf-head{display:flex;align-items:center;gap:12px;border-bottom:2px solid #1e6fff;padding-bottom:10px;margin-bottom:14px}
+      .pdf-head img{width:38px;height:38px}
+      .pdf-head h1{font-size:18px;margin:0}
+      .pdf-head .sub{font-size:11px;color:#6b7686}
+      .pdf-head .when{margin-left:auto;font-size:11px;color:#6b7686;text-align:right}
+      .no-print,.intel-pdf-bar{display:none!important}
+      .card{box-shadow:none;border:1px solid #e2e6ee}
+      .bb-grid{grid-template-columns:1fr 1fr}
+      .bb-card,.bar-kpis{break-inside:avoid}
+    </style></head><body>
+    <div class="pdf-head">
+      <img src="${location.origin}/img/logo-mark.svg" alt="">
+      <div><h1>${esc(titulo)}</h1><div class="sub">FinanceEcom · Inteligência de Mercado (ML)</div></div>
+      <div class="when">Gerado em<br>${esc(when)}</div>
+    </div>
+    ${innerHtml}
+    </body></html>`);
+  w.document.close();
+  w.focus();
+  const go = () => { try { w.print(); } catch (_) {} };
+  if (w.document.readyState === 'complete') setTimeout(go, 500); else w.onload = () => setTimeout(go, 500);
+}
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.intel-pdf');
+  if (!btn) return;
+  const box = btn.closest('.intel-results');
+  if (!box) return;
+  const clone = box.cloneNode(true);
+  clone.querySelectorAll('.intel-pdf-bar').forEach((el) => el.remove());
+  printIntelPDF(btn.dataset.title || 'Relatório', clone.innerHTML);
+});
+
 const INTEL = {
   buybox: {
     url: (p) => '/api/ml/buybox?' + p,
     render: (r) => {
       if (!r.linhas || !r.linhas.length) return '<p class="muted">Nenhum produto de catálogo com disputa de Buy Box nesta categoria. Tente uma busca mais específica.</p>';
       return catHead(r.categoria, ` <span class="ci-comp">🥇 ${r.linhas.length} produtos com Buy Box</span>`) +
+        pdfBtn('Buy Box — ' + ((r.categoria && r.categoria.nome) || 'Categoria')) +
         '<div class="bb-grid">' + r.linhas.map((l) => `
           <div class="bb-card">
             <div class="bb-thumb">${l.thumb ? `<img src="${esc(l.thumb)}" alt="" loading="lazy"/>` : ''}</div>
@@ -187,6 +235,7 @@ const INTEL = {
       const cor = r.score >= 66 ? '#e5484d' : r.score >= 33 ? '#f5b301' : '#30a46c';
       const vend = (r.vendedores || []).map((v) => `<tr><td>${esc(v.nick||'—')}</td><td>${esc(v.status||v.level||'—')}</td><td>${v.vendas!=null?Number(v.vendas).toLocaleString('pt-BR'):'—'}</td><td>${esc(v.cidade||'—')}</td></tr>`).join('');
       return catHead(r.categoria) +
+        pdfBtn('Barreira de Entrada — ' + ((r.categoria && r.categoria.nome) || 'Categoria')) +
         `<div class="bar-kpis">
           <div class="bar-gauge"><div class="bar-score" style="color:${cor}">${r.score}<span>/100</span></div><div class="bar-lvl" style="color:${cor}">${esc(r.nivelDif)}</div></div>
           <div class="fin-grid" style="grid-template-columns:repeat(3,1fr);flex:1">
