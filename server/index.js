@@ -1788,20 +1788,45 @@ function retryNextModel(status, err) {
   return false; // 401 (chave), 429/insufficient (credito), etc -> propaga
 }
 
+async function anthropicTry(key, model, prompt) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({ model, max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
+  });
+  const data = await r.json().catch(() => ({}));
+  return { r, data };
+}
+
+// Descobre modelos reais da conta (GET /v1/models)
+async function anthropicListModels(key) {
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/models?limit=20', {
+      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) return [];
+    return (data.data || []).map((m) => m.id).filter(Boolean);
+  } catch (_) { return []; }
+}
+
 async function callAnthropic(key, prompt) {
   let lastErr = 'sem modelo disponivel';
   for (const model of ANTHROPIC_MODELS) {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({ model, max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
-    });
-    const data = await r.json().catch(() => ({}));
+    const { r, data } = await anthropicTry(key, model, prompt);
     if (r.ok) return (data.content || []).map((c) => c.text || '').join('\n').trim();
     lastErr = data?.error?.message || `Anthropic HTTP ${r.status}`;
     if (!retryNextModel(r.status, data?.error)) throw new Error(lastErr);
   }
-  throw new Error(`nenhum modelo Claude disponivel na sua conta (${lastErr})`);
+  // fallback: pergunta a propria conta quais modelos existem e tenta o 1o
+  const models = await anthropicListModels(key);
+  for (const model of models.slice(0, 4)) {
+    const { r, data } = await anthropicTry(key, model, prompt);
+    if (r.ok) return (data.content || []).map((c) => c.text || '').join('\n').trim();
+    lastErr = data?.error?.message || lastErr;
+  }
+  if (models.length === 0) throw new Error('a chave nao lista nenhum modelo. Verifique se e uma API Key do console.anthropic.com (nao o token do Claude Code) e se ha creditos em Billing.');
+  throw new Error(`nenhum modelo Claude respondeu (${lastErr})`);
 }
 
 async function callOpenAI(key, prompt) {
