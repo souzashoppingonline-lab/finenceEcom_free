@@ -320,7 +320,7 @@ function adCard(a) {
     <div class="ad-sections">
       ${kws.length ? `<div class="ad-sec"><b>🔑 SEO / palavras-chave</b><div class="ad-kws">${kws.map((k) => `<span class="kw">${esc(k)}</span>`).join('')}</div></div>` : ''}
       ${ficha.length ? `<details class="ad-sec"><summary><b>📋 Ficha técnica</b> (${ficha.length})</summary><ul class="ad-ficha">${ficha.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></details>` : ''}
-      ${a.ml_id ? `<details class="ad-sec" data-hist="${esc(a.ml_id)}"><summary><b>📈 Histórico de preço</b></summary><div class="ad-hist muted">clique para carregar…</div></details>` : ''}
+      ${a.ml_id ? `<div class="ad-sec"><b>📈 Histórico de preço</b><div class="ad-hist muted" data-hist="${esc(a.ml_id)}">carregando…</div></div>` : ''}
       ${a.aval_dist ? `<div class="ad-sec"><b>⭐ Avaliações:</b> ${a.nota ? a.nota + ' · ' : ''}${a.comentarios || 0} no total<div class="ad-kws" style="margin-top:5px">${esc(a.aval_dist).split('·').map((d) => `<span class="kw">${esc(d.trim())}</span>`).join('')}</div></div>` : ''}
       ${a.comentarios_texto ? `<details class="ad-sec"><summary><b>💬 Avaliações (texto)</b></summary><div class="ad-desc">${esc(a.comentarios_texto).replace(/\n/g, '<br>')}</div></details>` : ''}
       ${a.descricao ? `<details class="ad-sec"><summary><b>📝 Descrição do anúncio</b></summary><div class="ad-desc">${esc(a.descricao).replace(/\n/g, '<br>')}</div></details>` : ''}
@@ -395,10 +395,8 @@ function renderAds(productId, ads) {
       : `<div class="ad-grid">${ads.map(adCard).join('')}</div>`}`;
 
   $('ad-refresh').addEventListener('click', () => openDetail(productId));
-  // histórico de preço: carrega ao abrir o details (uma vez)
-  $('detail-ads').querySelectorAll('details[data-hist]').forEach((d) => d.addEventListener('toggle', () => {
-    if (d.open && !d.dataset.loaded) { d.dataset.loaded = '1'; loadHistory(d.dataset.hist, d.querySelector('.ad-hist')); }
-  }));
+  // histórico de preço: carrega automaticamente em cada card
+  $('detail-ads').querySelectorAll('.ad-hist[data-hist]').forEach((el) => loadHistory(el.dataset.hist, el));
   $('ad-new').addEventListener('click', () => { $('ad-form').hidden = false; });
   $('ad-cancel').addEventListener('click', () => { $('ad-form').hidden = true; });
   $('ad-form').addEventListener('submit', async (e) => {
