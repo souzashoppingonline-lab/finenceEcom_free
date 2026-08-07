@@ -1735,6 +1735,145 @@ app.delete('/api/analise/ads/:adId', requireUser, async (req, res) => {
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao excluir concorrente.' }); }
 });
 
+// ===========================================================================
+// ANALISE POR IA (Fase 2) — usa o token do proprio cliente (Claude/OpenAI)
+// ===========================================================================
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+
+async function callAnthropic(key, prompt) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data?.error?.message || `Anthropic HTTP ${r.status}`);
+  return (data.content || []).map((c) => c.text || '').join('\n').trim();
+}
+
+async function callOpenAI(key, prompt) {
+  const r = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ model: OPENAI_MODEL, max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data?.error?.message || `OpenAI HTTP ${r.status}`);
+  return (data.choices?.[0]?.message?.content || '').trim();
+}
+
+function buildAnalysisPrompt(product, ads) {
+  const p = product;
+  const custoBase = (Number(p.preco_compra) || 0) + (Number(p.frete_entrada) || 0) + (Number(p.embalagem) || 0);
+  const linhasConc = (ads || []).length
+    ? ads.map((a, i) => `  ${i + 1}. "${a.titulo || a.ml_id || 'sem titulo'}" — preco ${a.preco != null ? 'R$ ' + Number(a.preco).toFixed(2) : 'n/d'}` +
+        `${a.nota ? `, nota ${a.nota}` : ''}${a.vendedor ? `, vendedor ${a.vendedor}` : ''}` +
+        `${a.vendas ? `, ${a.vendas}` : ''}${a.reputacao ? `, reputacao ${a.reputacao}` : ''}` +
+        `${a.is_full ? ', FULL' : ''}${a.is_flex ? ', FLEX' : ''}${a.link ? `, link ${a.link}` : ''}`).join('\n')
+    : '  (nenhum concorrente cadastrado ainda)';
+
+  return `Voce e um especialista em Mercado Livre (Brasil) que faz o "Raio-X" de anuncios, no nivel de ferramentas como Nubimetrics e Joopulse. Sua missao e diagnosticar o anuncio e dar uma NOTA DE 0 A 100, com problemas e acoes priorizadas por impacto. Responda em portugues do Brasil, com markdown.
+
+Analise o funil COMPLETO do anuncio, considerando os 12 pilares abaixo. Para cada pilar, use os dados fornecidos; quando um dado nao existir (muitos so aparecem no painel do DONO do anuncio, nao do concorrente), diga explicitamente "dado nao coletado" e o que seria util medir — NAO invente numeros.
+
+OS 12 PILARES:
+1. Conversao (o mais importante): taxa de conversao, visitas, pedidos, receita, conversao 7d e 30d. Referencia: <1% grave, 1-2% ruim, 2-4% aceitavel, 4-8% muito bom, >8% excelente.
+2. CTR: quantos clicam ao ver. CTR baixo = problema em foto principal, preco, frete, parcelamento ou titulo.
+3. Foto principal: chama atencao? produto ocupa quase toda a imagem? fundo branco? contraste? melhor que concorrentes?
+4. Titulo: responde o que e, marca, modelo, quantidade, medidas e a palavra mais buscada? Tem palavras-chave que os lideres usam?
+5. Preco: vs os primeiros colocados, desconto, parcelamento, elegivel a campanhas.
+6. Frete: Full, Flex, Entrega Hoje/Amanha, frete gratis, subsidio, prazo. Mais rapido = mais conversao.
+7. Estoque: quantidade, dias de cobertura, rupturas, historico sem estoque.
+8. Reputacao: cancelamentos, reclamacoes, devolucoes, atrasos, mensagens nao respondidas.
+9. Conteudo: descricao boa? beneficios, especificacoes, medidas, garantia, FAQ, videos.
+10. Competitividade vs TOP 10: preco, fotos, titulo, qtd vendida, avaliacoes, parcelamento, entrega, garantia, brindes.
+11. Avaliacoes: ler principalmente 1-3 estrelas — o que reclamam, o que falta, oportunidades de melhoria.
+12. Publicidade: ACOS, TACOS, ROAS, CTR, CPC, impressoes, conversao patrocinada.
+
+ALEM DISSO, comente os "dados ocultos" quando houver base: evolucao (conversao caiu? apos qual mudanca?), sazonalidade (7/30/90 dias, ano anterior), share da categoria, elasticidade de preco, palavras-chave (aparece nas buscas certas?), e movimentos da concorrencia (quem entrou, baixou preco, virou Full, ganhou Mercado Lider).
+
+===== DADOS DO PRODUTO DO VENDEDOR =====
+- Nome: ${p.produto}
+- Fornecedor: ${p.fornecedor || 'n/d'}
+- Preco de compra: R$ ${(Number(p.preco_compra) || 0).toFixed(2)}
+- Frete de entrada: R$ ${(Number(p.frete_entrada) || 0).toFixed(2)}
+- Embalagem: R$ ${(Number(p.embalagem) || 0).toFixed(2)}
+- Custo direto total (compra+frete+embalagem): R$ ${custoBase.toFixed(2)}
+- Taxa Mercado Pago: ${(Number(p.taxa_mp) || 0)}% sobre o preco de venda
+- Imposto: ${(Number(p.imposto) || 0)}% sobre o preco de venda
+- Observacoes: ${p.observacoes || 'nenhuma'}
+
+===== CONCORRENTES MONITORADOS =====
+${linhasConc}
+
+REGRA DE CUSTO: taxa MP e imposto sao PERCENTUAIS sobre o preco de venda P. Lucro liquido = P - custo_direto - (P * taxaMP%) - (P * imposto%). Use isso para calcular margem e preco ideal.
+
+SCORE GERAL PONDERADO (calcule a nota final com estes pesos): Conversao 25%, CTR 15%, SEO/Titulo 15%, Conteudo 10%, Oferta/Preco 10%, Logistica/Frete 10%, Publicidade 5%, Estoque 5%, Reputacao 5%. Quando um pilar nao tiver dados, estime de forma conservadora e sinalize que a nota e parcial. Mostre a nota final e a contribuicao dos principais pilares.
+
+ENTREGUE EXATAMENTE NESTA ESTRUTURA (markdown):
+
+## 🎯 Nota geral: X/100
+Uma frase resumindo a saude do anuncio. Diga se a nota e completa ou parcial (por falta de dados).
+
+## 📊 Notas por pilar
+Tabela com os 12 pilares, uma nota de 0-100 (ou "s/ dados") e status curto de cada um.
+
+## 🔴 Principais problemas
+Lista objetiva dos maiores gargalos detectados (com numeros quando houver).
+
+## 💰 Preco ideal e margem
+Faixa de preco competitiva + lucro liquido e margem % estimada, respeitando os custos.
+
+## ✅ Acoes priorizadas (por impacto)
+Lista numerada de 4 a 6 acoes, cada uma marcada como (impacto alto/medio/baixo).
+
+## 📥 O que coletar para uma analise mais precisa
+Liste os dados que faltaram (conversao, CTR, ACOS, estoque, etc.) e onde obte-los.
+
+Seja objetivo e use numeros sempre que possivel. Nunca invente metricas que nao foram fornecidas.`;
+}
+
+app.post('/api/analise/products/:id/analyze', requireUser, async (req, res) => {
+  const id = req.params.id;
+  try {
+    // carrega produto + concorrentes (com escopo do usuario)
+    let product, ads;
+    if (supabase) {
+      const { data: p } = await supabase.from('analise_products').select('*').eq('id', id).eq('user_id', req.userId).maybeSingle();
+      if (!p) return res.status(404).json({ error: 'Produto nao encontrado.' });
+      const { data: a } = await supabase.from('analise_product_ads').select('*').eq('product_id', id).eq('user_id', req.userId);
+      product = p; ads = a || [];
+    } else {
+      product = memAnaliseProducts.find((x) => String(x.id) === String(id) && x.user_id === req.userId);
+      if (!product) return res.status(404).json({ error: 'Produto nao encontrado.' });
+      ads = memAnaliseAds.filter((x) => String(x.product_id) === String(id) && x.user_id === req.userId);
+    }
+
+    const keys = await getDecryptedKeys(req.userId);
+    const key = keys.provider === 'openai' ? keys.openai : keys.anthropic;
+    if (!key) return res.status(400).json({ error: 'Configure seu token de IA nas Configuracoes para usar a analise.' });
+
+    const prompt = buildAnalysisPrompt(product, ads);
+    let text;
+    try {
+      text = keys.provider === 'openai' ? await callOpenAI(key, prompt) : await callAnthropic(key, prompt);
+    } catch (e) {
+      return res.status(502).json({ error: `A IA retornou erro: ${e.message}. Verifique se o token esta correto e com creditos.` });
+    }
+    if (!text) return res.status(502).json({ error: 'A IA nao retornou conteudo.' });
+
+    // persiste a ultima analise no produto (best-effort)
+    const stamp = new Date().toISOString();
+    try {
+      if (supabase) await supabase.from('analise_products').update({ analise_ia: text, analise_ia_at: stamp }).eq('id', id).eq('user_id', req.userId);
+      else Object.assign(product, { analise_ia: text, analise_ia_at: stamp });
+    } catch (_) { /* coluna pode nao existir ainda; ignora */ }
+
+    return res.json({ analysis: text, provider: keys.provider, at: stamp });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao analisar produto.' }); }
+});
+
 app.get('/health', (req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => {

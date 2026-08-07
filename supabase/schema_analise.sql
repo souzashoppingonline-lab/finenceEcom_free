@@ -77,3 +77,7 @@ create table if not exists public.analise_monitor_snapshots (
 );
 create index if not exists idx_analise_snap on public.analise_monitor_snapshots (user_id, ml_id, snap_date);
 alter table public.analise_monitor_snapshots enable row level security;
+
+-- Analise por IA salva no produto (Fase 2)
+alter table public.analise_products add column if not exists analise_ia text;
+alter table public.analise_products add column if not exists analise_ia_at timestamptz;

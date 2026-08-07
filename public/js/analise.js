@@ -111,9 +111,59 @@ function renderProducts() {
     </div>`;
   }).join('');
   el.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', () => openDetail(b.dataset.open)));
-  el.querySelectorAll('[data-ia]').forEach((b) => b.addEventListener('click', () => {
-    alert('A análise por IA será ativada na Fase 2. Seu token já está configurado e pronto.');
-  }));
+  el.querySelectorAll('[data-ia]').forEach((b) => b.addEventListener('click', () => runAnalysis(b.dataset.ia, b)));
+}
+
+// ---------------------------------------------------------------------------
+// Análise por IA
+// ---------------------------------------------------------------------------
+// Mini renderizador de markdown (títulos, negrito, listas, tabelas simples)
+function mdToHtml(md) {
+  const lines = String(md).split('\n');
+  let html = '', inUl = false, inTable = false;
+  const inline = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`(.+?)`/g, '<code>$1</code>');
+  const closeUl = () => { if (inUl) { html += '</ul>'; inUl = false; } };
+  const closeTable = () => { if (inTable) { html += '</tbody></table></div>'; inTable = false; } };
+  for (let raw of lines) {
+    const line = raw.trimEnd();
+    if (/^\s*\|(.+)\|\s*$/.test(line)) {
+      const cells = line.replace(/^\s*\||\|\s*$/g, '').split('|').map((c) => c.trim());
+      if (/^[-:\s|]+$/.test(line.replace(/\|/g, ''))) continue; // separador ---
+      if (!inTable) { closeUl(); html += '<div class="table-wrap"><table><tbody>'; inTable = true; }
+      html += '<tr>' + cells.map((c) => `<td>${inline(c)}</td>`).join('') + '</tr>';
+      continue;
+    } else closeTable();
+    if (/^###?\s+/.test(line)) { closeUl(); html += `<h3 class="ia-h">${inline(line.replace(/^#+\s+/, ''))}</h3>`; }
+    else if (/^\s*[-*]\s+/.test(line)) { if (!inUl) { html += '<ul>'; inUl = true; } html += `<li>${inline(line.replace(/^\s*[-*]\s+/, ''))}</li>`; }
+    else if (/^\s*\d+\.\s+/.test(line)) { if (!inUl) { html += '<ul>'; inUl = true; } html += `<li>${inline(line.replace(/^\s*\d+\.\s+/, ''))}</li>`; }
+    else if (line.trim() === '') { closeUl(); }
+    else { closeUl(); html += `<p>${inline(line)}</p>`; }
+  }
+  closeUl(); closeTable();
+  return html;
+}
+
+function openModal(title, html) {
+  $('ia-modal-title').innerHTML = title;
+  $('ia-modal-body').innerHTML = html;
+  $('ia-modal').hidden = false;
+}
+$('ia-modal-close').addEventListener('click', () => { $('ia-modal').hidden = true; });
+$('ia-modal').addEventListener('click', (e) => { if (e.target.id === 'ia-modal') $('ia-modal').hidden = true; });
+
+async function runAnalysis(productId, btn) {
+  if (!iaReady()) { alert('Configure seu token de IA nas Configurações acima.'); return; }
+  const original = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '🤖 Analisando…'; }
+  openModal('🤖 Análise por IA', '<p class="muted">A IA está analisando o anúncio, aguarde alguns segundos…</p>');
+  try {
+    const r = await api(`/api/analise/products/${productId}/analyze`, { method: 'POST' });
+    const when = r.at ? new Date(r.at).toLocaleString('pt-BR') : '';
+    openModal(`🤖 Análise por IA <small class="muted" style="font-weight:400">(${r.provider === 'openai' ? 'ChatGPT' : 'Claude'} · ${when})</small>`, mdToHtml(r.analysis));
+  } catch (e) {
+    openModal('🤖 Análise por IA', `<p class="c-danger">${esc(e.message)}</p>`);
+  }
+  if (btn) { btn.disabled = false; btn.textContent = original; }
 }
 
 // Form novo/editar produto
@@ -158,6 +208,9 @@ async function openDetail(id) {
     <div class="dash-head-row">
       <h2 style="margin:0">${esc(p.produto)}</h2>
       <div class="head-actions" style="flex-wrap:wrap;gap:8px">
+        ${iaReady()
+          ? `<button class="btn-inline" data-ia="${p.id}">🤖 Analisar com IA</button>`
+          : '<button class="btn-ghost" disabled title="Configure seu token de IA acima">🤖 IA (configure o token)</button>'}
         ${isActive
           ? `<button class="btn-ghost" data-finalize="${p.id}">⏹ Finalizar coleta</button>`
           : `<button class="btn-inline" data-activate="${p.id}">▶ Coleta ativa</button>`}
@@ -177,6 +230,13 @@ async function openDetail(id) {
     await api(`/api/analise/products/${e.target.dataset.del}`, { method: 'DELETE' });
     backToList();
   });
+  $('detail-head').querySelector('[data-ia]')?.addEventListener('click', (e) => runAnalysis(p.id, e.target));
+
+  // última análise salva (se houver)
+  if (p.analise_ia) {
+    const when = p.analise_ia_at ? new Date(p.analise_ia_at).toLocaleString('pt-BR') : '';
+    $('detail-head').insertAdjacentHTML('beforeend', `<div class="card ia-saved"><div class="dash-head-row"><h4 style="margin:0">🤖 Última análise por IA</h4><small class="muted">${when}</small></div><div class="ia-modal-body">${mdToHtml(p.analise_ia)}</div></div>`);
+  }
 
   renderAds(id, ads);
 }

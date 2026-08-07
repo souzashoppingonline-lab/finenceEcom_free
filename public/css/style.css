@@ -674,3 +674,18 @@ tbody tr:hover { background: #f7f9fc; }
 .ext-token-row input { flex: 1; min-width: 240px; font-family: monospace; font-size: .82rem; }
 .switch-sm { font-size: .8rem; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; }
 #prod-grid .period-card { text-align: left; }
+
+/* ---------- Modal de análise por IA ---------- */
+.ia-modal { position: fixed; inset: 0; background: rgba(10,20,40,.55); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; z-index: 999; overflow-y: auto; }
+.ia-modal-box { background: var(--card); border: 1px solid var(--border); border-radius: 14px; max-width: 780px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+.ia-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--card); border-radius: 14px 14px 0 0; }
+.ia-modal-head h3 { margin: 0; }
+.ia-modal-body { padding: 8px 22px 22px; line-height: 1.55; }
+.ia-modal-body .ia-h { margin: 18px 0 8px; font-size: 1.05rem; }
+.ia-modal-body p { margin: 8px 0; }
+.ia-modal-body ul { margin: 8px 0 8px 4px; padding-left: 20px; }
+.ia-modal-body li { margin: 4px 0; }
+.ia-modal-body table { min-width: 0; width: 100%; }
+.ia-modal-body td { padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: .9rem; }
+.ia-saved { margin-top: 16px; }
+.ia-saved .ia-modal-body { padding: 8px 4px 0; }
