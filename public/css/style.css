@@ -298,7 +298,7 @@ tbody tr:hover { background: #f7f9fc; }
 .side-btn { font-weight: 400; }
 .side-bottom { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; }
 .side-open { display: none; }
-.app-content { margin-left: 236px; padding: 32px 40px 60px; max-width: 1180px; transition: margin-left .18s; }
+.app-content { margin-left: 236px; padding: 32px 44px 60px; max-width: 1600px; transition: margin-left .18s; }
 
 /* Menu recolhido (desktop) */
 :root.sidebar-collapsed .sidebar { width: 64px; padding: 22px 8px; }
