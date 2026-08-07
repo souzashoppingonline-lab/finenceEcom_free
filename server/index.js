@@ -2180,51 +2180,55 @@ app.get('/api/analise/monitor/:mlb', requireUser, async (req, res) => {
 // ===========================================================================
 // CRIAR CRIATIVOS (opcional) — gera JSON de brief de imagem (texto, barato)
 // ===========================================================================
-function buildCreativesPrompt(product, ads) {
-  const insumos = (ads || []).slice(0, 6).map((a) => {
-    const parts = [];
-    if (a.titulo) parts.push(`titulo: ${a.titulo}`);
-    if (a.preco) parts.push(`preco: R$ ${Number(a.preco).toFixed(2)}`);
-    if (a.highlights) parts.push(`ficha: ${(Array.isArray(a.highlights) ? a.highlights.join('; ') : a.highlights)}`.slice(0, 300));
-    if (a.descricao) parts.push(`descricao: ${String(a.descricao).slice(0, 300)}`);
-    if (a.comentarios_texto) parts.push(`avaliacoes: ${String(a.comentarios_texto).slice(0, 300)}`);
-    return '- ' + parts.join(' | ');
-  }).join('\n');
+const SYSTEM_CRIATIVOS = `Voce e diretor de arte de e-commerce. Gera BRIEFS DE IMAGEM (criativos) para anunciar um produto no Mercado Livre. Cada criativo foca UM angulo de persuasao (sem repetir), escolhendo os 7 mais fortes entre: Gancho, Proposta de valor, Beneficios, Provas, Quebra de objecoes, Autoridade, Diferenciais, Clareza, Urgencia, Confianca, Especificacoes, CTA implicito. Base: elogios das avaliacoes viram Provas/Beneficios; reclamacoes viram Quebra de objecoes; dados dos concorrentes viram Diferenciais.
 
-  return `Voce e diretor de arte de e-commerce. Gere BRIEFS DE IMAGEM (criativos) para anunciar o produto abaixo no Mercado Livre, usando TUDO que sabemos dele e dos concorrentes (descricoes, ficha tecnica e o que os clientes elogiam/reclamam nas avaliacoes) para destacar os beneficios certos no texto.
+Responda SOMENTE com JSON valido (sem markdown, sem texto fora do JSON), EXATAMENTE assim:
+{"criativos":[ 7 objetos ]}
+Cada objeto:
+{"angulo":"","objetivo":"","composicao":{"cenario":"","sujeito":"","detalhe_produto":"","camera":""},"direcao_de_arte":{"iluminacao":"","paleta_cores":"","estilo_visual":""},"elementos_visual_copy":{"texto_principal":"","texto_secundario":"","posicao_texto":"","estilo_texto":"","grafismo":"","selo":""},"formato":"1:1"}
 
-PRODUTO: ${product.produto}
-${product.analise_ia ? `RESUMO DA ANALISE: ${String(product.analise_ia).slice(0, 800)}` : ''}
-DADOS DOS CONCORRENTES (use como referencia de mercado e do que valorizar):
-${insumos || '- (sem concorrentes cadastrados)'}
+Regras: copy curta em pt-BR servindo ao angulo; "detalhe_produto" pede para preservar a identidade visual do produto conforme fotos de referencia; "estilo_visual" fotorealista premium (8k, sharp focus, depth of field). Nunca invente selos, certificacoes ou provas falsas. Seja CONCISO para o JSON dos 7 caber inteiro.`;
 
-Cada criativo deve focar UM angulo de persuasao (um objetivo claro). Escolha os 7 angulos MAIS FORTES para este produto entre os 12 elementos abaixo (um por criativo, sem repetir):
-1. Gancho (Hook) — fazer o comprador parar de rolar; imagem/titulo de forte impacto.
-2. Proposta de valor — por que comprar ESTE e nao outro.
-3. Beneficios — o resultado que o cliente tera (nao so caracteristicas).
-4. Provas — avaliacoes, numero de vendas, fotos reais, certificacoes (reduzem risco).
-5. Quebra de objecoes — eliminar medos: qualidade, entrega, garantia, compatibilidade, tamanho, funcionamento.
-6. Autoridade — marca, fabricante, tempo de mercado, certificacoes.
-7. Diferenciais — o que torna superior aos concorrentes.
-8. Clareza — entender tudo em poucos segundos, sem duvida.
-9. Urgencia — estoque limitado, promocao, sazonalidade (SEM falsas urgencias).
-10. Confianca — garantia, devolucao facil, nota fiscal, suporte.
-11. Especificacoes completas — dimensoes, peso, material, conteudo da embalagem, compatibilidade.
-12. CTA implicito — levar naturalmente a concluir a compra.
-Baseie as escolhas nas avaliacoes reais (elogios viram Provas/Beneficios; reclamacoes viram Quebra de objecoes) e nos dados dos concorrentes (Diferenciais).
-
-Responda APENAS com JSON valido (sem texto fora do JSON, sem markdown), no formato:
-{"criativos":[ CRIATIVO x7 ]}
-Cada CRIATIVO segue EXATAMENTE este schema:
-{
-  "angulo": "<nome do elemento, ex.: 'Quebra de objecoes', 'Prova social', 'Diferenciais'>",
-  "objetivo": "<o que este criativo precisa provocar no comprador, em 1 frase>",
-  "composicao": {"cenario":"","sujeito":"","detalhe_produto":"","camera":""},
-  "direcao_de_arte": {"iluminacao":"","paleta_cores":"","estilo_visual":""},
-  "elementos_visual_copy": {"texto_principal":"","texto_secundario":"","posicao_texto":"","estilo_texto":"","grafismo":"","selo":""},
-  "formato": "1:1"
+// Recupera objetos de criativo completos mesmo se o array vier truncado
+function salvageCriativos(text) {
+  if (!text) return [];
+  let t = String(text).replace(/```json/gi, '').replace(/```/g, '');
+  const k = t.indexOf('"criativos"');
+  const lb = t.indexOf('[', k >= 0 ? k : 0);
+  if (lb < 0) return [];
+  const out = [];
+  let i = lb + 1;
+  while (i < t.length) {
+    while (i < t.length && t[i] !== '{') { if (t[i] === ']') return out; i++; }
+    if (i >= t.length) break;
+    // brace match a partir de i
+    let depth = 0, inStr = false, escp = false, end = -1;
+    for (let j = i; j < t.length; j++) {
+      const ch = t[j];
+      if (inStr) { if (escp) escp = false; else if (ch === '\\') escp = true; else if (ch === '"') inStr = false; }
+      else if (ch === '"') inStr = true;
+      else if (ch === '{') depth++;
+      else if (ch === '}') { depth--; if (depth === 0) { end = j; break; } }
+    }
+    if (end < 0) break; // objeto truncado -> para
+    try { out.push(JSON.parse(t.slice(i, end + 1))); } catch (_) { break; }
+    i = end + 1;
+  }
+  return out;
 }
-Regras: copy curta e persuasiva em pt-BR servindo ao angulo do criativo; "detalhe_produto" deve pedir para preservar a identidade visual do produto conforme fotos de referencia; estilo_visual fotorealista premium para e-commerce (8k, sharp focus, depth of field). Nunca invente selos, certificacoes ou provas falsas.`;
+
+function buildCreativesContext(product, ads) {
+  const concorrentes = (ads || []).slice(0, 5).map((a) => ({
+    titulo: a.titulo || null,
+    preco: a.preco != null ? Number(a.preco) : null,
+    ficha: a.highlights ? (Array.isArray(a.highlights) ? a.highlights.slice(0, 8) : String(a.highlights).slice(0, 200)) : null,
+    avaliacoes: a.comentarios_texto ? String(a.comentarios_texto).slice(0, 300) : null,
+  }));
+  return JSON.stringify({
+    produto: product.produto,
+    resumo_analise: product.analise_ia ? String(product.analise_ia).slice(0, 600) : null,
+    concorrentes,
+  });
 }
 
 function extractJson(text) {
@@ -2274,14 +2278,23 @@ app.post('/api/analise/products/:id/creatives', requireUser, async (req, res) =>
     const key = keys.provider === 'openai' ? keys.openai : keys.anthropic;
     if (!key) return res.status(400).json({ error: 'Configure seu token de IA para gerar criativos.' });
 
-    const prompt = buildCreativesPrompt(product, ads);
+    const context = buildCreativesContext(product, ads);
     let text;
     try {
-      text = keys.provider === 'openai' ? await callOpenAI(key, prompt, 3000) : await callAnthropic(key, prompt, 3000);
+      text = keys.provider === 'openai'
+        ? await callOpenAI(key, context, 4096, SYSTEM_CRIATIVOS)
+        : await callAnthropic(key, context, 4096, SYSTEM_CRIATIVOS);
     } catch (e) { return res.status(502).json({ error: `A IA retornou erro: ${e.message}` }); }
 
-    const parsed = extractJson(text);
-    if (!parsed || !Array.isArray(parsed.criativos)) return res.status(502).json({ error: 'A IA nao retornou um JSON valido de criativos. Tente novamente.' });
+    let parsed = extractJson(text);
+    // tolera JSON truncado no ultimo criativo: recupera os objetos completos do array
+    if (!parsed || !Array.isArray(parsed.criativos)) {
+      const salv = salvageCriativos(text);
+      if (salv.length) parsed = { criativos: salv };
+    }
+    if (!parsed || !Array.isArray(parsed.criativos) || !parsed.criativos.length) {
+      return res.status(502).json({ error: 'A IA nao retornou um JSON valido de criativos. Tente novamente.' });
+    }
 
     const stamp = new Date().toISOString();
     const jsonStr = JSON.stringify(parsed);
