@@ -1776,9 +1776,16 @@ const OPENAI_MODELS = process.env.OPENAI_MODEL
   ? [process.env.OPENAI_MODEL]
   : ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'];
 
-// Erro de "modelo nao encontrado/indisponivel" -> vale tentar o proximo modelo.
-function isModelError(msg) {
-  return /model/i.test(msg || '') && /(not_found|not found|does not exist|inv[aá]lid|unavailable|access|permission|deprecat)/i.test(msg || '');
+// Decide se vale tentar o proximo modelo (modelo indisponivel) ou parar
+// (credito/chave). Usa status HTTP + tipo/mensagem do erro.
+function retryNextModel(status, err) {
+  const type = (err?.type || err?.code || '').toLowerCase();
+  const msg = (err?.message || '').toLowerCase();
+  if (status === 404) return true;                              // Anthropic modelo inexistente
+  if (/not_found|model_not_found|does not exist|unavailable|deprecat/.test(type + ' ' + msg)) return true;
+  if (/^\s*model\s*:/.test(msg)) return true;                   // Anthropic: "model: <id>"
+  if (status === 400 && /model/.test(msg)) return true;         // OpenAI modelo invalido
+  return false; // 401 (chave), 429/insufficient (credito), etc -> propaga
 }
 
 async function callAnthropic(key, prompt) {
@@ -1789,12 +1796,12 @@ async function callAnthropic(key, prompt) {
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({ model, max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
     });
-    const data = await r.json();
+    const data = await r.json().catch(() => ({}));
     if (r.ok) return (data.content || []).map((c) => c.text || '').join('\n').trim();
     lastErr = data?.error?.message || `Anthropic HTTP ${r.status}`;
-    if (!isModelError(lastErr)) throw new Error(lastErr); // credito/chave -> nao adianta trocar modelo
+    if (!retryNextModel(r.status, data?.error)) throw new Error(lastErr);
   }
-  throw new Error(lastErr);
+  throw new Error(`nenhum modelo Claude disponivel na sua conta (${lastErr})`);
 }
 
 async function callOpenAI(key, prompt) {
@@ -1805,12 +1812,12 @@ async function callOpenAI(key, prompt) {
       headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
       body: JSON.stringify({ model, max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
     });
-    const data = await r.json();
+    const data = await r.json().catch(() => ({}));
     if (r.ok) return (data.choices?.[0]?.message?.content || '').trim();
     lastErr = data?.error?.message || `OpenAI HTTP ${r.status}`;
-    if (!isModelError(lastErr)) throw new Error(lastErr);
+    if (!retryNextModel(r.status, data?.error)) throw new Error(lastErr);
   }
-  throw new Error(lastErr);
+  throw new Error(`nenhum modelo OpenAI disponivel na sua conta (${lastErr})`);
 }
 
 function buildAnalysisPrompt(product, ads) {
