@@ -153,17 +153,118 @@ function openModal(title, html) {
 $('ia-modal-close').addEventListener('click', () => { $('ia-modal').hidden = true; });
 $('ia-modal').addEventListener('click', (e) => { if (e.target.id === 'ia-modal') $('ia-modal').hidden = true; });
 
+const money2 = (v) => 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// Donut de score (0-100)
+function scoreDonut(score) {
+  const s = Math.max(0, Math.min(100, Number(score) || 0));
+  const r = 34, c = 2 * Math.PI * r, off = c * (1 - s / 100);
+  const col = s >= 70 ? '#22c55e' : s >= 45 ? '#f5b301' : '#ef4444';
+  return `<svg viewBox="0 0 90 90" class="score-donut" width="90" height="90">
+    <circle cx="45" cy="45" r="${r}" fill="none" stroke="#e2e6ee" stroke-width="9"/>
+    <circle cx="45" cy="45" r="${r}" fill="none" stroke="${col}" stroke-width="9" stroke-linecap="round"
+      stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 45 45)" class="score-arc"/>
+    <text x="45" y="42" text-anchor="middle" class="score-num">${s}</text>
+    <text x="45" y="58" text-anchor="middle" class="score-lbl">/100</text>
+  </svg>`;
+}
+
+function ul(items) {
+  if (!Array.isArray(items) || !items.length) return '<p class="muted" style="font-size:.85rem">—</p>';
+  return '<ul class="ia-list">' + items.map((i) => `<li>${esc(i)}</li>`).join('') + '</ul>';
+}
+
+// Renderiza o painel estruturado da análise
+function analysisHtml(d, when) {
+  const verd = { vale_a_pena: { t: 'Vale a pena', c: 'v-ok', i: '✅' }, avaliar: { t: 'Avaliar com cuidado', c: 'v-warn', i: '🟡' }, evitar: { t: 'Evitar', c: 'v-bad', i: '🔴' } }[d.veredito] || { t: d.veredito || '—', c: 'v-warn', i: '•' };
+  const f = d.financeiro || {};
+  const kpi = (l, v) => `<div class="fin-kpi"><span>${l}</span><b>${v}</b></div>`;
+  return `
+  <div class="ia-hero">
+    ${scoreDonut(d.score)}
+    <div class="ia-hero-txt">
+      <span class="verd ${verd.c}">${verd.i} ${esc(verd.t)}</span>
+      <p class="ia-resumo">${esc(d.resumo || '')}</p>
+      ${d.detalhe ? `<p class="ia-detalhe">${esc(d.detalhe)}</p>` : ''}
+      <small class="muted">🤖 Análise por IA · ${when}</small>
+    </div>
+  </div>
+  <div class="ia-cols">
+    <div class="ia-col">
+      <h4>💬 Comentários</h4>
+      <p class="ia-p">${esc(d.comentarios || '—')}</p>
+      <h5 class="ia-sub sub-bad">Reclamações</h5>${ul(d.reclamacoes)}
+      <h5 class="ia-sub sub-ok">Elogios</h5>${ul(d.elogios)}
+      <h5 class="ia-sub sub-op">Oportunidades</h5>${ul(d.oportunidades)}
+    </div>
+    <div class="ia-col">
+      <h4>💰 Financeiro</h4>
+      <div class="fin-grid">
+        ${kpi('Custo', money2(f.custo))}
+        ${kpi('Preço sugerido', money2(f.preco_sugerido))}
+        ${kpi('Margem líq.', (Number(f.margem_pct) || 0).toFixed(2) + '%')}
+        ${kpi('Lucro/un.', money2(f.lucro_un))}
+      </div>
+      <p class="ia-p" style="margin-top:10px">${esc(f.explicacao || '')}</p>
+    </div>
+    <div class="ia-col">
+      <h4>⚖️ Decisão</h4>
+      <h5 class="ia-sub sub-bad">Riscos</h5>${ul(d.riscos)}
+      <h5 class="ia-sub sub-op">Próximos passos</h5>${ul(d.proximos_passos)}
+    </div>
+  </div>`;
+}
+
 async function runAnalysis(productId, btn) {
   if (!iaReady()) { alert('Configure seu token de IA nas Configurações acima.'); return; }
   const original = btn ? btn.textContent : '';
   if (btn) { btn.disabled = true; btn.textContent = '🤖 Analisando…'; }
-  openModal('🤖 Análise por IA', '<p class="muted">A IA está analisando o anúncio, aguarde alguns segundos…</p>');
   try {
-    const r = await api(`/api/analise/products/${productId}/analyze`, { method: 'POST' });
-    const when = r.at ? new Date(r.at).toLocaleString('pt-BR') : '';
-    openModal(`🤖 Análise por IA <small class="muted" style="font-weight:400">(${r.provider === 'openai' ? 'ChatGPT' : 'Claude'} · ${when})</small>`, mdToHtml(r.analysis));
+    await api(`/api/analise/products/${productId}/analyze`, { method: 'POST' });
+    await openDetail(productId); // recarrega -> análise aparece acima dos cards
+    document.querySelector('.ia-report')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (e) {
-    openModal('🤖 Análise por IA', `<p class="c-danger">${esc(e.message)}</p>`);
+    if (btn) { btn.disabled = false; btn.textContent = original; }
+    alert(e.message);
+  }
+}
+
+// ---- Criativos (opcional, gasta crédito) ----
+function creativesHtml(list) {
+  if (!Array.isArray(list) || !list.length) return '<p class="muted">Nenhum criativo.</p>';
+  return list.map((c, i) => {
+    const json = JSON.stringify(c, null, 2);
+    const cp = c.elementos_visual_copy || {};
+    return `<div class="crea-card">
+      <div class="dash-head-row"><b>Criativo ${i + 1} · formato ${esc(c.formato || '1:1')}</b>
+        <button class="btn-ghost crea-copy" data-json='${esc(json)}'>📋 Copiar JSON</button></div>
+      ${cp.texto_principal ? `<p class="crea-h">“${esc(cp.texto_principal)}”</p>` : ''}
+      ${cp.texto_secundario ? `<p class="muted">${esc(cp.texto_secundario)}</p>` : ''}
+      <details style="margin-top:8px"><summary class="muted">Ver briefing completo (JSON)</summary>
+        <pre class="crea-json">${esc(json)}</pre></details>
+    </div>`;
+  }).join('');
+}
+
+function bindCreativeCopies() {
+  document.querySelectorAll('.crea-copy').forEach((b) => b.addEventListener('click', () => {
+    navigator.clipboard?.writeText(b.dataset.json);
+    const o = b.textContent; b.textContent = '✅ Copiado!'; setTimeout(() => (b.textContent = o), 1500);
+  }));
+}
+
+async function runCreatives(productId, btn) {
+  if (!iaReady()) { alert('Configure seu token de IA nas Configurações acima.'); return; }
+  if (!confirm('Gerar criativos usa a IA e consome créditos da sua chave. Deseja continuar?')) return;
+  const original = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '🎨 Gerando…'; }
+  openModal('🎨 Criando criativos', '<p class="muted">A IA está montando os briefs de imagem, aguarde…</p>');
+  try {
+    const r = await api(`/api/analise/products/${productId}/creatives`, { method: 'POST' });
+    openModal('🎨 Criativos gerados', creativesHtml(r.criativos));
+    bindCreativeCopies();
+  } catch (e) {
+    openModal('🎨 Criar Criativos', `<p class="c-danger">${esc(e.message)}</p>`);
   }
   if (btn) { btn.disabled = false; btn.textContent = original; }
 }
@@ -211,7 +312,8 @@ async function openDetail(id) {
       <h2 style="margin:0">${esc(p.produto)}</h2>
       <div class="head-actions" style="flex-wrap:wrap;gap:8px">
         ${iaReady()
-          ? `<button class="btn-inline" data-ia="${p.id}">🤖 Analisar com IA</button>`
+          ? `<button class="btn-inline" data-ia="${p.id}">🤖 Analisar com IA</button>
+             <button class="btn-ghost" data-creatives="${p.id}" title="Gera briefs de imagem (usa créditos de IA)">🎨 Criar Criativos</button>`
           : '<button class="btn-ghost" disabled title="Configure seu token de IA acima">🤖 IA (configure o token)</button>'}
         ${isActive
           ? `<button class="btn-ghost" data-finalize="${p.id}">⏹ Finalizar coleta</button>`
@@ -233,11 +335,24 @@ async function openDetail(id) {
     backToList();
   });
   $('detail-head').querySelector('[data-ia]')?.addEventListener('click', (e) => runAnalysis(p.id, e.target));
+  $('detail-head').querySelector('[data-creatives]')?.addEventListener('click', (e) => runCreatives(p.id, e.target));
 
-  // última análise salva (se houver)
+  // ANÁLISE POR IA — aparece acima dos cards, com todos os detalhes
   if (p.analise_ia) {
     const when = p.analise_ia_at ? new Date(p.analise_ia_at).toLocaleString('pt-BR') : '';
-    $('detail-head').insertAdjacentHTML('beforeend', `<div class="card ia-saved"><div class="dash-head-row"><h4 style="margin:0">🤖 Última análise por IA</h4><small class="muted">${when}</small></div><div class="ia-modal-body">${mdToHtml(p.analise_ia)}</div></div>`);
+    let inner; let data = null;
+    try { data = JSON.parse(p.analise_ia); } catch (_) {}
+    inner = (data && data.veredito) ? analysisHtml(data, when) : `<div class="dash-head-row"><h3 style="margin:0">🤖 Análise por IA</h3><small class="muted">${when}</small></div><div class="ia-modal-body">${mdToHtml(p.analise_ia)}</div>`;
+    $('detail-head').insertAdjacentHTML('beforeend', `<div class="ia-report">${inner}</div>`);
+  }
+  // CRIATIVOS gerados (se houver)
+  if (p.creativos_json) {
+    try {
+      const cr = JSON.parse(p.creativos_json).criativos || [];
+      const when = p.creativos_at ? new Date(p.creativos_at).toLocaleString('pt-BR') : '';
+      $('detail-head').insertAdjacentHTML('beforeend', `<div class="card ia-saved"><div class="dash-head-row"><h3 style="margin:0">🎨 Criativos gerados</h3><small class="muted">${when}</small></div>${creativesHtml(cr)}</div>`);
+      bindCreativeCopies();
+    } catch (_) {}
   }
 
   renderAds(id, ads);

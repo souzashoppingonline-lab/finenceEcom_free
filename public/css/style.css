@@ -742,3 +742,33 @@ tbody tr:hover { background: #f7f9fc; }
 .pc-kpi b { font-size: 1.05rem; }
 @media (prefers-reduced-motion: reduce) { .pc-line, .pc-area, .pc-dot { animation: none; opacity: 1; stroke-dashoffset: 0; } }
 .ad-price-tag { display: inline-block; font-size: .62rem; font-weight: 700; color: var(--muted); background: #eef2f7; border-radius: 20px; padding: 1px 7px; margin-left: 6px; vertical-align: middle; text-transform: uppercase; letter-spacing: .3px; }
+
+/* ---------- Painel da Análise por IA (acima dos cards) ---------- */
+.ia-report{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-top:16px;box-shadow:var(--shadow)}
+.ia-hero{display:flex;gap:18px;align-items:flex-start;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.score-donut{flex-shrink:0}
+.score-arc{transition:stroke-dashoffset 1s ease}
+.score-num{font-size:22px;font-weight:800;fill:var(--text)}
+.score-lbl{font-size:10px;fill:var(--muted)}
+.ia-hero-txt{min-width:0}
+.verd{display:inline-block;font-weight:700;font-size:.9rem;padding:4px 12px;border-radius:20px;margin-bottom:8px}
+.v-ok{background:#eafaf3;color:#17915f}.v-warn{background:#fff7e8;color:#b7791f}.v-bad{background:#fdecec;color:#e04545}
+.ia-resumo{font-size:1rem;font-weight:600;color:var(--text);margin:4px 0}
+.ia-detalhe{font-size:.9rem;color:var(--muted);margin:6px 0}
+.ia-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+.ia-col{background:var(--bg-soft,#f7f9fc);border:1px solid var(--border);border-radius:12px;padding:14px}
+.ia-col h4{margin:0 0 10px;font-size:1rem}
+.ia-sub{margin:12px 0 4px;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px}
+.sub-bad{color:#e04545}.sub-ok{color:#17915f}.sub-op{color:#1e6fff}
+.ia-p{font-size:.88rem;color:var(--text);margin:0}
+.ia-list{margin:4px 0 0;padding-left:18px}
+.ia-list li{font-size:.85rem;margin:3px 0}
+.fin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fin-kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column}
+.fin-kpi span{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.fin-kpi b{font-size:1.15rem;color:var(--primary)}
+@media(max-width:900px){.ia-cols{grid-template-columns:1fr}}
+/* criativos */
+.crea-card{border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px}
+.crea-h{font-size:1.05rem;font-weight:700;margin:8px 0 2px}
+.crea-json{background:#0a1428;color:#cfe0ff;padding:12px;border-radius:8px;font-size:.75rem;overflow-x:auto;white-space:pre-wrap;word-break:break-word}

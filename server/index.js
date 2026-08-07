@@ -1894,29 +1894,27 @@ ${linhasConc}
 
 REGRA DE CUSTO: taxa MP e imposto sao PERCENTUAIS sobre o preco de venda P. Lucro liquido = P - custo_direto - (P * taxaMP%) - (P * imposto%). Use isso para calcular margem e preco ideal.
 
-SCORE GERAL PONDERADO (calcule a nota final com estes pesos): Conversao 25%, CTR 15%, SEO/Titulo 15%, Conteudo 10%, Oferta/Preco 10%, Logistica/Frete 10%, Publicidade 5%, Estoque 5%, Reputacao 5%. Quando um pilar nao tiver dados, estime de forma conservadora e sinalize que a nota e parcial. Mostre a nota final e a contribuicao dos principais pilares.
+SCORE (0-100) ponderado: Conversao 25%, CTR 15%, SEO 15%, Conteudo 10%, Oferta 10%, Logistica 10%, Publicidade 5%, Estoque 5%, Reputacao 5%. Sem dados de um pilar, estime conservador.
 
-ENTREGUE EXATAMENTE NESTA ESTRUTURA (markdown):
+Responda APENAS com JSON valido (sem markdown, sem texto fora do JSON), neste schema exato:
+{
+  "veredito": "vale_a_pena" | "avaliar" | "evitar",
+  "score": <inteiro 0-100>,
+  "resumo": "<1-2 frases diretas>",
+  "detalhe": "<paragrafo com pontos positivos e negativos>",
+  "financeiro": {
+    "custo": <numero>, "preco_sugerido": <numero>, "margem_pct": <numero>, "lucro_un": <numero>,
+    "explicacao": "<como chegou no preco/margem, comparando com a faixa dos concorrentes>"
+  },
+  "comentarios": "<resumo do que os clientes acham, baseado nas avaliacoes>",
+  "elogios": ["<ponto positivo>", "..."],
+  "reclamacoes": ["<reclamacao recorrente>", "..."],
+  "oportunidades": ["<oportunidade concreta>", "..."],
+  "riscos": ["<risco>", "..."],
+  "proximos_passos": ["<acao pratica e priorizada>", "..."]
+}
 
-## 🎯 Nota geral: X/100
-Uma frase resumindo a saude do anuncio. Diga se a nota e completa ou parcial (por falta de dados).
-
-## 📊 Notas por pilar
-Tabela com os 12 pilares, uma nota de 0-100 (ou "s/ dados") e status curto de cada um.
-
-## 🔴 Principais problemas
-Lista objetiva dos maiores gargalos detectados (com numeros quando houver).
-
-## 💰 Preco ideal e margem
-Faixa de preco competitiva + lucro liquido e margem % estimada, respeitando os custos.
-
-## ✅ Acoes priorizadas (por impacto)
-Lista numerada de 4 a 6 acoes, cada uma marcada como (impacto alto/medio/baixo).
-
-## 📥 O que coletar para uma analise mais precisa
-Liste os dados que faltaram (conversao, CTR, ACOS, estoque, etc.) e onde obte-los.
-
-Seja objetivo e use numeros sempre que possivel. Nunca invente metricas que nao foram fornecidas.`;
+Regras: use os custos para calcular financeiro (margem_pct e lucro_un liquidos, ja descontando taxa MP% e imposto%); preco_sugerido competitivo vs concorrentes. elogios/reclamacoes vem das avaliacoes fornecidas (se nao houver, deixe [] e cite em reclamacoes que faltam avaliacoes). 3 a 6 itens por lista. Numeros sem "R$" (apenas o valor). Nunca invente metricas nao fornecidas.`;
 }
 
 app.post('/api/analise/products/:id/analyze', requireUser, async (req, res) => {
@@ -1948,14 +1946,17 @@ app.post('/api/analise/products/:id/analyze', requireUser, async (req, res) => {
     }
     if (!text) return res.status(502).json({ error: 'A IA nao retornou conteudo.' });
 
-    // persiste a ultima analise no produto (best-effort)
+    // espera JSON estruturado; se vier texto solto, guarda como fallback
+    const parsed = extractJson(text);
+    const toStore = parsed ? JSON.stringify(parsed) : text;
+
     const stamp = new Date().toISOString();
     try {
-      if (supabase) await supabase.from('analise_products').update({ analise_ia: text, analise_ia_at: stamp }).eq('id', id).eq('user_id', req.userId);
-      else Object.assign(product, { analise_ia: text, analise_ia_at: stamp });
+      if (supabase) await supabase.from('analise_products').update({ analise_ia: toStore, analise_ia_at: stamp }).eq('id', id).eq('user_id', req.userId);
+      else Object.assign(product, { analise_ia: toStore, analise_ia_at: stamp });
     } catch (_) { /* coluna pode nao existir ainda; ignora */ }
 
-    return res.json({ analysis: text, provider: keys.provider, at: stamp });
+    return res.json({ analysis: toStore, structured: !!parsed, provider: keys.provider, at: stamp });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao analisar produto.' }); }
 });
 
@@ -2184,6 +2185,84 @@ app.get('/api/analise/monitor/:mlb', requireUser, async (req, res) => {
     } else hist = memAnaliseSnaps.filter((s) => s.user_id === req.userId && s.ml_id === ml_id).sort((a, b) => a.snap_date < b.snap_date ? -1 : 1);
     return res.json({ historico: hist, count: hist.length });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro.' }); }
+});
+
+// ===========================================================================
+// CRIAR CRIATIVOS (opcional) — gera JSON de brief de imagem (texto, barato)
+// ===========================================================================
+function buildCreativesPrompt(product, ads) {
+  const insumos = (ads || []).slice(0, 6).map((a) => {
+    const parts = [];
+    if (a.titulo) parts.push(`titulo: ${a.titulo}`);
+    if (a.preco) parts.push(`preco: R$ ${Number(a.preco).toFixed(2)}`);
+    if (a.highlights) parts.push(`ficha: ${(Array.isArray(a.highlights) ? a.highlights.join('; ') : a.highlights)}`.slice(0, 300));
+    if (a.descricao) parts.push(`descricao: ${String(a.descricao).slice(0, 300)}`);
+    if (a.comentarios_texto) parts.push(`avaliacoes: ${String(a.comentarios_texto).slice(0, 300)}`);
+    return '- ' + parts.join(' | ');
+  }).join('\n');
+
+  return `Voce e diretor de arte de e-commerce. Gere BRIEFS DE IMAGEM (criativos) para anunciar o produto abaixo no Mercado Livre, usando TUDO que sabemos dele e dos concorrentes (descricoes, ficha tecnica e o que os clientes elogiam/reclamam nas avaliacoes) para destacar os beneficios certos no texto.
+
+PRODUTO: ${product.produto}
+${product.analise_ia ? `RESUMO DA ANALISE: ${String(product.analise_ia).slice(0, 800)}` : ''}
+DADOS DOS CONCORRENTES (use como referencia de mercado e do que valorizar):
+${insumos || '- (sem concorrentes cadastrados)'}
+
+Responda APENAS com JSON valido (sem texto fora do JSON, sem markdown), no formato:
+{"criativos":[ CRIATIVO, CRIATIVO ]}
+Gere 2 criativos. Cada CRIATIVO segue EXATAMENTE este schema:
+{
+  "composicao": {"cenario":"","sujeito":"","detalhe_produto":"","camera":""},
+  "direcao_de_arte": {"iluminacao":"","paleta_cores":"","estilo_visual":""},
+  "elementos_visual_copy": {"texto_principal":"","texto_secundario":"","posicao_texto":"","estilo_texto":"","grafismo":"","selo":""},
+  "formato": "1:1"
+}
+Regras: textos de copy curtos e persuasivos em pt-BR baseados nos beneficios reais; "detalhe_produto" deve pedir para preservar a identidade visual do produto conforme fotos de referencia; estilo_visual fotorealista premium para e-commerce (8k, sharp focus, depth of field). Nao invente selos falsos de certificacao.`;
+}
+
+function extractJson(text) {
+  if (!text) return null;
+  let t = String(text).replace(/```json/gi, '').replace(/```/g, '').trim();
+  const i = t.indexOf('{'), j = t.lastIndexOf('}');
+  if (i >= 0 && j > i) t = t.slice(i, j + 1);
+  try { return JSON.parse(t); } catch (_) { return null; }
+}
+
+app.post('/api/analise/products/:id/creatives', requireUser, async (req, res) => {
+  const id = req.params.id;
+  try {
+    let product, ads;
+    if (supabase) {
+      const { data: p } = await supabase.from('analise_products').select('*').eq('id', id).eq('user_id', req.userId).maybeSingle();
+      if (!p) return res.status(404).json({ error: 'Produto nao encontrado.' });
+      const { data: a } = await supabase.from('analise_product_ads').select('*').eq('product_id', id).eq('user_id', req.userId);
+      product = p; ads = a || [];
+    } else {
+      product = memAnaliseProducts.find((x) => String(x.id) === String(id) && x.user_id === req.userId);
+      if (!product) return res.status(404).json({ error: 'Produto nao encontrado.' });
+      ads = memAnaliseAds.filter((x) => String(x.product_id) === String(id) && x.user_id === req.userId);
+    }
+    const keys = await getDecryptedKeys(req.userId);
+    const key = keys.provider === 'openai' ? keys.openai : keys.anthropic;
+    if (!key) return res.status(400).json({ error: 'Configure seu token de IA para gerar criativos.' });
+
+    const prompt = buildCreativesPrompt(product, ads);
+    let text;
+    try {
+      text = keys.provider === 'openai' ? await callOpenAI(key, prompt) : await callAnthropic(key, prompt);
+    } catch (e) { return res.status(502).json({ error: `A IA retornou erro: ${e.message}` }); }
+
+    const parsed = extractJson(text);
+    if (!parsed || !Array.isArray(parsed.criativos)) return res.status(502).json({ error: 'A IA nao retornou um JSON valido de criativos. Tente novamente.' });
+
+    const stamp = new Date().toISOString();
+    const jsonStr = JSON.stringify(parsed);
+    try {
+      if (supabase) await supabase.from('analise_products').update({ creativos_json: jsonStr, creativos_at: stamp }).eq('id', id).eq('user_id', req.userId);
+      else Object.assign(product, { creativos_json: jsonStr, creativos_at: stamp });
+    } catch (_) {}
+    return res.json({ criativos: parsed.criativos, at: stamp });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao gerar criativos.' }); }
 });
 
 app.get('/health', (req, res) => res.json({ ok: true }));
