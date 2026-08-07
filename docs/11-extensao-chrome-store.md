@@ -46,15 +46,32 @@ Guia prático para colocar a extensão “FinanceEcom — Análise de Produtos�
 (EN) Save Mercado Livre product listings that the user selects into the user's own FinanceEcom
 dashboard, to track price, specifications and public listing information.
 
-## 4. Justificativa de permissões (campo “Privacy practices”)
-Preencha o propósito de cada permissão (textos prontos):
-- **storage** — Armazenar localmente o token do usuário e as preferências da extensão.
-- **tabs** — Reabrir, em segundo plano, anúncios que o próprio usuário já salvou, para
-  atualizar o preço.
-- **scripting** — Ler os dados públicos da página do anúncio aberto pelo usuário.
-- **alarms** — Agendar a atualização periódica (1×/dia) dos anúncios salvos.
-- **host permissions (mercadolivre.com.br, app.financeecom.com.br)** — Ler anúncios do
-  Mercado Livre e enviar os dados ao painel do usuário no FinanceEcom.
+## 4. Justificativa de permissões (campo “Permission justification”)
+A extensão pede o MÍNIMO. Textos prontos para cada campo:
+
+- **storage** — Armazenar localmente, no navegador do usuário, o token de acesso ao painel
+  FinanceEcom e as preferências da extensão (URL do sistema e se a atualização automática
+  está ligada). Nenhum dado é compartilhado com terceiros.
+- **alarms** — Agendar uma verificação periódica (aprox. 1×/dia) para atualizar o preço dos
+  anúncios que o próprio usuário já salvou. Sem isso, o usuário teria que reabrir cada
+  anúncio manualmente.
+- **Host permission `https://*.mercadolivre.com.br/*`** — Ler os dados públicos do anúncio
+  que o usuário está vendo (título, preço, avaliações, ficha técnica) quando ele clica em
+  “Salvar na análise”, e reabrir em segundo plano anúncios já salvos para atualizar o preço.
+- **Host permission `https://app.financeecom.com.br/*`** — Enviar os dados salvos ao painel
+  do próprio usuário (backend do FinanceEcom), autenticando com o token do usuário.
+
+> **Permissões removidas de propósito** (não são necessárias e causariam rejeição):
+> `scripting` (não é usada — o content script é declarado no manifest) e `tabs` (a extensão
+> nunca lê `tab.url`/`tab.title`; só cria/fecha abas e troca mensagens, o que não exige a
+> permissão). Se um revisor perguntar, esta é a justificativa da ausência delas.
+
+## 4b. Uso de código remoto / tratamento de dados
+- **Remote code:** Não. A extensão não carrega nem executa código remoto; todo o JavaScript
+  está no pacote. Ela apenas faz chamadas de dados (fetch) ao backend do FinanceEcom.
+- **Data usage (marcar no formulário):** coleta “Website content” (dados públicos de anúncios)
+  e um identificador de autenticação (o token). NÃO vende dados, NÃO usa para fins não
+  relacionados à função principal, NÃO usa para verificação de crédito/empréstimo.
 - **Uso de dados**: marque que os dados **não** são vendidos a terceiros, **não** são usados
   para fins não relacionados à função principal e **não** são usados para avaliação de crédito.
 - **Política de privacidade (URL):** https://app.financeecom.com.br/privacidade-extensao.html
