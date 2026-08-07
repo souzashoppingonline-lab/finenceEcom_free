@@ -756,7 +756,9 @@ tbody tr:hover { background: #f7f9fc; }
 .ia-resumo{font-size:1rem;font-weight:600;color:var(--text);margin:4px 0}
 .ia-detalhe{font-size:.9rem;color:var(--muted);margin:6px 0}
 .ia-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
-.ia-col{background:var(--bg-soft,#f7f9fc);border:1px solid var(--border);border-radius:12px;padding:14px}
+.ia-col{background:#f4f7fb;color:var(--text);border:1px solid var(--border);border-radius:12px;padding:14px}
+.ia-col h4,.ia-p,.ia-list li{color:var(--text)}
+:root[data-theme="dark"] .ia-col{background:#0f1622}
 .ia-col h4{margin:0 0 10px;font-size:1rem}
 .ia-sub{margin:12px 0 4px;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px}
 .sub-bad{color:#e04545}.sub-ok{color:#17915f}.sub-op{color:#1e6fff}
