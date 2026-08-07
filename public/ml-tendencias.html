@@ -20,6 +20,12 @@
 
     <div class="tabs">
       <button class="tab is-active" data-tab="caca">📈 Inteligência da Categoria</button>
+      <button class="tab" data-tab="buybox">🥇 Buy Box</button>
+      <button class="tab" data-tab="dores">😖 Dores do Cliente</button>
+      <button class="tab" data-tab="barreira">🚧 Barreira de Entrada</button>
+      <button class="tab" data-tab="nichos">🗺️ Mapa de Nichos</button>
+      <button class="tab" data-tab="perfeito">✅ Anúncio Perfeito</button>
+      <button class="tab" data-tab="descobrir">🧭 Descobrir Produtos</button>
       <button class="tab" data-tab="tend">🔥 Tendências</button>
     </div>
 
@@ -35,6 +41,83 @@
         <p id="op-msg" class="muted" style="margin-top:8px"></p>
       </div>
       <div id="op-results"></div>
+    </section>
+
+    <!-- ABA BUY BOX -->
+    <section class="tab-panel" data-panel="buybox" hidden>
+      <div class="card" style="margin-bottom:18px">
+        <p class="muted">Descubra <b>quanto custa ganhar a Buy Box</b> (a caixa de compra) de cada produto de catálogo — o preço vencedor, o 2º colocado e o quão apertada está a disputa.</p>
+        <form class="op-filters intel-form" data-endpoint="buybox" style="grid-template-columns:1fr 1fr auto;align-items:end">
+          <label>Categoria (opcional)<input name="cat" placeholder="Ex.: fones de ouvido" /></label>
+          <label>Palavra-chave (opcional)<input name="q" placeholder="Ex.: fone bluetooth" /></label>
+          <button type="submit" class="btn-cadastrar" style="max-width:200px;margin:0">🥇 Analisar Buy Box</button>
+        </form>
+      </div>
+      <div class="intel-results"></div>
+    </section>
+
+    <!-- ABA DORES DO CLIENTE -->
+    <section class="tab-panel" data-panel="dores" hidden>
+      <div class="card" style="margin-bottom:18px">
+        <p class="muted">O que os clientes <b>mais reclamam</b> nos campeões da categoria. Use as dores para vender melhor que a concorrência.</p>
+        <form class="op-filters intel-form" data-endpoint="dores" style="grid-template-columns:1fr 1fr auto;align-items:end">
+          <label>Categoria (opcional)<input name="cat" placeholder="Ex.: liquidificadores" /></label>
+          <label>Palavra-chave (opcional)<input name="q" placeholder="Ex.: liquidificador" /></label>
+          <button type="submit" class="btn-cadastrar" style="max-width:200px;margin:0">😖 Ver dores</button>
+        </form>
+      </div>
+      <div class="intel-results"></div>
+    </section>
+
+    <!-- ABA BARREIRA DE ENTRADA -->
+    <section class="tab-panel" data-panel="barreira" hidden>
+      <div class="card" style="margin-bottom:18px">
+        <p class="muted">O quão <b>difícil é entrar</b> nesta categoria: % de anúncios no Full e a reputação dos vendedores que dominam.</p>
+        <form class="op-filters intel-form" data-endpoint="barreira" style="grid-template-columns:1fr 1fr auto;align-items:end">
+          <label>Categoria (opcional)<input name="cat" placeholder="Ex.: suplementos" /></label>
+          <label>Palavra-chave (opcional)<input name="q" placeholder="Ex.: whey protein" /></label>
+          <button type="submit" class="btn-cadastrar" style="max-width:200px;margin:0">🚧 Medir barreira</button>
+        </form>
+      </div>
+      <div class="intel-results"></div>
+    </section>
+
+    <!-- ABA MAPA DE NICHOS -->
+    <section class="tab-panel" data-panel="nichos" hidden>
+      <div class="card" style="margin-bottom:18px">
+        <p class="muted">As <b>subcategorias com menos concorrência</b> dentro do seu mercado — onde ainda dá para crescer.</p>
+        <form class="op-filters intel-form" data-endpoint="nichos" style="grid-template-columns:1fr 1fr auto;align-items:end">
+          <label>Categoria (opcional)<input name="cat" placeholder="Ex.: pet shop" /></label>
+          <label>Palavra-chave (opcional)<input name="q" placeholder="Ex.: ração gato" /></label>
+          <button type="submit" class="btn-cadastrar" style="max-width:200px;margin:0">🗺️ Mapear nichos</button>
+        </form>
+      </div>
+      <div class="intel-results"></div>
+    </section>
+
+    <!-- ABA ANÚNCIO PERFEITO -->
+    <section class="tab-panel" data-panel="perfeito" hidden>
+      <div class="card" style="margin-bottom:18px">
+        <p class="muted">O <b>checklist de ficha técnica</b> da categoria: atributos obrigatórios e recomendados para o anúncio ranquear.</p>
+        <form class="op-filters intel-form" data-endpoint="perfeito" style="grid-template-columns:1fr 1fr auto;align-items:end">
+          <label>Categoria (opcional)<input name="cat" placeholder="Ex.: celulares" /></label>
+          <label>Palavra-chave (opcional)<input name="q" placeholder="Ex.: smartphone" /></label>
+          <button type="submit" class="btn-cadastrar" style="max-width:200px;margin:0">✅ Ver checklist</button>
+        </form>
+      </div>
+      <div class="intel-results"></div>
+    </section>
+
+    <!-- ABA DESCOBRIR PRODUTOS -->
+    <section class="tab-panel" data-panel="descobrir" hidden>
+      <div class="card" style="margin-bottom:18px">
+        <p class="muted">Busque no <b>catálogo oficial</b> do Mercado Livre — produtos que você pode anunciar por catálogo.</p>
+        <form class="op-filters intel-form" data-endpoint="descobrir" style="grid-template-columns:1fr auto;align-items:end">
+          <label>Buscar produto<input name="q" placeholder="Ex.: echo dot 5" /></label>
+          <button type="submit" class="btn-cadastrar" style="max-width:200px;margin:0">🧭 Buscar</button>
+        </form>
+      </div>
+      <div class="intel-results"></div>
     </section>
 
     <!-- ABA TENDÊNCIAS -->

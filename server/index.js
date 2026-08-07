@@ -2446,14 +2446,14 @@ async function highlightItems(catId, max = 40) {
   const out = [];
   for (let i = 0; i < itemIds.length; i += 20) {
     try {
-      const items = await mlFetch(`/items?ids=${itemIds.slice(i, i + 20).join(',')}&attributes=id,title,price,sold_quantity,date_created,thumbnail,permalink,shipping,attributes`);
+      const items = await mlFetch(`/items?ids=${itemIds.slice(i, i + 20).join(',')}&attributes=id,title,price,sold_quantity,date_created,thumbnail,permalink,shipping,attributes,seller_id`);
       (items || []).forEach((w) => { if (w.body && w.body.id) out.push({ ...w.body, thumbnail: httpsThumb(w.body.thumbnail), _type: 'ITEM' }); });
     } catch (_) {}
   }
   for (const pid of prodIds.slice(0, 15)) {
     try {
       const p = await mlFetch(`/products/${pid}`);
-      out.push({ id: pid, title: p.name, price: p.buy_box_winner && p.buy_box_winner.price, sold_quantity: null, date_created: null, thumbnail: httpsThumb(p.pictures && p.pictures[0] && p.pictures[0].url), permalink: p.permalink || `https://www.mercadolivre.com.br/p/${pid}`, attributes: p.attributes || [], _type: 'PRODUCT' });
+      out.push({ id: pid, title: p.name, price: p.buy_box_winner && p.buy_box_winner.price, seller_id: p.buy_box_winner && p.buy_box_winner.seller_id, sold_quantity: null, date_created: null, thumbnail: httpsThumb(p.pictures && p.pictures[0] && p.pictures[0].url), permalink: p.permalink || `https://www.mercadolivre.com.br/p/${pid}`, attributes: p.attributes || [], _type: 'PRODUCT' });
     } catch (_) {}
   }
   return out;
@@ -2615,6 +2615,194 @@ app.get('/api/ml/category-intel', requireUser, async (req, res) => {
     }
     return res.json({ categoria, total_anuncios, marcas, atributos, ranking, stats, faixas });
   } catch (e) { console.error('ml/category-intel:', e.message); return res.status(502).json({ error: e.message }); }
+});
+
+// Base compartilhada pelas abas de inteligência: resolve categoria + itens (cache)
+async function intelBase(req) {
+  const q = String(req.query.q || '').trim();
+  const catText = String(req.query.category || '').trim();
+  if (!q && !catText) { const e = new Error('Informe uma categoria ou uma palavra-chave.'); e.code = 400; throw e; }
+  const categoria = await catFromText(catText || q);
+  if (!categoria) { const e = new Error('Nao identifiquei a categoria. Tente outra palavra.'); e.code = 404; throw e; }
+  const ck = 'ci:' + categoria.id;
+  let items = mlCacheGet(ck);
+  if (!items) { items = await highlightItems(categoria.id, 40); mlCacheSet(ck, items, 3 * 3600 * 1000); }
+  return { categoria, items };
+}
+const intelErr = (res, e, tag) => { console.error(tag + ':', e.message); return res.status(e.code || 502).json({ error: e.message }); };
+
+// 🥇 BUY BOX — quanto custa ganhar a "caixa de compra" de cada produto de catálogo
+app.get('/api/ml/buybox', requireUser, async (req, res) => {
+  try {
+    const { categoria, items } = await intelBase(req);
+    const prods = items.filter((b) => b._type === 'PRODUCT' && b.id).slice(0, 12);
+    const linhas = [];
+    for (const p of prods) {
+      try {
+        const d = await mlFetch(`/products/${p.id}/items?limit=10`);
+        const ofertas = (d.results || []).map((o) => Number(o.price)).filter((v) => v > 0).sort((a, b) => a - b);
+        if (!ofertas.length) continue;
+        const vencedor = Number(p.price) || ofertas[0];
+        const segundo = ofertas.find((v) => v > vencedor) ?? ofertas[Math.min(1, ofertas.length - 1)];
+        const gap = segundo != null ? +(segundo - vencedor).toFixed(2) : 0;
+        linhas.push({
+          title: p.title, thumb: p.thumbnail, link: p.permalink,
+          vencedor, segundo, gap, concorrentes: (d.paging && d.paging.total) || ofertas.length,
+          alvo: +(vencedor - 0.01).toFixed(2),
+        });
+      } catch (_) {}
+    }
+    linhas.sort((a, b) => a.gap - b.gap);
+    return res.json({ categoria, linhas });
+  } catch (e) { return intelErr(res, e, 'ml/buybox'); }
+});
+
+// 😖 DORES DO CLIENTE — avaliações negativas agregadas dos campeões
+app.get('/api/ml/reviews', requireUser, async (req, res) => {
+  try {
+    const { categoria, items } = await intelBase(req);
+    const alvos = items.filter((b) => b.title).slice(0, 12);
+    let totalRev = 0, soma = 0, nNotas = 0;
+    const dist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    const negativos = [];
+    for (const it of alvos) {
+      try {
+        const rv = await mlFetch(`/reviews/item/${it.id}`);
+        const rt = rv.rating_average || (rv.paging && rv.paging.rating_average);
+        if (rt) { soma += rt; nNotas++; }
+        totalRev += (rv.paging && rv.paging.total) || 0;
+        const rd = rv.rating_levels || {};
+        [1, 2, 3, 4, 5].forEach((n) => { dist[n] += Number(rd['' + n] || rd[n] || 0); });
+        (rv.reviews || []).filter((r) => Number(r.rate) <= 3 && r.content).slice(0, 3).forEach((r) => {
+          negativos.push({ nota: r.rate, texto: String(r.content).slice(0, 240), produto: it.title });
+        });
+      } catch (_) {}
+    }
+    const media = nNotas ? +(soma / nNotas).toFixed(2) : null;
+    return res.json({ categoria, media, total_avaliacoes: totalRev, dist, negativos: negativos.slice(0, 30) });
+  } catch (e) { return intelErr(res, e, 'ml/reviews'); }
+});
+
+// 🚧 BARREIRA DE ENTRADA — % Full + reputação dos vendedores dominantes
+app.get('/api/ml/barrier', requireUser, async (req, res) => {
+  try {
+    const { categoria, items } = await intelBase(req);
+    const comShip = items.filter((b) => b.title);
+    const full = comShip.filter((b) => b.shipping && b.shipping.logistic_type === 'fulfillment').length;
+    const pctFull = comShip.length ? Math.round(full / comShip.length * 100) : 0;
+    const sellerIds = [...new Set(comShip.map((b) => b.seller_id).filter(Boolean))].slice(0, 12);
+    const nivel = { '5_green': 0, '4_light_green': 0, '3_yellow': 0, '2_orange': 0, '1_red': 0 };
+    let platinum = 0, gold = 0, nRep = 0;
+    const vendedores = [];
+    for (const sid of sellerIds) {
+      try {
+        const u = await mlFetch(`/users/${sid}`);
+        const rep = u.seller_reputation || {};
+        if (rep.level_id && nivel[rep.level_id] != null) { nivel[rep.level_id]++; nRep++; }
+        const ps = rep.power_seller_status;
+        if (ps === 'platinum') platinum++; else if (ps === 'gold') gold++;
+        vendedores.push({
+          nick: u.nickname, level: rep.level_id || null, status: ps || null,
+          vendas: (rep.transactions && rep.transactions.completed) || null,
+          cidade: (u.address && u.address.state) || null,
+        });
+      } catch (_) {}
+    }
+    // score de dificuldade 0-100
+    const score = Math.min(100, Math.round(pctFull * 0.5 + (nRep ? ((platinum + gold) / nRep) * 50 : 0)));
+    const nivelDif = score >= 66 ? 'Difícil' : score >= 33 ? 'Moderada' : 'Acessível';
+    return res.json({ categoria, pctFull, score, nivelDif, platinum, gold, nivel, vendedores });
+  } catch (e) { return intelErr(res, e, 'ml/barrier'); }
+});
+
+// 🗺️ MAPA DE NICHOS — subcategorias por tamanho (onde há menos concorrência)
+app.get('/api/ml/niches', requireUser, async (req, res) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    const catText = String(req.query.category || '').trim();
+    if (!q && !catText) return res.status(400).json({ error: 'Informe uma categoria ou uma palavra-chave.' });
+    const categoria = await catFromText(catText || q);
+    if (!categoria) return res.status(404).json({ error: 'Nao identifiquei a categoria. Tente outra palavra.' });
+    const ck = 'nc:' + categoria.id;
+    let out = mlCacheGet(ck);
+    if (!out) {
+      const c = await mlFetch(`/categories/${categoria.id}`);
+      const filhos = (c.children_categories || []).slice(0, 20);
+      const nichos = [];
+      for (const f of filhos) {
+        try {
+          const cd = await mlFetch(`/categories/${f.id}`);
+          nichos.push({ id: f.id, nome: f.name, total: cd.total_items_in_this_category ?? f.total_items_in_this_category ?? null });
+        } catch (_) { nichos.push({ id: f.id, nome: f.name, total: f.total_items_in_this_category ?? null }); }
+      }
+      nichos.sort((a, b) => (a.total ?? Infinity) - (b.total ?? Infinity));
+      out = { categoria: { id: categoria.id, nome: c.name || categoria.nome }, total_pai: c.total_items_in_this_category ?? null, nichos };
+      mlCacheSet(ck, out, 6 * 3600 * 1000);
+    }
+    return res.json(out);
+  } catch (e) { return intelErr(res, e, 'ml/niches'); }
+});
+
+// ✅ ANÚNCIO PERFEITO — atributos obrigatórios e recomendados da categoria
+app.get('/api/ml/checklist', requireUser, async (req, res) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    const catText = String(req.query.category || '').trim();
+    if (!q && !catText) return res.status(400).json({ error: 'Informe uma categoria ou uma palavra-chave.' });
+    const categoria = await catFromText(catText || q);
+    if (!categoria) return res.status(404).json({ error: 'Nao identifiquei a categoria. Tente outra palavra.' });
+    const ck = 'ck:' + categoria.id;
+    let out = mlCacheGet(ck);
+    if (!out) {
+      const attrs = await mlFetch(`/categories/${categoria.id}/attributes`);
+      const obrig = [], recom = [];
+      for (const a of (attrs || [])) {
+        const tags = a.tags || {};
+        const item = {
+          nome: a.name, id: a.id,
+          valores: (a.values || []).slice(0, 6).map((v) => v.name).filter(Boolean),
+          tipo: a.value_type, catalogo: !!tags.catalog_required,
+        };
+        if (tags.required || tags.catalog_required) obrig.push(item);
+        else if (!tags.hidden && !tags.read_only) recom.push(item);
+      }
+      out = { categoria, obrigatorios: obrig, recomendados: recom.slice(0, 24) };
+      mlCacheSet(ck, out, 6 * 3600 * 1000);
+    }
+    return res.json(out);
+  } catch (e) { return intelErr(res, e, 'ml/checklist'); }
+});
+
+// 🧭 DESCOBRIR PRODUTOS — busca no catálogo oficial (products/search)
+app.get('/api/ml/catalog-search', requireUser, async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (!q) return res.status(400).json({ error: 'Digite o que deseja buscar.' });
+  try {
+    const ck = 'cs:' + q.toLowerCase();
+    let out = mlCacheGet(ck);
+    if (!out) {
+      const sr = await mlFetch(`/products/search?status=active&site_id=MLB&q=${encodeURIComponent(q)}`);
+      const ids = (sr.results || []).slice(0, 16).map((r) => r.id).filter(Boolean);
+      const produtos = [];
+      for (const id of ids) {
+        try {
+          const p = await mlFetch(`/products/${id}`);
+          const bbw = p.buy_box_winner || {};
+          produtos.push({
+            id, nome: p.name,
+            preco: bbw.price ?? null,
+            thumb: (p.pictures && p.pictures[0] && p.pictures[0].url || '').replace(/^http:/, 'https:'),
+            link: p.permalink || `https://www.mercadolivre.com.br/p/${id}`,
+            vendedores: (p.buy_box_winner && p.buy_box_winner.seller_id) ? null : null,
+            catalogo: true,
+          });
+        } catch (_) {}
+      }
+      out = { total: (sr.paging && sr.paging.total) || produtos.length, produtos };
+      mlCacheSet(ck, out, 3 * 3600 * 1000);
+    }
+    return res.json(out);
+  } catch (e) { return intelErr(res, e, 'ml/catalog-search'); }
 });
 
 app.get('/health', (req, res) => res.json({ ok: true }));

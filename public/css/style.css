@@ -919,3 +919,40 @@ tbody tr:hover { background: #f7f9fc; }
 .chip-a{background:#f4f7fb;color:var(--text);font-size:.82rem;padding:5px 12px;border-radius:20px;border:1px solid var(--border)}
 .chip-a b{color:var(--primary)}
 :root[data-theme="dark"] .chip-a{background:#0f1622}
+
+/* === Abas de inteligência ML (Buy Box / Dores / Barreira / Nichos / Perfeito) === */
+.intel-form{display:grid;gap:12px}
+.bb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+.bb-card{display:flex;gap:12px;background:var(--card,#fff);border:1px solid var(--border);border-radius:12px;padding:12px}
+.bb-thumb{width:64px;height:64px;flex:none;border-radius:8px;overflow:hidden;background:#f4f7fb;display:flex;align-items:center;justify-content:center}
+.bb-thumb img{width:100%;height:100%;object-fit:contain}
+.bb-info{min-width:0;flex:1}
+.bb-title{display:block;font-weight:600;font-size:.9rem;color:var(--text);text-decoration:none;margin-bottom:6px}
+.bb-title:hover{color:var(--primary)}
+.bb-nums{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:5px}
+.bb-nums span{font-size:.78rem;padding:3px 9px;border-radius:14px;font-weight:600}
+.bb-win{background:#e7f7ee;color:#0a7c3f}
+.bb-2nd{background:#f4f7fb;color:var(--text);border:1px solid var(--border)}
+.bb-gap{background:#fff4e5;color:#b26a00}
+.bb-gap.bb-hot{background:#fdeaea;color:#c62828}
+.dor-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.dor-item{border-left:3px solid #e5484d;padding:8px 12px;margin-bottom:10px;background:#faf5f5;border-radius:0 8px 8px 0}
+.dor-item p{margin:4px 0;font-size:.86rem}
+.dor-nota{font-size:.8rem}
+.fx-bad{background:#e5484d!important}
+.bar-kpis{display:flex;gap:18px;align-items:center;background:var(--card,#fff);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:8px;flex-wrap:wrap}
+.bar-gauge{text-align:center;min-width:120px}
+.bar-score{font-size:2.4rem;font-weight:800;line-height:1}
+.bar-score span{font-size:1rem;font-weight:600;opacity:.6}
+.bar-lvl{font-weight:700;font-size:1rem}
+.mini-table{width:100%;border-collapse:collapse;font-size:.86rem}
+.mini-table th,.mini-table td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}
+.mini-table th{font-weight:600;color:var(--muted,#667)}
+.ck-item{padding:8px 0;border-bottom:1px dashed var(--border);display:flex;flex-direction:column;gap:2px}
+.ck-item:last-child{border-bottom:none}
+.ck-tag{align-self:flex-start;background:#eef4ff;color:#1e6fff;font-size:.7rem;padding:2px 8px;border-radius:12px;font-weight:600;margin:2px 0}
+:root[data-theme="dark"] .bb-card,:root[data-theme="dark"] .bar-kpis{background:#0f1622}
+:root[data-theme="dark"] .bb-thumb{background:#0b111a}
+:root[data-theme="dark"] .dor-item{background:#1a1113}
+:root[data-theme="dark"] .bb-2nd{background:#0f1622}
+@media(max-width:720px){.dor-cols{grid-template-columns:1fr}}
