@@ -2208,17 +2208,33 @@ ${product.analise_ia ? `RESUMO DA ANALISE: ${String(product.analise_ia).slice(0,
 DADOS DOS CONCORRENTES (use como referencia de mercado e do que valorizar):
 ${insumos || '- (sem concorrentes cadastrados)'}
 
+Cada criativo deve focar UM angulo de persuasao (um objetivo claro). Escolha os 7 angulos MAIS FORTES para este produto entre os 12 elementos abaixo (um por criativo, sem repetir):
+1. Gancho (Hook) — fazer o comprador parar de rolar; imagem/titulo de forte impacto.
+2. Proposta de valor — por que comprar ESTE e nao outro.
+3. Beneficios — o resultado que o cliente tera (nao so caracteristicas).
+4. Provas — avaliacoes, numero de vendas, fotos reais, certificacoes (reduzem risco).
+5. Quebra de objecoes — eliminar medos: qualidade, entrega, garantia, compatibilidade, tamanho, funcionamento.
+6. Autoridade — marca, fabricante, tempo de mercado, certificacoes.
+7. Diferenciais — o que torna superior aos concorrentes.
+8. Clareza — entender tudo em poucos segundos, sem duvida.
+9. Urgencia — estoque limitado, promocao, sazonalidade (SEM falsas urgencias).
+10. Confianca — garantia, devolucao facil, nota fiscal, suporte.
+11. Especificacoes completas — dimensoes, peso, material, conteudo da embalagem, compatibilidade.
+12. CTA implicito — levar naturalmente a concluir a compra.
+Baseie as escolhas nas avaliacoes reais (elogios viram Provas/Beneficios; reclamacoes viram Quebra de objecoes) e nos dados dos concorrentes (Diferenciais).
+
 Responda APENAS com JSON valido (sem texto fora do JSON, sem markdown), no formato:
 {"criativos":[ CRIATIVO x7 ]}
-Gere 7 criativos. IMPORTANTE: cada criativo deve QUEBRAR UMA OBJECAO diferente que aparece (ou apareceria) nos comentarios/avaliacoes dos clientes — ex.: "sera que dura?", "e dificil de usar?", "vale o preco?", "chega rapido?", "e original?", "serve pro meu caso?", "faz sujeira?". Use as reclamacoes reais das avaliacoes quando existirem; se faltarem, use as objecoes de compra mais comuns da categoria. Cada CRIATIVO segue EXATAMENTE este schema:
+Cada CRIATIVO segue EXATAMENTE este schema:
 {
-  "objecao": "<a objecao/duvida do cliente que este criativo resolve>",
+  "angulo": "<nome do elemento, ex.: 'Quebra de objecoes', 'Prova social', 'Diferenciais'>",
+  "objetivo": "<o que este criativo precisa provocar no comprador, em 1 frase>",
   "composicao": {"cenario":"","sujeito":"","detalhe_produto":"","camera":""},
   "direcao_de_arte": {"iluminacao":"","paleta_cores":"","estilo_visual":""},
   "elementos_visual_copy": {"texto_principal":"","texto_secundario":"","posicao_texto":"","estilo_texto":"","grafismo":"","selo":""},
   "formato": "1:1"
 }
-Regras: textos de copy curtos e persuasivos em pt-BR, cada um focado em vencer a objecao daquele criativo; "detalhe_produto" deve pedir para preservar a identidade visual do produto conforme fotos de referencia; estilo_visual fotorealista premium para e-commerce (8k, sharp focus, depth of field). Nao invente selos falsos de certificacao.`;
+Regras: copy curta e persuasiva em pt-BR servindo ao angulo do criativo; "detalhe_produto" deve pedir para preservar a identidade visual do produto conforme fotos de referencia; estilo_visual fotorealista premium para e-commerce (8k, sharp focus, depth of field). Nunca invente selos, certificacoes ou provas falsas.`;
 }
 
 function extractJson(text) {

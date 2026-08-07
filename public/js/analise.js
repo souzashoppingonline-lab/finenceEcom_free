@@ -236,10 +236,11 @@ function creativesHtml(list) {
   return `<div class="crea-grid">` + list.map((c, i) => {
     const json = JSON.stringify(c, null, 2);
     const cp = c.elementos_visual_copy || {};
+    const ang = c.angulo || c.objecao || '';
     return `<div class="crea-card">
-      <div class="dash-head-row"><span class="crea-tag">Criativo ${i + 1}</span>
+      <div class="dash-head-row"><span class="crea-tag">${i + 1}. ${esc(ang)}</span>
         <button class="btn-ghost crea-copy" data-json='${esc(json)}'>📋 Copiar</button></div>
-      ${c.objecao ? `<p class="crea-obj">🎯 Quebra: <b>${esc(c.objecao)}</b></p>` : ''}
+      ${c.objetivo ? `<p class="crea-obj">🎯 ${esc(c.objetivo)}</p>` : ''}
       ${cp.texto_principal ? `<p class="crea-h">“${esc(cp.texto_principal)}”</p>` : ''}
       ${cp.texto_secundario ? `<p class="muted" style="font-size:.82rem">${esc(cp.texto_secundario)}</p>` : ''}
       <details style="margin-top:8px"><summary class="muted">Ver JSON completo</summary>
