@@ -806,3 +806,17 @@ tbody tr:hover { background: #f7f9fc; }
 .sim-out{display:flex;gap:16px;margin-top:10px}
 .sim-out span{display:block;font-size:.72rem}
 .sim-out b{font-size:1.15rem}
+
+/* barra de preço vs concorrentes */
+.pb-wrap{margin-top:14px}
+.pb-head{font-size:.8rem;font-weight:600;margin-bottom:22px}
+.pb-track{position:relative;height:8px;background:linear-gradient(90deg,#22c55e,#f5b301,#ef4444);border-radius:20px;margin:0 6px}
+.pb-dot{position:absolute;top:50%;width:8px;height:8px;background:#fff;border:2px solid #6b7686;border-radius:50%;transform:translate(-50%,-50%)}
+.pb-mark{position:absolute;top:50%;width:3px;height:20px;transform:translate(-50%,-50%)}
+.pb-mark.pb-p{background:#1e6fff}
+.pb-mark.pb-be{background:#6b7686}
+.pb-lbl{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font-size:.62rem;font-weight:700;white-space:nowrap;text-align:center;color:var(--text)}
+.pb-be .pb-lbl{color:var(--muted)}
+.pb-ends{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-top:8px}
+.ia-report-actions{display:flex;justify-content:flex-end;margin-bottom:-6px}
+.ia-report-actions .btn-ghost{width:auto;margin:0;padding:6px 12px;font-size:.82rem}

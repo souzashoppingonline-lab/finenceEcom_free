@@ -175,7 +175,27 @@ function ul(items) {
 }
 
 // Renderiza o painel estruturado (schema: comentarios/financeiro/decisao/score)
-function analysisHtml(d, when, prod) {
+// Barra mostrando onde o preço sugerido cai no range dos concorrentes
+function priceBar(ads, P, breakEven) {
+  const prices = (ads || []).map((a) => Number(a.preco)).filter((v) => v > 0);
+  if (prices.length < 2) return '';
+  const min = Math.min(...prices), max = Math.max(...prices);
+  const span = max - min || 1;
+  const pos = (v) => Math.max(0, Math.min(100, (v - min) / span * 100));
+  const dots = prices.map((v) => `<span class="pb-dot" style="left:${pos(v)}%" title="${money2(v)}"></span>`).join('');
+  const marker = (v, cls, label) => (v > 0 ? `<span class="pb-mark ${cls}" style="left:${pos(v)}%"><span class="pb-lbl">${label}<br>${money2(v)}</span></span>` : '');
+  return `<div class="pb-wrap">
+    <div class="pb-head"><span>💲 Seu preço vs concorrentes</span></div>
+    <div class="pb-track">
+      ${dots}
+      ${marker(breakEven, 'pb-be', 'Equilíbrio')}
+      ${marker(P, 'pb-p', 'Sugerido')}
+    </div>
+    <div class="pb-ends"><span>${money2(min)}</span><span>${money2(max)}</span></div>
+  </div>`;
+}
+
+function analysisHtml(d, when, prod, ads) {
   const dec = d.decisao || {};
   const f = d.financeiro || {};
   const com = d.comentarios || {};
@@ -204,7 +224,8 @@ function analysisHtml(d, when, prod) {
       <div class="be-box"><span>⚖️ Preço de equilíbrio</span><b>${money2(breakEven)}</b><small>margem 0% (nem lucro nem prejuízo)</small></div>
       <div class="be-box"><span>🎯 Preço p/ margem ${ALVO}%</span><b>${money2(precoAlvo)}</b><small>lucro de ${money2(precoAlvo * ALVO / 100)}/un.</small></div>
     </div>
-    <div class="sim" data-custo="${custoFixo}" data-taxa="${taxaPct}" data-imp="${impPct}">
+    ${priceBar(ads, P, breakEven)}
+    <div class="sim no-print" data-custo="${custoFixo}" data-taxa="${taxaPct}" data-imp="${impPct}">
       <label>🧮 Simular preço de venda
         <input type="number" id="sim-preco" min="0" step="0.01" value="${P ? P.toFixed(2) : ''}" placeholder="Digite um preço" />
       </label>
@@ -221,6 +242,7 @@ function analysisHtml(d, when, prod) {
   }[String(dec.veredito || '').toUpperCase()] || { t: dec.veredito || '—', c: 'v-warn', i: '•' };
   const kpi = (l, v) => `<div class="fin-kpi"><span>${l}</span><b>${v}</b></div>`;
   return `
+  <div class="ia-report-actions no-print"><button class="btn-ghost" id="ia-pdf">📄 Baixar PDF</button></div>
   <div class="ia-hero">
     ${scoreDonut(score)}
     <div class="ia-hero-txt">
@@ -275,6 +297,32 @@ function bindSimulator() {
   inp.addEventListener('input', calc);
   calc();
 }
+
+// Baixar a análise em PDF (abre janela de impressão -> salvar como PDF)
+function exportAnalysisPDF(titleText) {
+  const rep = document.querySelector('.ia-report');
+  if (!rep) return;
+  const clone = rep.cloneNode(true);
+  clone.querySelectorAll('.no-print').forEach((el) => el.remove());
+  const w = window.open('', '_blank');
+  if (!w) { alert('Permita pop-ups para baixar o PDF.'); return; }
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+    <title>${esc(titleText)}</title>
+    <link rel="stylesheet" href="${location.origin}/css/style.css">
+    <style>@page{size:A4;margin:12mm}body{background:#fff;padding:0}
+      .ia-report{box-shadow:none;border:none;padding:0}
+      .ia-cols{grid-template-columns:1fr 1fr 1fr}
+      h1{font-size:18px;margin:0 0 12px}</style>
+    </head><body>
+    <h1>🔎 Análise de Produto — ${esc(titleText)}</h1>
+    <div class="ia-report">${clone.innerHTML}</div>
+    </body></html>`);
+  w.document.close();
+  w.focus();
+  const go = () => { try { w.print(); } catch (_) {} };
+  if (w.document.readyState === 'complete') setTimeout(go, 400); else w.onload = () => setTimeout(go, 400);
+}
+window.__pdfTitle = '';
 
 async function runAnalysis(productId, btn) {
   if (!iaReady()) { alert('Configure seu token de IA nas Configurações acima.'); return; }
@@ -405,11 +453,12 @@ async function openDetail(id) {
     let data = null;
     try { data = JSON.parse(p.analise_ia); } catch (_) {}
     const inner = (data && data.decisao)
-      ? analysisHtml(data, when, p)
+      ? analysisHtml(data, when, p, ads)
       : `<div class="dash-head-row"><h3 style="margin:0">🤖 Análise por IA</h3><small class="muted">${when}</small></div>
          <p class="muted">Esta análise foi gerada numa versão anterior e ficou incompleta. Clique em <b>🤖 Analisar com IA</b> para gerar de novo no novo formato.</p>`;
     $('detail-head').insertAdjacentHTML('beforeend', `<div class="ia-report">${inner}</div>`);
     bindSimulator();
+    $('detail-head').querySelector('#ia-pdf')?.addEventListener('click', () => exportAnalysisPDF(p.produto));
   }
   // CRIATIVOS p/ imagem — banner (opcional, gasta crédito)
   if (iaReady()) {
