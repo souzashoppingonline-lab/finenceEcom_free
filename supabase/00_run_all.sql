@@ -285,3 +285,11 @@ create table if not exists public.ai_usage_log (
 create index if not exists idx_ai_usage_user on public.ai_usage_log (user_id, created_at desc);
 alter table public.ai_usage_log enable row level security;
 alter table public.user_ai_settings add column if not exists ai_level integer not null default 3;
+
+-- ---------- Mercado Livre (tokens OAuth) ----------
+create table if not exists public.ml_tokens (
+  id int primary key default 1,
+  access_token text, refresh_token text, expires_at bigint,
+  updated_at timestamptz default now()
+);
+alter table public.ml_tokens enable row level security;

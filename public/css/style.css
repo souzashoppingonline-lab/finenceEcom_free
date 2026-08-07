@@ -871,3 +871,16 @@ tbody tr:hover { background: #f7f9fc; }
 .crea-vis{display:flex;align-items:center;gap:6px;font-size:.82rem;color:#dfe6f2;cursor:pointer;white-space:nowrap}
 .crea-vis input{width:auto;margin:0}
 .crea-vis .muted{color:#9fb3d0}
+
+/* ML Tendências */
+.ml-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:20px;align-items:start}
+@media(max-width:900px){.ml-grid{grid-template-columns:1fr}}
+.ml-kw{margin:0;padding-left:24px}
+.ml-kw li{margin:7px 0;font-size:.95rem}
+.ml-top-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.ml-top-card{display:flex;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;text-decoration:none;color:var(--text);position:relative}
+.ml-rank{position:absolute;top:8px;left:8px;background:var(--primary);color:#fff;font-size:.7rem;font-weight:800;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.ml-thumb{width:60px;height:60px;flex-shrink:0;border-radius:8px;overflow:hidden;background:#f1f4f9}
+.ml-thumb img{width:100%;height:100%;object-fit:cover}
+.ml-title{font-size:.82rem;font-weight:600;line-height:1.25}
+.ml-price{font-size:1.05rem;font-weight:800;color:var(--primary);margin-top:2px}

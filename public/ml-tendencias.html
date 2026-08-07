@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <link rel="icon" type="image/svg+xml" href="/img/logo-mark.svg" />
+  <link rel="apple-touch-icon" href="/img/logo-mark.svg" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ML Tendências — FinanceEcom Free</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="app-body">
+  <div id="sidebar-root"></div>
+  <main class="app-content">
+    <div class="dash-head">
+      <h1>📊 ML Tendências</h1>
+      <p class="muted">O que o mercado está buscando e comprando no Mercado Livre — direto da API oficial.</p>
+    </div>
+
+    <div id="ml-status"></div>
+
+    <div class="card" style="margin-bottom:20px">
+      <form id="ml-form" class="head-actions" style="gap:10px;flex-wrap:wrap">
+        <input type="text" id="ml-q" placeholder="Digite um produto/categoria (ex.: ração gato castrado)" style="flex:1;min-width:260px" />
+        <button type="submit" class="btn-cadastrar" style="max-width:180px;margin:0">🔍 Ver tendências</button>
+      </form>
+      <p class="muted" id="ml-cat" style="margin-top:10px"></p>
+    </div>
+
+    <div class="ml-grid">
+      <div>
+        <h3 class="v-section-title">🔥 Palavras em alta</h3>
+        <div id="ml-trends" class="card"><p class="muted">Digite um termo acima para começar.</p></div>
+      </div>
+      <div>
+        <h3 class="v-section-title">🏆 Mais vendidos da categoria</h3>
+        <div id="ml-top"><p class="muted">—</p></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/auth-common.js"></script>
+  <script src="/js/app-shell.js"></script>
+  <script src="/js/ml-tendencias.js"></script>
+</body>
+</html>

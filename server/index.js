@@ -22,6 +22,11 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'troque-este-token';
 
+// Mercado Livre API (tendencias) — app do dono, autenticado 1x
+const ML_CLIENT_ID = process.env.ML_CLIENT_ID;
+const ML_CLIENT_SECRET = process.env.ML_CLIENT_SECRET;
+const ML_REDIRECT_URI = process.env.ML_REDIRECT_URI || 'https://app.financeecom.com.br/api/ml/callback';
+
 let supabase = null;
 if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
   supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
@@ -2388,6 +2393,105 @@ app.post('/api/analise/products/:id/creatives', requireUser, async (req, res) =>
     } catch (_) {}
     return res.json({ criativos: parsed.criativos, at: stamp });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao gerar criativos.' }); }
+});
+
+// ===========================================================================
+// MERCADO LIVRE — TENDENCIAS (API oficial, app do dono autenticado 1x)
+// ===========================================================================
+let memMlTokens = null;
+async function loadMlTokens() {
+  if (supabase) { const { data } = await supabase.from('ml_tokens').select('*').eq('id', 1).maybeSingle(); return data || null; }
+  return memMlTokens;
+}
+async function saveMlTokens(tok) {
+  const rec = { id: 1, ...tok, updated_at: new Date().toISOString() };
+  if (supabase) { await supabase.from('ml_tokens').delete().eq('id', 1); await supabase.from('ml_tokens').insert(rec); }
+  else memMlTokens = rec;
+}
+async function getMlToken() {
+  const t = await loadMlTokens();
+  if (!t || !t.refresh_token) return null;
+  if (t.access_token && Date.now() < (Number(t.expires_at) || 0) - 60000) return t.access_token;
+  // renova via refresh_token
+  const body = new URLSearchParams({ grant_type: 'refresh_token', client_id: ML_CLIENT_ID, client_secret: ML_CLIENT_SECRET, refresh_token: t.refresh_token });
+  const r = await fetch('https://api.mercadolibre.com/oauth/token', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }, body });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { console.error('ML refresh:', d); return null; }
+  await saveMlTokens({ access_token: d.access_token, refresh_token: d.refresh_token || t.refresh_token, expires_at: Date.now() + (d.expires_in || 21600) * 1000 });
+  return d.access_token;
+}
+async function mlFetch(path) {
+  const token = await getMlToken();
+  if (!token) throw new Error('Mercado Livre nao conectado. Peca ao administrador para conectar.');
+  const r = await fetch('https://api.mercadolibre.com' + path, { headers: { Authorization: `Bearer ${token}` } });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.message || `ML HTTP ${r.status}`);
+  return d;
+}
+
+// cache simples em memoria (6h) — respeita rate limit
+const mlCache = new Map();
+const mlCacheGet = (k) => { const v = mlCache.get(k); return v && v.exp > Date.now() ? v.data : null; };
+const mlCacheSet = (k, data, ttl = 6 * 3600 * 1000) => mlCache.set(k, { data, exp: Date.now() + ttl });
+
+// Inicia OAuth (uso unico do dono; protegido pelo ADMIN_TOKEN na query)
+app.get('/api/ml/auth', (req, res) => {
+  if ((req.query.admin || '') !== ADMIN_TOKEN) return res.status(401).send('Nao autorizado.');
+  if (!ML_CLIENT_ID) return res.status(400).send('Configure ML_CLIENT_ID e ML_CLIENT_SECRET no servidor.');
+  const url = `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${ML_CLIENT_ID}&redirect_uri=${encodeURIComponent(ML_REDIRECT_URI)}`;
+  res.redirect(url);
+});
+
+// Callback do OAuth — troca code por tokens e guarda
+app.get('/api/ml/callback', async (req, res) => {
+  const code = req.query.code;
+  if (!code) return res.status(400).send('Sem code na URL.');
+  try {
+    const body = new URLSearchParams({ grant_type: 'authorization_code', client_id: ML_CLIENT_ID, client_secret: ML_CLIENT_SECRET, code, redirect_uri: ML_REDIRECT_URI });
+    const r = await fetch('https://api.mercadolibre.com/oauth/token', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }, body });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) return res.status(400).send('Erro ao autenticar: ' + JSON.stringify(d));
+    await saveMlTokens({ access_token: d.access_token, refresh_token: d.refresh_token, expires_at: Date.now() + (d.expires_in || 21600) * 1000 });
+    res.send('<h2 style="font-family:sans-serif">✅ Mercado Livre conectado! Pode fechar esta aba.</h2>');
+  } catch (e) { res.status(500).send('Erro: ' + e.message); }
+});
+
+// Status da conexao (para a pagina)
+app.get('/api/ml/status', requireUser, async (req, res) => {
+  const t = await loadMlTokens();
+  res.json({ connected: !!(t && t.refresh_token), configured: !!ML_CLIENT_ID });
+});
+
+// Tendencias: palavras em alta + mais vendidos por categoria
+app.get('/api/ml/trends', requireUser, async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  try {
+    const ck = 'tr:' + q.toLowerCase();
+    const cached = mlCacheGet(ck);
+    if (cached) return res.json({ ...cached, cached: true });
+
+    let categoria = null;
+    if (q) {
+      const disc = await mlFetch(`/sites/MLB/domain_discovery/search?limit=1&q=${encodeURIComponent(q)}`);
+      if (Array.isArray(disc) && disc[0] && disc[0].category_id) categoria = { id: disc[0].category_id, nome: disc[0].category_name || '' };
+    }
+    const trends = await mlFetch(categoria ? `/trends/MLB/${categoria.id}` : '/trends/MLB');
+
+    let mais_vendidos = [];
+    if (categoria) {
+      try {
+        const hi = await mlFetch(`/highlights/MLB/category/${categoria.id}`);
+        const ids = (hi.content || []).filter((x) => x.id && /^MLB\d+/.test(x.id)).slice(0, 12).map((x) => x.id);
+        if (ids.length) {
+          const items = await mlFetch(`/items?ids=${ids.join(',')}&attributes=id,title,price,sold_quantity,thumbnail,permalink`);
+          mais_vendidos = (items || []).map((w) => w.body).filter(Boolean).map((b) => ({ title: b.title, price: b.price, sold: b.sold_quantity, thumb: b.thumbnail, link: b.permalink }));
+        }
+      } catch (_) { /* highlights pode nao existir p/ a categoria */ }
+    }
+    const out = { categoria, trends: (trends || []).slice(0, 30), mais_vendidos };
+    mlCacheSet(ck, out);
+    res.json(out);
+  } catch (e) { console.error('ml/trends:', e.message); return res.status(502).json({ error: e.message }); }
 });
 
 app.get('/health', (req, res) => res.json({ ok: true }));
