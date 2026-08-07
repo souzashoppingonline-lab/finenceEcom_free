@@ -1942,7 +1942,7 @@ app.post('/api/analise/products/:id/analyze', requireUser, async (req, res) => {
     const prompt = buildAnalysisPrompt(product, ads);
     let text;
     try {
-      text = keys.provider === 'openai' ? await callOpenAI(key, prompt, 2500) : await callAnthropic(key, prompt, 2500);
+      text = keys.provider === 'openai' ? await callOpenAI(key, prompt, 3500) : await callAnthropic(key, prompt, 3500);
     } catch (e) {
       return res.status(502).json({ error: `A IA retornou erro: ${e.message}. Verifique se o token esta correto e com creditos.` });
     }
@@ -2245,9 +2245,30 @@ Regras: copy curta e persuasiva em pt-BR servindo ao angulo do criativo; "detalh
 function extractJson(text) {
   if (!text) return null;
   let t = String(text).replace(/```json/gi, '').replace(/```/g, '').trim();
-  const i = t.indexOf('{'), j = t.lastIndexOf('}');
-  if (i >= 0 && j > i) t = t.slice(i, j + 1);
-  try { return JSON.parse(t); } catch (_) { return null; }
+  const start = t.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0, inStr = false, escp = false, end = -1;
+  for (let k = start; k < t.length; k++) {
+    const ch = t[k];
+    if (inStr) {
+      if (escp) escp = false;
+      else if (ch === '\\') escp = true;
+      else if (ch === '"') inStr = false;
+    } else if (ch === '"') inStr = true;
+    else if (ch === '{') depth++;
+    else if (ch === '}') { depth--; if (depth === 0) { end = k; break; } }
+  }
+  let sub = end >= 0 ? t.slice(start, end + 1) : t.slice(start);
+  const ctrl = new RegExp('[' + String.fromCharCode(0) + '-' + String.fromCharCode(8) +
+    String.fromCharCode(11) + String.fromCharCode(12) + String.fromCharCode(14) + '-' + String.fromCharCode(31) + ']', 'g');
+  const tryParse = (x) => { try { return JSON.parse(x); } catch (_) { return null; } };
+  let r = tryParse(sub);
+  if (r) return r;
+  let a = sub.replace(/,\s*([}\]])/g, '$1').replace(ctrl, '');
+  r = tryParse(a);
+  if (r) return r;
+  a = a.replace(/"(?:[^"\\]|\\.)*"/g, (m) => m.replace(/\n/g, '\\n').replace(/\r/g, '').replace(/\t/g, ' '));
+  return tryParse(a);
 }
 
 app.post('/api/analise/products/:id/creatives', requireUser, async (req, res) => {
