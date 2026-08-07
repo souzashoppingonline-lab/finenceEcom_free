@@ -145,7 +145,27 @@ function showDashboard() {
   loginView.hidden = true;
   dashboardView.hidden = false;
   logoutBtn.hidden = false;
+  loadMlConn();
 }
+
+let mlAuthUrl = '';
+async function loadMlConn() {
+  const badge = document.getElementById('ml-conn-badge');
+  try {
+    const r = await api('/api/ml/auth-url');
+    mlAuthUrl = r.url || '';
+    badge.textContent = r.connected ? '✅ conectado' : '⚠️ não conectado';
+    badge.className = r.connected ? 'c-ok' : 'c-warn';
+    badge.style.fontSize = '.8rem';
+  } catch (e) { badge.textContent = ''; }
+}
+document.getElementById('ml-connect')?.addEventListener('click', () => {
+  const msg = document.getElementById('ml-conn-msg');
+  if (!mlAuthUrl) { msg.textContent = 'Configure ML_CLIENT_ID/SECRET no servidor.'; msg.className = 'form-msg c-danger'; return; }
+  window.open(mlAuthUrl, '_blank');
+  msg.textContent = 'Autorize na aba aberta. Depois volte e recarregue esta página.';
+  msg.className = 'form-msg';
+});
 
 loginBtn.addEventListener('click', async () => {
   loginMsg.textContent = '';

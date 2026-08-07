@@ -2442,6 +2442,14 @@ app.get('/api/ml/auth', (req, res) => {
   res.redirect(url);
 });
 
+// URL de autorizacao para o painel admin (autenticado por x-admin-token)
+app.get('/api/ml/auth-url', requireAdmin, async (req, res) => {
+  if (!ML_CLIENT_ID) return res.status(400).json({ error: 'Configure ML_CLIENT_ID e ML_CLIENT_SECRET no servidor (Render).' });
+  const t = await loadMlTokens();
+  const url = `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${ML_CLIENT_ID}&redirect_uri=${encodeURIComponent(ML_REDIRECT_URI)}`;
+  res.json({ url, connected: !!(t && t.refresh_token) });
+});
+
 // Callback do OAuth — troca code por tokens e guarda
 app.get('/api/ml/callback', async (req, res) => {
   const code = req.query.code;
