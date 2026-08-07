@@ -132,8 +132,38 @@
     return out.slice(0, 40);
   }
 
+  function getReviews() {
+    // distribuição de estrelas (5..1)
+    const dist = [];
+    $$('.ui-review-capability-histogram__bar, .ui-review-capability-filters__pill').forEach((el) => {
+      const t = txt(el).replace(/\s+/g, ' ');
+      const m = t.match(/(\d)\s*estrela.*?(\d+)/i) || t.match(/(\d).*?\((\d+)\)/);
+      if (m) dist.push(`${m[1]}★: ${m[2]}`);
+    });
+    // textos das avaliações (pega estrela quando disponível)
+    const texts = [];
+    const nodes = $$('.ui-review-capability-comments__comment, article.ui-review-capability-comments__comment, [data-testid="comment-component"]');
+    for (const n of nodes) {
+      const body = txt(n.querySelector('.ui-review-capability-comments__comment__content, [data-testid="comment-content-component"], p'));
+      if (!body || body.length < 3) continue;
+      let stars = '';
+      const sEl = n.querySelector('[class*="rating"] , .ui-review-capability-comments__comment__rating');
+      const sTxt = sEl ? (sEl.getAttribute('aria-label') || txt(sEl)) : '';
+      const sm = sTxt.match(/(\d)\s*(de 5|estrela|star)/i) || sTxt.match(/^([1-5])$/);
+      if (sm) stars = sm[1] + '★ ';
+      texts.push((stars + body).slice(0, 300));
+      if (texts.length >= 20) break;
+    }
+    return {
+      count: getReviewsCount(),
+      dist,
+      texto: texts.length ? (dist.length ? '[Distribuição] ' + dist.join(' · ') + '\n\n' : '') + texts.map((t) => '• ' + t).join('\n') : null,
+    };
+  }
+
   function collectAll() {
     const jsonLd = getJsonLd();
+    const reviews = getReviews();
     const loc = getLocation();
     const ff = getFullFlex();
     const extracted = {
@@ -145,6 +175,8 @@
       nota: getRating() ?? (jsonLd && jsonLd.aggregateRating && Number(jsonLd.aggregateRating.ratingValue)),
       vendas: getVendas(),
       perguntas: null,
+      comentarios: reviews.count,
+      comentarios_texto: reviews.texto,
       vendedor: getSeller(),
       cidade: loc.cidade,
       estado: loc.estado,

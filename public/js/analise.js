@@ -289,6 +289,7 @@ function adCard(a) {
     <div class="ad-sections">
       ${kws.length ? `<div class="ad-sec"><b>🔑 SEO / palavras-chave</b><div class="ad-kws">${kws.map((k) => `<span class="kw">${esc(k)}</span>`).join('')}</div></div>` : ''}
       ${ficha.length ? `<details class="ad-sec"><summary><b>📋 Ficha técnica</b> (${ficha.length})</summary><ul class="ad-ficha">${ficha.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></details>` : ''}
+      ${a.comentarios_texto ? `<details class="ad-sec"><summary><b>⭐ Avaliações</b>${a.comentarios ? ` (${a.comentarios})` : ''}</summary><div class="ad-desc">${esc(a.comentarios_texto).replace(/\n/g, '<br>')}</div></details>` : ''}
       ${a.descricao ? `<details class="ad-sec"><summary><b>📝 Descrição do anúncio</b></summary><div class="ad-desc">${esc(a.descricao).replace(/\n/g, '<br>')}</div></details>` : ''}
       ${a.observacoes ? `<div class="ad-sec"><b>🗒️ Minhas anotações:</b> ${esc(a.observacoes)}</div>` : ''}
     </div>
@@ -332,6 +333,7 @@ function renderAds(productId, ads) {
       <label class="checkbox" style="display:inline-flex;margin-right:18px"><input type="checkbox" name="is_full" /> <span>Full</span></label>
       <label class="checkbox" style="display:inline-flex"><input type="checkbox" name="is_flex" /> <span>Flex</span></label>
       <label>Ficha técnica (uma por linha, ex.: "Peso: 3kg")<textarea name="ficha" rows="3" placeholder="Marca: Quatree&#10;Peso: 3kg&#10;Indicação: Gatos castrados"></textarea></label>
+      <label>Avaliações (o que reclamam / gostam)<textarea name="comentarios_texto" rows="3" placeholder="Cole aqui trechos das avaliações do concorrente"></textarea></label>
       <label>Descrição do anúncio<textarea name="descricao" rows="4" placeholder="Cole aqui a descrição do concorrente"></textarea></label>
       <label>Minhas anotações<input name="observacoes" placeholder="O que ele faz de diferente pra vender mais?" /></label>
       <div class="head-actions">
@@ -348,7 +350,7 @@ function renderAds(productId, ads) {
   $('ad-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const f = e.target; const body = {};
-    ['titulo', 'ml_id', 'link', 'preco', 'nota', 'vendedor', 'vendas', 'reputacao', 'cidade', 'estado', 'descricao', 'observacoes'].forEach((k) => { if (f[k].value) body[k] = f[k].value; });
+    ['titulo', 'ml_id', 'link', 'preco', 'nota', 'vendedor', 'vendas', 'reputacao', 'cidade', 'estado', 'comentarios_texto', 'descricao', 'observacoes'].forEach((k) => { if (f[k].value) body[k] = f[k].value; });
     if (f.foto.value.trim()) body.foto = f.foto.value.trim();
     if (f.ficha.value.trim()) body.ficha = f.ficha.value.trim();
     body.is_full = f.is_full.checked; body.is_flex = f.is_flex.checked;

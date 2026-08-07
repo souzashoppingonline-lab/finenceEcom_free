@@ -1689,7 +1689,7 @@ app.post('/api/analise/products/:id/finalize', requireUser, async (req, res) => 
 });
 
 // Concorrente manual (add). Fase 3-4 fara via extensao.
-const AD_FIELDS = ['ml_id', 'link', 'titulo', 'preco', 'preco_original', 'nota', 'vendas', 'vendedor', 'cidade', 'estado', 'reputacao', 'observacoes', 'descricao'];
+const AD_FIELDS = ['ml_id', 'link', 'titulo', 'preco', 'preco_original', 'nota', 'vendas', 'vendedor', 'cidade', 'estado', 'reputacao', 'observacoes', 'descricao', 'comentarios_texto'];
 app.post('/api/analise/products/:id/ads', requireUser, async (req, res) => {
   const id = req.params.id; const b = req.body || {};
   const rec = {};
@@ -1777,7 +1777,9 @@ function buildAnalysisPrompt(product, ads) {
     ? ads.map((a, i) => `  ${i + 1}. "${a.titulo || a.ml_id || 'sem titulo'}" — preco ${a.preco != null ? 'R$ ' + Number(a.preco).toFixed(2) : 'n/d'}` +
         `${a.nota ? `, nota ${a.nota}` : ''}${a.vendedor ? `, vendedor ${a.vendedor}` : ''}` +
         `${a.vendas ? `, ${a.vendas}` : ''}${a.reputacao ? `, reputacao ${a.reputacao}` : ''}` +
-        `${a.is_full ? ', FULL' : ''}${a.is_flex ? ', FLEX' : ''}${a.link ? `, link ${a.link}` : ''}`).join('\n')
+        `${a.is_full ? ', FULL' : ''}${a.is_flex ? ', FLEX' : ''}` +
+        `${a.comentarios ? `, ${a.comentarios} avaliacoes` : ''}` +
+        `${a.comentarios_texto ? `\n     avaliacoes: ${String(a.comentarios_texto).slice(0, 600).replace(/\n/g, ' | ')}` : ''}`).join('\n')
     : '  (nenhum concorrente cadastrado ainda)';
 
   return `Voce e um especialista em Mercado Livre (Brasil) que faz o "Raio-X" de anuncios, no nivel de ferramentas como Nubimetrics e Joopulse. Sua missao e diagnosticar o anuncio e dar uma NOTA DE 0 A 100, com problemas e acoes priorizadas por impacto. Responda em portugues do Brasil, com markdown.
@@ -1935,6 +1937,8 @@ function resolveAdPayload(rawData) {
     nota: num(e.nota),
     vendas: e.vendas || null,
     perguntas: e.perguntas != null ? Number(e.perguntas) || 0 : null,
+    comentarios: e.comentarios != null ? Number(e.comentarios) || 0 : null,
+    comentarios_texto: e.comentarios_texto || null,
     vendedor: e.vendedor || null,
     cidade: e.cidade || null,
     estado: e.estado || null,
