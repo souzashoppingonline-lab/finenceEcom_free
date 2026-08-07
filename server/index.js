@@ -1767,29 +1767,50 @@ app.delete('/api/analise/ads/:adId', requireUser, async (req, res) => {
 // ===========================================================================
 // ANALISE POR IA (Fase 2) — usa o token do proprio cliente (Claude/OpenAI)
 // ===========================================================================
-const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
-const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+// Lista de modelos tentados em ordem (o 1o que a conta aceitar e usado).
+// Pode forcar um unico via env ANTHROPIC_MODEL / OPENAI_MODEL.
+const ANTHROPIC_MODELS = process.env.ANTHROPIC_MODEL
+  ? [process.env.ANTHROPIC_MODEL]
+  : ['claude-sonnet-4-20250514', 'claude-3-7-sonnet-latest', 'claude-3-5-sonnet-latest', 'claude-3-5-haiku-latest', 'claude-3-haiku-20240307'];
+const OPENAI_MODELS = process.env.OPENAI_MODEL
+  ? [process.env.OPENAI_MODEL]
+  : ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'];
+
+// Erro de "modelo nao encontrado/indisponivel" -> vale tentar o proximo modelo.
+function isModelError(msg) {
+  return /model/i.test(msg || '') && /(not_found|not found|does not exist|inv[aá]lid|unavailable|access|permission|deprecat)/i.test(msg || '');
+}
 
 async function callAnthropic(key, prompt) {
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
-  });
-  const data = await r.json();
-  if (!r.ok) throw new Error(data?.error?.message || `Anthropic HTTP ${r.status}`);
-  return (data.content || []).map((c) => c.text || '').join('\n').trim();
+  let lastErr = 'sem modelo disponivel';
+  for (const model of ANTHROPIC_MODELS) {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({ model, max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
+    });
+    const data = await r.json();
+    if (r.ok) return (data.content || []).map((c) => c.text || '').join('\n').trim();
+    lastErr = data?.error?.message || `Anthropic HTTP ${r.status}`;
+    if (!isModelError(lastErr)) throw new Error(lastErr); // credito/chave -> nao adianta trocar modelo
+  }
+  throw new Error(lastErr);
 }
 
 async function callOpenAI(key, prompt) {
-  const r = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ model: OPENAI_MODEL, max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
-  });
-  const data = await r.json();
-  if (!r.ok) throw new Error(data?.error?.message || `OpenAI HTTP ${r.status}`);
-  return (data.choices?.[0]?.message?.content || '').trim();
+  let lastErr = 'sem modelo disponivel';
+  for (const model of OPENAI_MODELS) {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ model, max_tokens: 1500, messages: [{ role: 'user', content: prompt }] }),
+    });
+    const data = await r.json();
+    if (r.ok) return (data.choices?.[0]?.message?.content || '').trim();
+    lastErr = data?.error?.message || `OpenAI HTTP ${r.status}`;
+    if (!isModelError(lastErr)) throw new Error(lastErr);
+  }
+  throw new Error(lastErr);
 }
 
 function buildAnalysisPrompt(product, ads) {
