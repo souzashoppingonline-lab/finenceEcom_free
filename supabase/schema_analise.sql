@@ -91,3 +91,9 @@ alter table public.analise_product_ads add column if not exists data_criacao tex
 -- Criativos gerados por IA (JSON) — opcional
 alter table public.analise_products add column if not exists creativos_json text;
 alter table public.analise_products add column if not exists creativos_at timestamptz;
+
+-- Vendas reais dos concorrentes (Shopping de Preco) — peso maximo na IA
+alter table public.analise_product_ads add column if not exists vendas_7d integer;
+alter table public.analise_product_ads add column if not exists vendas_15d integer;
+alter table public.analise_product_ads add column if not exists vendas_21d integer;
+alter table public.analise_product_ads add column if not exists vendas_30d integer;

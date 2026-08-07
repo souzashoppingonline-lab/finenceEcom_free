@@ -174,43 +174,50 @@ function ul(items) {
   return '<ul class="ia-list">' + items.map((i) => `<li>${esc(i)}</li>`).join('') + '</ul>';
 }
 
-// Renderiza o painel estruturado da análise
+// Renderiza o painel estruturado (schema: comentarios/financeiro/decisao/score)
 function analysisHtml(d, when) {
-  const verd = { vale_a_pena: { t: 'Vale a pena', c: 'v-ok', i: '✅' }, avaliar: { t: 'Avaliar com cuidado', c: 'v-warn', i: '🟡' }, evitar: { t: 'Evitar', c: 'v-bad', i: '🔴' } }[d.veredito] || { t: d.veredito || '—', c: 'v-warn', i: '•' };
+  const dec = d.decisao || {};
   const f = d.financeiro || {};
+  const com = d.comentarios || {};
+  const score = (d.score && d.score.valor != null) ? d.score.valor : (typeof d.score === 'number' ? d.score : 0);
+  const verd = {
+    VALE: { t: 'Vale a pena', c: 'v-ok', i: '✅' },
+    ATENCAO: { t: 'Atenção', c: 'v-warn', i: '🟡' },
+    NAO_VALE: { t: 'Não vale', c: 'v-bad', i: '🔴' },
+  }[String(dec.veredito || '').toUpperCase()] || { t: dec.veredito || '—', c: 'v-warn', i: '•' };
   const kpi = (l, v) => `<div class="fin-kpi"><span>${l}</span><b>${v}</b></div>`;
   return `
   <div class="ia-hero">
-    ${scoreDonut(d.score)}
+    ${scoreDonut(score)}
     <div class="ia-hero-txt">
       <span class="verd ${verd.c}">${verd.i} ${esc(verd.t)}</span>
-      <p class="ia-resumo">${esc(d.resumo || '')}</p>
-      ${d.detalhe ? `<p class="ia-detalhe">${esc(d.detalhe)}</p>` : ''}
+      ${dec.justificativa ? `<p class="ia-resumo">${esc(dec.justificativa)}</p>` : ''}
+      ${(d.score && d.score.explicacao) ? `<p class="ia-detalhe">${esc(d.score.explicacao)}</p>` : ''}
       <small class="muted">🤖 Análise por IA · ${when}</small>
     </div>
   </div>
   <div class="ia-cols">
     <div class="ia-col">
       <h4>💬 Comentários</h4>
-      <p class="ia-p">${esc(d.comentarios || '—')}</p>
-      <h5 class="ia-sub sub-bad">Reclamações</h5>${ul(d.reclamacoes)}
-      <h5 class="ia-sub sub-ok">Elogios</h5>${ul(d.elogios)}
-      <h5 class="ia-sub sub-op">Oportunidades</h5>${ul(d.oportunidades)}
+      <p class="ia-p">${esc(com.resumo || '—')}</p>
+      <h5 class="ia-sub sub-bad">Reclamações</h5>${ul(com.reclamacoes)}
+      <h5 class="ia-sub sub-ok">Elogios</h5>${ul(com.elogios)}
+      <h5 class="ia-sub sub-op">Oportunidades</h5>${ul(com.oportunidades)}
     </div>
     <div class="ia-col">
       <h4>💰 Financeiro</h4>
       <div class="fin-grid">
-        ${kpi('Custo', money2(f.custo))}
+        ${kpi('Custo total', money2(f.custo_total))}
         ${kpi('Preço sugerido', money2(f.preco_sugerido))}
-        ${kpi('Margem líq.', (Number(f.margem_pct) || 0).toFixed(2) + '%')}
-        ${kpi('Lucro/un.', money2(f.lucro_un))}
+        ${kpi('Margem líq.', (Number(f.margem_liquida_pct) || 0).toFixed(2) + '%')}
+        ${kpi('Lucro/un.', money2(f.lucro_unitario))}
       </div>
       <p class="ia-p" style="margin-top:10px">${esc(f.explicacao || '')}</p>
     </div>
     <div class="ia-col">
       <h4>⚖️ Decisão</h4>
-      <h5 class="ia-sub sub-bad">Riscos</h5>${ul(d.riscos)}
-      <h5 class="ia-sub sub-op">Próximos passos</h5>${ul(d.proximos_passos)}
+      <h5 class="ia-sub sub-bad">Riscos</h5>${ul(dec.riscos)}
+      <h5 class="ia-sub sub-op">Próximos passos</h5>${ul(dec.proximos_passos)}
     </div>
   </div>`;
 }
@@ -343,7 +350,7 @@ async function openDetail(id) {
     const when = p.analise_ia_at ? new Date(p.analise_ia_at).toLocaleString('pt-BR') : '';
     let data = null;
     try { data = JSON.parse(p.analise_ia); } catch (_) {}
-    const inner = (data && data.veredito)
+    const inner = (data && data.decisao)
       ? analysisHtml(data, when)
       : `<div class="dash-head-row"><h3 style="margin:0">🤖 Análise por IA</h3><small class="muted">${when}</small></div>
          <p class="muted">Esta análise foi gerada numa versão anterior e ficou incompleta. Clique em <b>🤖 Analisar com IA</b> para gerar de novo no novo formato.</p>`;
@@ -571,6 +578,15 @@ function renderAds(productId, ads) {
         <label>Estado (UF)<input name="estado" placeholder="Ex.: SP" maxlength="2" /></label>
       </div>
       <label>Data de criação do anúncio<input name="data_criacao" placeholder="Ex.: 07/08/2026" /></label>
+      <span class="field-label">📊 Vendas reais (Shopping de Preço) — dão PESO MÁXIMO à análise</span>
+      <div class="two-col">
+        <label>Vendas 7 dias<input name="vendas_7d" type="number" min="0" placeholder="un." /></label>
+        <label>Vendas 15 dias<input name="vendas_15d" type="number" min="0" placeholder="un." /></label>
+      </div>
+      <div class="two-col">
+        <label>Vendas 21 dias<input name="vendas_21d" type="number" min="0" placeholder="un." /></label>
+        <label>Vendas 30 dias<input name="vendas_30d" type="number" min="0" placeholder="un." /></label>
+      </div>
       <label class="checkbox" style="display:inline-flex;margin-right:18px"><input type="checkbox" name="is_full" /> <span>Full</span></label>
       <label class="checkbox" style="display:inline-flex"><input type="checkbox" name="is_flex" /> <span>Flex</span></label>
       <label>Ficha técnica (uma por linha, ex.: "Peso: 3kg")<textarea name="ficha" rows="3" placeholder="Marca: Quatree&#10;Peso: 3kg&#10;Indicação: Gatos castrados"></textarea></label>
@@ -600,7 +616,7 @@ function renderAds(productId, ads) {
   $('ad-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const f = e.target; const body = {};
-    ['titulo', 'ml_id', 'link', 'preco', 'nota', 'vendedor', 'vendas', 'reputacao', 'cidade', 'estado', 'data_criacao', 'comentarios_texto', 'descricao', 'observacoes'].forEach((k) => { if (f[k].value) body[k] = f[k].value; });
+    ['titulo', 'ml_id', 'link', 'preco', 'nota', 'vendedor', 'vendas', 'reputacao', 'cidade', 'estado', 'data_criacao', 'vendas_7d', 'vendas_15d', 'vendas_21d', 'vendas_30d', 'comentarios_texto', 'descricao', 'observacoes'].forEach((k) => { if (f[k].value) body[k] = f[k].value; });
     if (f.foto.value.trim()) body.foto = f.foto.value.trim();
     if (f.ficha.value.trim()) body.ficha = f.ficha.value.trim();
     body.is_full = f.is_full.checked; body.is_flex = f.is_flex.checked;

@@ -1698,9 +1698,10 @@ app.post('/api/analise/products/:id/ads', requireUser, async (req, res) => {
     if (['preco', 'preco_original', 'nota'].includes(k)) rec[k] = Number(b[k]) || 0;
     else rec[k] = String(b[k] || '').trim() || null;
   });
-  // campos ricos: imagens, ficha tecnica, Full/Flex
+  // campos ricos: imagens, ficha tecnica, Full/Flex, vendas reais
   if (b.is_full !== undefined) rec.is_full = !!b.is_full;
   if (b.is_flex !== undefined) rec.is_flex = !!b.is_flex;
+  ['vendas_7d', 'vendas_15d', 'vendas_21d', 'vendas_30d'].forEach((k) => { if (b[k] !== undefined && b[k] !== '') rec[k] = Number(b[k]) || 0; });
   if (b.foto) rec.fotos = [String(b.foto).trim()];
   else if (Array.isArray(b.fotos)) rec.fotos = b.fotos;
   if (b.ficha) rec.highlights = String(b.ficha).split('\n').map((s) => s.trim()).filter(Boolean);
@@ -1731,7 +1732,7 @@ app.put('/api/analise/ads/:adId', requireUser, async (req, res) => {
   ['titulo', 'link', 'vendedor', 'cidade', 'estado', 'reputacao', 'vendas', 'descricao', 'comentarios_texto', 'observacoes', 'aval_dist', 'data_criacao'].forEach((k) => {
     if (b[k] !== undefined) patch[k] = String(b[k] || '').trim() || null;
   });
-  ['preco', 'preco_original', 'nota', 'comentarios'].forEach((k) => { if (b[k] !== undefined) patch[k] = Number(b[k]) || 0; });
+  ['preco', 'preco_original', 'nota', 'comentarios', 'vendas_7d', 'vendas_15d', 'vendas_21d', 'vendas_30d'].forEach((k) => { if (b[k] !== undefined) patch[k] = (b[k] === '' ? null : Number(b[k]) || 0); });
   if (b.is_full !== undefined) patch.is_full = !!b.is_full;
   if (b.is_flex !== undefined) patch.is_flex = !!b.is_flex;
   try {
@@ -1769,9 +1770,9 @@ app.delete('/api/analise/ads/:adId', requireUser, async (req, res) => {
 // ===========================================================================
 // Lista de modelos tentados em ordem (o 1o que a conta aceitar e usado).
 // Pode forcar um unico via env ANTHROPIC_MODEL / OPENAI_MODEL.
-const ANTHROPIC_MODELS = process.env.ANTHROPIC_MODEL
-  ? [process.env.ANTHROPIC_MODEL]
-  : ['claude-sonnet-4-20250514', 'claude-3-7-sonnet-latest', 'claude-3-5-sonnet-latest', 'claude-3-5-haiku-latest', 'claude-3-haiku-20240307'];
+const ANTHROPIC_MODELS = (process.env.ANTHROPIC_MODEL || process.env.AI_MODEL)
+  ? [process.env.ANTHROPIC_MODEL || process.env.AI_MODEL]
+  : ['claude-haiku-4-5-20251001', 'claude-3-5-haiku-latest', 'claude-3-5-sonnet-latest', 'claude-3-haiku-20240307'];
 const OPENAI_MODELS = process.env.OPENAI_MODEL
   ? [process.env.OPENAI_MODEL]
   : ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'];
@@ -1788,11 +1789,13 @@ function retryNextModel(status, err) {
   return false; // 401 (chave), 429/insufficient (credito), etc -> propaga
 }
 
-async function anthropicTry(key, model, prompt, maxTokens = 1500) {
+async function anthropicTry(key, model, prompt, maxTokens = 1500, system) {
+  const body = { model, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] };
+  if (system) body.system = system;
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] }),
+    body: JSON.stringify(body),
   });
   const data = await r.json().catch(() => ({}));
   return { r, data };
@@ -1810,10 +1813,10 @@ async function anthropicListModels(key) {
   } catch (_) { return []; }
 }
 
-async function callAnthropic(key, prompt, maxTokens = 1500) {
+async function callAnthropic(key, prompt, maxTokens = 1500, system) {
   let lastErr = 'sem modelo disponivel';
   for (const model of ANTHROPIC_MODELS) {
-    const { r, data } = await anthropicTry(key, model, prompt, maxTokens);
+    const { r, data } = await anthropicTry(key, model, prompt, maxTokens, system);
     if (r.ok) return (data.content || []).map((c) => c.text || '').join('\n').trim();
     lastErr = data?.error?.message || `Anthropic HTTP ${r.status}`;
     if (!retryNextModel(r.status, data?.error)) throw new Error(lastErr);
@@ -1829,13 +1832,14 @@ async function callAnthropic(key, prompt, maxTokens = 1500) {
   throw new Error(`nenhum modelo Claude respondeu (${lastErr})`);
 }
 
-async function callOpenAI(key, prompt, maxTokens = 1500) {
+async function callOpenAI(key, prompt, maxTokens = 1500, system) {
   let lastErr = 'sem modelo disponivel';
   for (const model of OPENAI_MODELS) {
+    const msgs = system ? [{ role: 'system', content: system }, { role: 'user', content: prompt }] : [{ role: 'user', content: prompt }];
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model, max_tokens: maxTokens, messages: msgs }),
     });
     const data = await r.json().catch(() => ({}));
     if (r.ok) return (data.choices?.[0]?.message?.content || '').trim();
@@ -1845,78 +1849,58 @@ async function callOpenAI(key, prompt, maxTokens = 1500) {
   throw new Error(`nenhum modelo OpenAI disponivel na sua conta (${lastErr})`);
 }
 
-function buildAnalysisPrompt(product, ads) {
-  const p = product;
-  const custoBase = (Number(p.preco_compra) || 0) + (Number(p.frete_entrada) || 0) + (Number(p.embalagem) || 0);
-  const linhasConc = (ads || []).length
-    ? ads.map((a, i) => `  ${i + 1}. "${a.titulo || a.ml_id || 'sem titulo'}" — preco ${a.preco != null ? 'R$ ' + Number(a.preco).toFixed(2) : 'n/d'}` +
-        `${a.nota ? `, nota ${a.nota}` : ''}${a.vendedor ? `, vendedor ${a.vendedor}` : ''}` +
-        `${a.vendas ? `, ${a.vendas}` : ''}${a.reputacao ? `, reputacao ${a.reputacao}` : ''}` +
-        `${a.is_full ? ', FULL' : ''}${a.is_flex ? ', FLEX' : ''}` +
-        `${a.data_criacao ? `, anuncio criado em ${a.data_criacao}` : ''}` +
-        `${a.comentarios ? `, ${a.comentarios} avaliacoes` : ''}${a.aval_dist ? ` (${a.aval_dist})` : ''}` +
-        `${a.comentarios_texto ? `\n     avaliacoes (texto): ${String(a.comentarios_texto).slice(0, 800).replace(/\n/g, ' | ')}` : ''}`).join('\n')
-    : '  (nenhum concorrente cadastrado ainda)';
+const ANALISE_MAX_COMMENT_CHARS = Number(process.env.ANALISE_MAX_COMMENT_CHARS) || 3500;
 
-  return `Voce e um especialista em Mercado Livre (Brasil) que faz o "Raio-X" de anuncios, no nivel de ferramentas como Nubimetrics e Joopulse. Sua missao e diagnosticar o anuncio e dar uma NOTA DE 0 A 100, com problemas e acoes priorizadas por impacto. Responda em portugues do Brasil, com markdown.
+const SYSTEM_ANALISE = `Voce e um comite de analistas senior de e-commerce especializado em Mercado Livre (Brasil). Trabalhe SOMENTE com os dados fornecidos no JSON de entrada. NUNCA invente numeros, precos, concorrentes, vendas ou metricas que nao estejam nos dados.
 
-Analise o funil COMPLETO do anuncio, considerando os 12 pilares abaixo. Para cada pilar, use os dados fornecidos; quando um dado nao existir (muitos so aparecem no painel do DONO do anuncio, nao do concorrente), diga explicitamente "dado nao coletado" e o que seria util medir — NAO invente numeros.
-
-OS 12 PILARES:
-1. Conversao (o mais importante): taxa de conversao, visitas, pedidos, receita, conversao 7d e 30d. Referencia: <1% grave, 1-2% ruim, 2-4% aceitavel, 4-8% muito bom, >8% excelente.
-2. CTR: quantos clicam ao ver. CTR baixo = problema em foto principal, preco, frete, parcelamento ou titulo.
-3. Foto principal: chama atencao? produto ocupa quase toda a imagem? fundo branco? contraste? melhor que concorrentes?
-4. Titulo: responde o que e, marca, modelo, quantidade, medidas e a palavra mais buscada? Tem palavras-chave que os lideres usam?
-5. Preco: vs os primeiros colocados, desconto, parcelamento, elegivel a campanhas.
-6. Frete: Full, Flex, Entrega Hoje/Amanha, frete gratis, subsidio, prazo. Mais rapido = mais conversao.
-7. Estoque: quantidade, dias de cobertura, rupturas, historico sem estoque.
-8. Reputacao: cancelamentos, reclamacoes, devolucoes, atrasos, mensagens nao respondidas.
-9. Conteudo: descricao boa? beneficios, especificacoes, medidas, garantia, FAQ, videos.
-10. Competitividade vs TOP 10: preco, fotos, titulo, qtd vendida, avaliacoes, parcelamento, entrega, garantia, brindes.
-11. Avaliacoes: ler principalmente 1-3 estrelas — o que reclamam, o que falta, oportunidades de melhoria.
-12. Publicidade: ACOS, TACOS, ROAS, CTR, CPC, impressoes, conversao patrocinada.
-
-ALEM DISSO, comente os "dados ocultos" quando houver base: evolucao (conversao caiu? apos qual mudanca?), sazonalidade (7/30/90 dias, ano anterior), share da categoria, elasticidade de preco, palavras-chave (aparece nas buscas certas?), e movimentos da concorrencia (quem entrou, baixou preco, virou Full, ganhou Mercado Lider).
-
-===== DADOS DO PRODUTO DO VENDEDOR =====
-- Nome: ${p.produto}
-- Fornecedor: ${p.fornecedor || 'n/d'}
-- Preco de compra: R$ ${(Number(p.preco_compra) || 0).toFixed(2)}
-- Frete de entrada: R$ ${(Number(p.frete_entrada) || 0).toFixed(2)}
-- Embalagem: R$ ${(Number(p.embalagem) || 0).toFixed(2)}
-- Custo direto total (compra+frete+embalagem): R$ ${custoBase.toFixed(2)}
-- Taxa Mercado Pago: ${(Number(p.taxa_mp) || 0)}% sobre o preco de venda
-- Imposto: ${(Number(p.imposto) || 0)}% sobre o preco de venda
-- Observacoes: ${p.observacoes || 'nenhuma'}
-
-===== CONCORRENTES MONITORADOS =====
-${linhasConc}
-
-REGRA DE CUSTO: taxa MP e imposto sao PERCENTUAIS sobre o preco de venda P. Lucro liquido = P - custo_direto - (P * taxaMP%) - (P * imposto%). Use isso para calcular margem e preco ideal.
-
-SCORE (0-100) ponderado: Conversao 25%, CTR 15%, SEO 15%, Conteudo 10%, Oferta 10%, Logistica 10%, Publicidade 5%, Estoque 5%, Reputacao 5%. Sem dados de um pilar, estime conservador.
-
-Use os 12 pilares apenas como RACIOCINIO INTERNO. NAO escreva "RAIO-X", NAO liste os pilares, NAO escreva textos longos — o JSON precisa caber inteiro e ser valido. Seja curto e direto em todos os campos.
-
-Responda APENAS com JSON valido (sem markdown, sem texto fora do JSON), neste schema exato:
+Responda SOMENTE com JSON valido (sem markdown, sem texto fora do JSON), EXATAMENTE neste formato:
 {
-  "veredito": "vale_a_pena" | "avaliar" | "evitar",
-  "score": <inteiro 0-100>,
-  "resumo": "<no maximo 2 frases>",
-  "detalhe": "<no maximo 3 frases curtas com os principais pontos positivos e negativos; NAO liste pilares>",
-  "financeiro": {
-    "custo": <numero>, "preco_sugerido": <numero>, "margem_pct": <numero>, "lucro_un": <numero>,
-    "explicacao": "<como chegou no preco/margem, comparando com a faixa dos concorrentes>"
-  },
-  "comentarios": "<resumo do que os clientes acham, baseado nas avaliacoes>",
-  "elogios": ["<ponto positivo>", "..."],
-  "reclamacoes": ["<reclamacao recorrente>", "..."],
-  "oportunidades": ["<oportunidade concreta>", "..."],
-  "riscos": ["<risco>", "..."],
-  "proximos_passos": ["<acao pratica e priorizada>", "..."]
+  "comentarios": {"resumo": "", "reclamacoes": [], "elogios": [], "oportunidades": []},
+  "financeiro": {"custo_total": 0, "preco_sugerido": 0, "margem_liquida_pct": 0, "lucro_unitario": 0, "explicacao": ""},
+  "decisao": {"veredito": "VALE", "justificativa": "", "riscos": [], "proximos_passos": []},
+  "score": {"valor": 0, "explicacao": ""}
 }
 
-Regras: use os custos para calcular financeiro (margem_pct e lucro_un liquidos, ja descontando taxa MP% e imposto%); preco_sugerido competitivo vs concorrentes. elogios/reclamacoes vem das avaliacoes fornecidas (se nao houver, deixe [] e cite em reclamacoes que faltam avaliacoes). Cada lista tem de 3 a 6 itens CURTOS (frases de ate ~12 palavras). Numeros sem "R$" (apenas o valor). Nunca invente metricas nao fornecidas.`;
+FORMULA DA MARGEM: para um preco de venda P, lucro_unitario = P - custo_total - (P * taxa_mp% ) - (P * imposto%); margem_liquida_pct = lucro_unitario / P * 100. custo_total = compra + frete + embalagem (ja vem calculado na entrada).
+
+veredito: use "VALE", "ATENCAO" ou "NAO_VALE".
+score.valor: inteiro 0-100.
+
+REGRA "VENDAS REAIS = PESO MAXIMO": se tem_vendas_reais=true, ancore preco sugerido e demanda nos numeros reais de vendas 7/15/21/30 dias dos concorrentes. Se tem_vendas_reais=false, seja CONSERVADOR e avise em decisao.riscos que a estimativa e fraca por falta de dados de vendas reais.
+
+Listas com 3 a 6 itens CURTOS (ate ~12 palavras). Numeros sem "R$". Baseie comentarios (reclamacoes/elogios) nas avaliacoes fornecidas; se nao houver avaliacoes, deixe as listas vazias e diga isso no resumo.`;
+
+// Monta o JSON compacto de ENTRADA — so dado real, para economizar token
+function buildContext(product, ads) {
+  const p = product;
+  const custo_total = Number(((Number(p.preco_compra) || 0) + (Number(p.frete_entrada) || 0) + (Number(p.embalagem) || 0)).toFixed(2));
+  const list = [...(ads || [])].sort((a, b) => (Number(b.comentarios) || 0) - (Number(a.comentarios) || 0)).slice(0, ANALISE_MAX_ADS);
+  let temVendasReais = false;
+  const concorrentes = list.map((a) => {
+    const vr = {};
+    ['vendas_7d', 'vendas_15d', 'vendas_21d', 'vendas_30d'].forEach((k) => { if (a[k] != null && a[k] !== '') { vr[k] = Number(a[k]); temVendasReais = true; } });
+    const o = {
+      titulo: a.titulo || a.ml_id || null,
+      preco: a.preco != null ? Number(a.preco) : null,
+      nota: a.nota != null ? Number(a.nota) : null,
+      vendidos: a.vendas || null,
+      avaliacoes: a.comentarios != null ? Number(a.comentarios) : null,
+      reputacao: a.reputacao || null,
+      full: !!a.is_full, flex: !!a.is_flex,
+    };
+    if (Object.keys(vr).length) o.vendas_reais = vr;
+    return o;
+  });
+  // comentarios agregados (auto + colados), com teto
+  let coment = list.map((a) => a.comentarios_texto).filter(Boolean).join('\n---\n');
+  if (coment.length > ANALISE_MAX_COMMENT_CHARS) coment = coment.slice(0, ANALISE_MAX_COMMENT_CHARS);
+
+  return JSON.stringify({
+    produto: { nome: p.produto, custo_aquisicao: custo_total, taxa_mp_pct: Number(p.taxa_mp) || 0, imposto_pct: Number(p.imposto) || 0 },
+    tem_vendas_reais: temVendasReais,
+    concorrentes,
+    comentarios: coment || null,
+  });
 }
 
 app.post('/api/analise/products/:id/analyze', requireUser, async (req, res) => {
@@ -1939,19 +1923,20 @@ app.post('/api/analise/products/:id/analyze', requireUser, async (req, res) => {
     const key = keys.provider === 'openai' ? keys.openai : keys.anthropic;
     if (!key) return res.status(400).json({ error: 'Configure seu token de IA nas Configuracoes para usar a analise.' });
 
-    const prompt = buildAnalysisPrompt(product, ads);
+    const context = buildContext(product, ads);
     let text;
     try {
-      text = keys.provider === 'openai' ? await callOpenAI(key, prompt, 3500) : await callAnthropic(key, prompt, 3500);
+      text = keys.provider === 'openai'
+        ? await callOpenAI(key, context, 3000, SYSTEM_ANALISE)
+        : await callAnthropic(key, context, 3000, SYSTEM_ANALISE);
     } catch (e) {
       return res.status(502).json({ error: `A IA retornou erro: ${e.message}. Verifique se o token esta correto e com creditos.` });
     }
     if (!text) return res.status(502).json({ error: 'A IA nao retornou conteudo.' });
 
-    // espera JSON estruturado; se vier incompleto/invalido, avisa para refazer
     const parsed = extractJson(text);
-    if (!parsed || !parsed.veredito) {
-      return res.status(502).json({ error: 'A analise veio incompleta. Clique em Analisar novamente (aumentamos o limite).' });
+    if (!parsed || !parsed.decisao || !parsed.score) {
+      return res.status(502).json({ error: 'A analise veio incompleta. Clique em Analisar novamente.' });
     }
     const toStore = JSON.stringify(parsed);
 

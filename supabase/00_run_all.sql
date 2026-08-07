@@ -266,3 +266,7 @@ alter table public.analise_product_ads add column if not exists aval_dist text;
 alter table public.analise_product_ads add column if not exists data_criacao text;
 alter table public.analise_products add column if not exists creativos_json text;
 alter table public.analise_products add column if not exists creativos_at timestamptz;
+alter table public.analise_product_ads add column if not exists vendas_7d integer;
+alter table public.analise_product_ads add column if not exists vendas_15d integer;
+alter table public.analise_product_ads add column if not exists vendas_21d integer;
+alter table public.analise_product_ads add column if not exists vendas_30d integer;
