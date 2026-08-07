@@ -262,34 +262,74 @@ function firstFoto(fotos) {
   return null;
 }
 
-// Mini-gráfico SVG (sparkline) do histórico de preço
-function sparkline(points) {
-  if (points.length < 2) return '';
-  const w = 260, h = 60, pad = 6;
+// Gráfico grande, animado e colorido do histórico de preço (data × preço)
+function priceChart(points) {
+  const w = 640, h = 280, padL = 64, padR = 20, padT = 24, padB = 44;
+  const iw = w - padL - padR, ih = h - padT - padB;
   const vals = points.map((p) => p.preco);
-  const min = Math.min(...vals), max = Math.max(...vals), range = max - min || 1;
-  const x = (i) => pad + (i * (w - 2 * pad)) / (points.length - 1);
-  const y = (v) => h - pad - ((v - min) / range) * (h - 2 * pad);
-  const d = points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.preco).toFixed(1)}`).join(' ');
-  const dots = points.map((p, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(p.preco).toFixed(1)}" r="2.5" fill="#1e6fff"/>`).join('');
-  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" style="max-width:${w}px">
-    <path d="${d}" fill="none" stroke="#1e6fff" stroke-width="2"/>${dots}</svg>`;
+  let min = Math.min(...vals), max = Math.max(...vals);
+  if (min === max) { min -= 1; max += 1; }
+  const pad = (max - min) * 0.15; min -= pad; max += pad;
+  const n = points.length;
+  const x = (i) => padL + (n === 1 ? iw / 2 : (i * iw) / (n - 1));
+  const y = (v) => padT + ih - ((v - min) / (max - min)) * ih;
+  const line = points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.preco).toFixed(1)}`).join(' ');
+  const area = `M${x(0).toFixed(1)},${(padT + ih).toFixed(1)} ` + points.map((p, i) => `L${x(i).toFixed(1)},${y(p.preco).toFixed(1)}`).join(' ') + ` L${x(n - 1).toFixed(1)},${(padT + ih).toFixed(1)} Z`;
+  // grades + rótulos de preço (eixo Y)
+  const yticks = 4; let grid = '';
+  for (let t = 0; t <= yticks; t++) {
+    const v = min + ((max - min) * t) / yticks; const yy = y(v);
+    grid += `<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${w - padR}" y2="${yy.toFixed(1)}" class="pc-grid"/>`;
+    grid += `<text x="${padL - 8}" y="${(yy + 4).toFixed(1)}" class="pc-ylab">${money(v)}</text>`;
+  }
+  // rótulos de data (eixo X) — no máx. 7
+  const step = Math.max(1, Math.ceil(n / 7)); let xlab = '';
+  points.forEach((p, i) => {
+    if (i % step !== 0 && i !== n - 1) return;
+    const dt = new Date(p.snap_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    xlab += `<text x="${x(i).toFixed(1)}" y="${h - 16}" class="pc-xlab">${dt}</text>`;
+  });
+  const dots = points.map((p, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(p.preco).toFixed(1)}" r="4" class="pc-dot" style="animation-delay:${(0.6 + i * 0.05).toFixed(2)}s"><title>${new Date(p.snap_date + 'T00:00:00').toLocaleDateString('pt-BR')}: ${money(p.preco)}</title></circle>`).join('');
+  const lineLen = 2000;
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" class="price-chart" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <linearGradient id="pcFill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#1e6fff" stop-opacity="0.35"/>
+        <stop offset="100%" stop-color="#22d3ee" stop-opacity="0.02"/>
+      </linearGradient>
+      <linearGradient id="pcStroke" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#1e6fff"/><stop offset="100%" stop-color="#22d3ee"/>
+      </linearGradient>
+    </defs>
+    ${grid}
+    <path d="${area}" fill="url(#pcFill)" class="pc-area"/>
+    <path d="${line}" fill="none" stroke="url(#pcStroke)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+      class="pc-line" style="stroke-dasharray:${lineLen};stroke-dashoffset:${lineLen}"/>
+    ${dots}${xlab}
+  </svg>`;
 }
 
 async function loadHistory(mlId, container) {
-  container.innerHTML = '<span class="muted">carregando…</span>';
+  container.innerHTML = '<p class="muted">Carregando…</p>';
   try {
     const r = await api(`/api/analise/monitor/${encodeURIComponent(mlId)}`);
     const h = (r.historico || []).map((s) => ({ ...s, preco: Number(s.preco) }));
-    if (!h.length) { container.innerHTML = '<span class="muted">Sem histórico ainda. A cada dia que a extensão recoletar, um ponto é gravado aqui.</span>'; return; }
-    const first = h[0].preco, last = h[h.length - 1].preco;
-    const delta = last - first;
-    const deltaTxt = delta === 0 ? 'estável' : (delta > 0 ? `▲ ${money(delta)}` : `▼ ${money(-delta)}`);
-    const rows = h.slice(-14).reverse().map((s) => `<tr><td>${new Date(s.snap_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</td><td>${money(s.preco)}</td></tr>`).join('');
-    container.innerHTML = `${sparkline(h)}
-      <p class="muted" style="margin:4px 0">${h.length} dias · variação ${deltaTxt}</p>
-      <div class="table-wrap"><table class="hist-table"><thead><tr><th>Data</th><th>Preço</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-  } catch (e) { container.innerHTML = `<span class="c-danger">${esc(e.message)}</span>`; }
+    if (!h.length) { container.innerHTML = '<p class="muted">Sem histórico ainda. A cada dia que a extensão recoletar, um ponto de preço é gravado aqui. Use “⚡ Forçar recoleta” no popup da extensão para gravar um ponto agora.</p>'; return; }
+    const first = h[0].preco, last = h[h.length - 1].preco, delta = last - first;
+    const menor = Math.min(...h.map((p) => p.preco)), maior = Math.max(...h.map((p) => p.preco));
+    const deltaTxt = delta === 0 ? '➡️ estável' : (delta > 0 ? `🔺 subiu ${money(delta)}` : `🔻 caiu ${money(-delta)}`);
+    const kpi = (l, v) => `<div class="pc-kpi"><span class="muted">${l}</span><b>${v}</b></div>`;
+    const rows = h.slice(-30).reverse().map((s) => `<tr><td>${new Date(s.snap_date + 'T00:00:00').toLocaleDateString('pt-BR')}</td><td>${money(s.preco)}</td></tr>`).join('');
+    container.innerHTML = `
+      ${priceChart(h)}
+      <div class="pc-kpis">
+        ${kpi('Atual', money(last))}${kpi('Variação', deltaTxt)}
+        ${kpi('Menor', money(menor))}${kpi('Maior', money(maior))}${kpi('Dias', h.length)}
+      </div>
+      <details style="margin-top:12px"><summary class="muted">Ver tabela (data × preço)</summary>
+        <div class="table-wrap" style="margin-top:8px"><table class="hist-table"><thead><tr><th>Data</th><th>Preço</th></tr></thead><tbody>${rows}</tbody></table></div>
+      </details>`;
+  } catch (e) { container.innerHTML = `<p class="c-danger">${esc(e.message)}</p>`; }
 }
 
 function adCard(a) {
@@ -320,7 +360,6 @@ function adCard(a) {
     <div class="ad-sections">
       ${kws.length ? `<div class="ad-sec"><b>🔑 SEO / palavras-chave</b><div class="ad-kws">${kws.map((k) => `<span class="kw">${esc(k)}</span>`).join('')}</div></div>` : ''}
       ${ficha.length ? `<details class="ad-sec"><summary><b>📋 Ficha técnica</b> (${ficha.length})</summary><ul class="ad-ficha">${ficha.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></details>` : ''}
-      ${a.ml_id ? `<div class="ad-sec"><b>📈 Histórico de preço</b><div class="ad-hist muted" data-hist="${esc(a.ml_id)}">carregando…</div></div>` : ''}
       ${a.aval_dist ? `<div class="ad-sec"><b>⭐ Avaliações:</b> ${a.nota ? a.nota + ' · ' : ''}${a.comentarios || 0} no total<div class="ad-kws" style="margin-top:5px">${esc(a.aval_dist).split('·').map((d) => `<span class="kw">${esc(d.trim())}</span>`).join('')}</div></div>` : ''}
       ${a.comentarios_texto ? `<details class="ad-sec"><summary><b>💬 Avaliações (texto)</b></summary><div class="ad-desc">${esc(a.comentarios_texto).replace(/\n/g, '<br>')}</div></details>` : ''}
       ${a.descricao ? `<details class="ad-sec"><summary><b>📝 Descrição do anúncio</b></summary><div class="ad-desc">${esc(a.descricao).replace(/\n/g, '<br>')}</div></details>` : ''}
@@ -338,6 +377,7 @@ function adCard(a) {
     <div class="ad-actions">
       <label class="switch-sm"><input type="checkbox" data-mon="${a.id}" ${a.monitorar ? 'checked' : ''}/> atualizar 1×/dia</label>
       <div class="head-actions" style="gap:6px">
+        ${a.ml_id ? `<button class="btn-ghost" data-hist-btn="${esc(a.ml_id)}" data-hist-title="${esc(a.titulo || a.ml_id)}">📈 Preço</button>` : ''}
         <button class="btn-ghost" data-review-btn="${a.id}">💬 Avaliações</button>
         <button class="btn-ghost" data-del-ad="${a.id}">Remover</button>
       </div>
@@ -395,8 +435,11 @@ function renderAds(productId, ads) {
       : `<div class="ad-grid">${ads.map(adCard).join('')}</div>`}`;
 
   $('ad-refresh').addEventListener('click', () => openDetail(productId));
-  // histórico de preço: carrega automaticamente em cada card
-  $('detail-ads').querySelectorAll('.ad-hist[data-hist]').forEach((el) => loadHistory(el.dataset.hist, el));
+  // histórico de preço: abre modal com gráfico animado
+  $('detail-ads').querySelectorAll('[data-hist-btn]').forEach((b) => b.addEventListener('click', () => {
+    openModal(`📈 Histórico de preço <small class="muted" style="font-weight:400">${esc(b.dataset.histTitle || '')}</small>`, '<p class="muted">Carregando…</p>');
+    loadHistory(b.dataset.histBtn, $('ia-modal-body'));
+  }));
   $('ad-new').addEventListener('click', () => { $('ad-form').hidden = false; });
   $('ad-cancel').addEventListener('click', () => { $('ad-form').hidden = true; });
   $('ad-form').addEventListener('submit', async (e) => {

@@ -725,3 +725,19 @@ tbody tr:hover { background: #f7f9fc; }
 .ad-hist { margin-top: 6px; }
 .hist-table { min-width: 0; width: 100%; font-size: .82rem; }
 .hist-table th, .hist-table td { padding: 4px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+
+/* gráfico de histórico de preço (modal) */
+.price-chart { display: block; max-width: 100%; margin: 6px auto 0; }
+.pc-grid { stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 4; }
+.pc-ylab { fill: var(--muted); font-size: 11px; text-anchor: end; }
+.pc-xlab { fill: var(--muted); font-size: 11px; text-anchor: middle; }
+.pc-area { opacity: 0; animation: pcArea .8s ease forwards .5s; }
+.pc-line { animation: pcDraw 1.3s ease forwards; }
+.pc-dot { fill: #fff; stroke: #1e6fff; stroke-width: 2.5; opacity: 0; animation: pcDot .3s ease forwards; }
+@keyframes pcDraw { to { stroke-dashoffset: 0; } }
+@keyframes pcArea { to { opacity: 1; } }
+@keyframes pcDot { to { opacity: 1; } }
+.pc-kpis { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.pc-kpi { background: #f4f7fb; border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; display: flex; flex-direction: column; min-width: 90px; }
+.pc-kpi b { font-size: 1.05rem; }
+@media (prefers-reduced-motion: reduce) { .pc-line, .pc-area, .pc-dot { animation: none; opacity: 1; stroke-dashoffset: 0; } }
