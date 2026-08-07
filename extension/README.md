@@ -1,6 +1,6 @@
-# FinanceEcom Monitor — Extensão Chrome
+# FinanceEcom — Análise de Produtos (Extensão Chrome)
 
-Coleta e monitora anúncios de concorrentes do Mercado Livre direto no painel FinanceEcom.
+Salva anúncios de concorrentes do Mercado Livre direto no painel FinanceEcom e acompanha preço, ficha técnica e concorrência.
 
 ## Como instalar (modo desenvolvedor, para testar)
 

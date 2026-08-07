@@ -1,5 +1,5 @@
 // ===========================================================================
-// FinanceEcom Monitor — content script (lê a página do anúncio do Mercado Livre)
+// FinanceEcom — Análise de Produtos — content script (lê a página do anúncio)
 // ===========================================================================
 (function () {
   const $ = (sel, root = document) => root.querySelector(sel);

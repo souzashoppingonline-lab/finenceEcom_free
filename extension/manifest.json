@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "FinanceEcom Monitor",
+  "name": "FinanceEcom — Análise de Produtos",
   "version": "1.0.0",
-  "description": "Salva e monitora anúncios de concorrentes do Mercado Livre direto no seu painel FinanceEcom.",
+  "description": "Salve anúncios do Mercado Livre no seu painel FinanceEcom e acompanhe preço, ficha técnica e concorrência.",
   "permissions": ["storage", "tabs", "scripting", "alarms"],
   "host_permissions": [
     "https://produto.mercadolivre.com.br/*",
@@ -22,6 +22,6 @@
       "run_at": "document_end"
     }
   ],
-  "action": { "default_popup": "popup.html", "default_title": "FinanceEcom Monitor" },
+  "action": { "default_popup": "popup.html", "default_title": "FinanceEcom — Análise de Produtos" },
   "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
 }
