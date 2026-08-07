@@ -38,6 +38,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       } else if (msg.action === 'get_monitor_status') {
         const s = await chrome.storage.local.get({ lastCycle: null });
         sendResponse(s.lastCycle || { ok: 0, fail: 0, at: null });
+      } else if (msg.action === 'download_media') {
+        const safe = String(msg.ml_id || 'midia').replace(/[^\w-]/g, '');
+        const ext = (u, def) => { const m = String(u).split('?')[0].match(/\.(\w{3,4})$/); return m ? m[1] : def; };
+        let count = 0, i = 1, v = 1;
+        for (const url of (msg.fotos || [])) {
+          try { await chrome.downloads.download({ url, filename: `financeecom/${safe}/img_${i++}.${ext(url, 'jpg')}` }); count++; } catch (_) {}
+        }
+        for (const url of (msg.videos || [])) {
+          if (/youtube\.com/.test(url)) continue; // YouTube nao baixa direto
+          try { await chrome.downloads.download({ url, filename: `financeecom/${safe}/video_${v++}.${ext(url, 'mp4')}` }); count++; } catch (_) {}
+        }
+        sendResponse({ ok: true, count });
       } else if (msg.action === 'test_token') {
         const r = await apiFetch('/extension/produto-ativo'); sendResponse({ ok: true, produto: r.produto });
       } else {

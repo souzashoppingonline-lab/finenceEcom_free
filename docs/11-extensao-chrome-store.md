@@ -55,6 +55,8 @@ A extensão pede o MÍNIMO. Textos prontos para cada campo:
 - **alarms** — Agendar uma verificação periódica (aprox. 1×/dia) para atualizar o preço dos
   anúncios que o próprio usuário já salvou. Sem isso, o usuário teria que reabrir cada
   anúncio manualmente.
+- **downloads** — Baixar, quando o usuário clica em "Baixar mídias", as imagens e vídeos
+  públicos do anúncio que ele está vendo, salvando na pasta Downloads do próprio usuário.
 - **Host permission `https://*.mercadolivre.com.br/*`** — Ler os dados públicos do anúncio
   que o usuário está vendo (título, preço, avaliações, ficha técnica) quando ele clica em
   “Salvar na análise”, e reabrir em segundo plano anúncios já salvos para atualizar o preço.

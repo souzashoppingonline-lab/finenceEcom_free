@@ -113,6 +113,21 @@
     return Array.from(set).slice(0, 8);
   }
 
+  function getVideos() {
+    const set = new Set();
+    $$('video source, video').forEach((v) => {
+      const s = v.getAttribute('src') || v.src;
+      if (s && /^https?:/.test(s)) set.add(s);
+    });
+    // clips/mp4 embutidos no HTML da página
+    const mp4 = (document.body.innerHTML.match(/https?:\/\/[^"'\\\s]+\.mp4/g) || []);
+    mp4.forEach((u) => set.add(u));
+    // vídeo do YouTube (quando o anúncio usa)
+    const yt = (document.body.innerHTML.match(/https?:\/\/(?:www\.)?youtube\.com\/embed\/[\w-]+/g) || []);
+    yt.forEach((u) => set.add(u));
+    return Array.from(set).slice(0, 5);
+  }
+
   function getDescricao() {
     return txt($('.ui-pdp-description__content')) || txt($('[data-testid="content"]')) || null;
   }
@@ -175,6 +190,7 @@
       is_full: ff.is_full,
       is_flex: ff.is_flex,
       fotos: getFotos(),
+      videos: getVideos(),
       descricao: getDescricao(),
       highlights: getHighlights(),
     };
@@ -223,6 +239,7 @@
     <div id="fec-body">
       <div id="fec-target" class="fec-muted">carregando alvo…</div>
       <button id="fec-save">💾 Salvar na análise</button>
+      <button id="fec-media">📥 Baixar mídias</button>
       <div id="fec-msg"></div>
     </div>`;
   document.body.appendChild(panel);
@@ -241,6 +258,8 @@
       font-weight:700;cursor:pointer;font-size:13px}
     #fec-save:hover{background:#1657d6}
     #fec-save:disabled{opacity:.6;cursor:default}
+    #fec-media{width:100%;margin-top:8px;background:#12203d;color:#fff;border:1px solid #24365e;border-radius:8px;padding:9px;font-weight:600;cursor:pointer;font-size:12px}
+    #fec-media:hover{background:#1a2c50}
     #fec-msg{margin-top:8px;font-size:12px;min-height:14px}
     #fec-panel.min #fec-body{display:none}`;
   document.head.appendChild(style);
@@ -267,6 +286,18 @@
       if (chrome.runtime.lastError) { msg('Erro de conexão com a extensão.', '#ff8a8a'); return; }
       if (r && r.ok) msg('✅ Concorrente salvo!', '#7ee6b0');
       else msg((r && r.error) || 'Erro ao salvar.', '#ff8a8a');
+    });
+  });
+
+  document.getElementById('fec-media').addEventListener('click', () => {
+    const e = collectAll().extracted;
+    const fotos = e.fotos || [], videos = e.videos || [];
+    if (!fotos.length && !videos.length) { msg('Nenhuma mídia encontrada nesta página.', '#ffcf6b'); return; }
+    msg(`Baixando ${fotos.length} imagem(ns)${videos.length ? ' + ' + videos.length + ' vídeo(s)' : ''}…`);
+    chrome.runtime.sendMessage({ action: 'download_media', ml_id: e.ml_id || 'midia', fotos, videos }, (r) => {
+      if (chrome.runtime.lastError) { msg('Erro ao baixar.', '#ff8a8a'); return; }
+      if (r && r.ok) msg(`✅ ${r.count} arquivo(s) na pasta Downloads/financeecom.`, '#7ee6b0');
+      else msg((r && r.error) || 'Erro ao baixar.', '#ff8a8a');
     });
   });
 })();
