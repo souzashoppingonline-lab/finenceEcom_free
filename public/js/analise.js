@@ -138,11 +138,11 @@ function renderProducts() {
     el.innerHTML = '<p class="muted">Nenhum produto ainda. Clique em “+ Novo produto” para começar.</p>';
     return;
   }
-  const iaBtn = iaReady()
-    ? '<button class="btn-inline" data-ia="1">🤖 Analisar com IA</button>'
-    : '<button class="btn-ghost" disabled title="Configure seu token de IA acima">🤖 IA (configure o token)</button>';
   el.innerHTML = products.map((p) => {
     const isActive = String(p.id) === String(activeId);
+    const iaBtn = iaReady()
+      ? `<button class="btn-inline" data-ia="${p.id}">🤖 Analisar com IA</button>`
+      : '<button class="btn-ghost" disabled title="Configure seu token de IA acima">🤖 IA (configure o token)</button>';
     return `<div class="card period-card" data-id="${p.id}">
       <div class="dash-head-row">
         <h4 style="margin:0">${esc(p.produto)}</h4>
@@ -152,11 +152,19 @@ function renderProducts() {
       <div class="head-actions" style="margin-top:10px;flex-wrap:wrap;gap:8px">
         <button class="btn-inline" data-open="${p.id}">Abrir</button>
         ${iaBtn}
+        <button class="btn-ghost" data-del-prod="${p.id}" title="Excluir produto">🗑️ Excluir</button>
       </div>
     </div>`;
   }).join('');
   el.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', () => openDetail(b.dataset.open)));
   el.querySelectorAll('[data-ia]').forEach((b) => b.addEventListener('click', () => runAnalysis(b.dataset.ia, b)));
+  el.querySelectorAll('[data-del-prod]').forEach((b) => b.addEventListener('click', async () => {
+    const p = products.find((x) => String(x.id) === String(b.dataset.delProd));
+    if (!confirm(`Excluir "${p ? p.produto : 'este produto'}" e todos os concorrentes/dados dele?`)) return;
+    b.disabled = true;
+    try { await api(`/api/analise/products/${b.dataset.delProd}`, { method: 'DELETE' }); await loadProducts(); }
+    catch (e) { alert(e.message); b.disabled = false; }
+  }));
 }
 
 // ---------------------------------------------------------------------------
