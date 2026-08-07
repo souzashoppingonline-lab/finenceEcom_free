@@ -407,7 +407,6 @@ function renderAds(productId, ads) {
         <select id="ad-filter" class="filter-inp">
           <option value="all"${adFilter === 'all' ? ' selected' : ''}>Todos</option>
           <option value="full"${adFilter === 'full' ? ' selected' : ''}>Só FULL</option>
-          <option value="flex"${adFilter === 'flex' ? ' selected' : ''}>Só FLEX</option>
         </select>
         <select id="ad-sort" class="filter-inp">
           <option value="default"${adSort === 'default' ? ' selected' : ''}>Ordenar…</option>
