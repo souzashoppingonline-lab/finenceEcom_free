@@ -64,6 +64,49 @@ $('ml-form').addEventListener('submit', async (e) => {
   }
 });
 
+// ---------- Abas ----------
+document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('is-active', x === t));
+  document.querySelectorAll('.tab-panel').forEach((p) => { p.hidden = p.dataset.panel !== t.dataset.tab; });
+}));
+
+// ---------- Caça Oportunidade ----------
+function opCard(x) {
+  const novo = x.ageDays <= 30;
+  return `<a class="op-card" href="${esc(x.link || '#')}" target="_blank" rel="noopener">
+    <div class="op-thumb">${x.thumb ? `<img src="${esc(x.thumb)}" alt="" loading="lazy"/>` : ''}</div>
+    <div class="op-info">
+      <div class="op-title">${esc((x.title || '').slice(0, 80))}</div>
+      <div class="op-badges">
+        <span class="op-vd">🔥 ${x.vendasDia}/dia</span>
+        ${novo ? '<span class="op-new">🆕 novo</span>' : ''}
+        ${x.full ? '<span class="op-full">FULL</span>' : ''}
+      </div>
+      <div class="op-meta">
+        <span>💰 ${x.price != null ? money(x.price) : '—'}</span>
+        <span>📦 ${x.sold} vendas</span>
+        <span>🗓️ ${x.ageDays} dias</span>
+      </div>
+    </div>
+  </a>`;
+}
+
+$('op-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const cat = $('op-cat').value.trim(), q = $('op-q').value.trim();
+  if (!cat && !q) { $('op-msg').textContent = 'Preencha ao menos a categoria ou a palavra-chave.'; return; }
+  const age = $('op-age').value, minSales = $('op-sales').value;
+  $('op-msg').textContent = '';
+  $('op-results').innerHTML = '<p class="muted">Buscando e calculando vendas/dia… (pode levar alguns segundos)</p>';
+  try {
+    const p = new URLSearchParams({ q, category: cat, age, minSales });
+    const r = await api('/api/ml/opportunities?' + p.toString());
+    if (!r.itens.length) { $('op-results').innerHTML = '<p class="muted">Nenhum anúncio bateu os filtros. Tente afrouxar (mais dias ou menos vendas).</p>'; return; }
+    const head = `<p class="muted" style="margin-bottom:10px">${r.total} oportunidades${r.categoria ? ' · categoria <b>' + esc(r.categoria.nome || r.categoria.id) + '</b>' : ''} · ordenado por vendas/dia</p>`;
+    $('op-results').innerHTML = head + '<div class="op-grid">' + r.itens.map(opCard).join('') + '</div>';
+  } catch (err) { $('op-results').innerHTML = `<p class="c-danger">${esc(err.message)}</p>`; }
+});
+
 (async () => {
   const session = await initShell('mltend');
   if (!session) return;

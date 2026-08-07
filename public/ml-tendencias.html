@@ -13,29 +13,72 @@
   <main class="app-content">
     <div class="dash-head">
       <h1>📊 ML Tendências</h1>
-      <p class="muted">O que o mercado está buscando e comprando no Mercado Livre — direto da API oficial.</p>
+      <p class="muted">Inteligência de mercado do Mercado Livre — direto da API oficial.</p>
     </div>
 
     <div id="ml-status"></div>
 
-    <div class="card" style="margin-bottom:20px">
-      <form id="ml-form" class="head-actions" style="gap:10px;flex-wrap:wrap">
-        <input type="text" id="ml-q" placeholder="Digite um produto/categoria (ex.: ração gato castrado)" style="flex:1;min-width:260px" />
-        <button type="submit" class="btn-cadastrar" style="max-width:180px;margin:0">🔍 Ver tendências</button>
-      </form>
-      <p class="muted" id="ml-cat" style="margin-top:10px"></p>
+    <div class="tabs">
+      <button class="tab is-active" data-tab="caca">🎯 Caça Oportunidade</button>
+      <button class="tab" data-tab="tend">🔥 Tendências</button>
     </div>
 
-    <div class="ml-grid">
-      <div>
-        <h3 class="v-section-title">🔥 Palavras em alta</h3>
-        <div id="ml-trends" class="card"><p class="muted">Digite um termo acima para começar.</p></div>
+    <!-- ABA CAÇA OPORTUNIDADE -->
+    <section class="tab-panel" data-panel="caca">
+      <div class="card" style="margin-bottom:18px">
+        <p class="muted">Encontre produtos <b>novos que já vendem muito</b> (ranking por vendas/dia). Categoria e palavra-chave são opcionais — mas preencha ao menos um.</p>
+        <form id="op-form">
+          <div class="op-filters">
+            <label>Criados há menos de
+              <select id="op-age" class="filter-inp">
+                <option value="30">30 dias</option>
+                <option value="60">60 dias</option>
+                <option value="90" selected>90 dias</option>
+              </select>
+            </label>
+            <label>Quantidade de vendas
+              <select id="op-sales" class="filter-inp">
+                <option value="0">Qualquer</option>
+                <option value="50">+50</option>
+                <option value="100" selected>+100</option>
+                <option value="500">+500</option>
+                <option value="1000">+1000</option>
+              </select>
+            </label>
+            <label>Categoria (opcional)
+              <input id="op-cat" placeholder="Ex.: rações" />
+            </label>
+            <label>Palavra-chave (opcional)
+              <input id="op-q" placeholder="Ex.: ração gato castrado" />
+            </label>
+          </div>
+          <button type="submit" class="btn-cadastrar" style="max-width:220px;margin-top:14px">🎯 Buscar oportunidades</button>
+          <p id="op-msg" class="muted" style="margin-top:8px"></p>
+        </form>
       </div>
-      <div>
-        <h3 class="v-section-title">🏆 Mais vendidos da categoria</h3>
-        <div id="ml-top"><p class="muted">—</p></div>
+      <div id="op-results"></div>
+    </section>
+
+    <!-- ABA TENDÊNCIAS -->
+    <section class="tab-panel" data-panel="tend" hidden>
+      <div class="card" style="margin-bottom:20px">
+        <form id="ml-form" class="head-actions" style="gap:10px;flex-wrap:wrap">
+          <input type="text" id="ml-q" placeholder="Digite um produto/categoria (ex.: ração gato castrado)" style="flex:1;min-width:260px" />
+          <button type="submit" class="btn-cadastrar" style="max-width:180px;margin:0">🔍 Ver tendências</button>
+        </form>
+        <p class="muted" id="ml-cat" style="margin-top:10px"></p>
       </div>
-    </div>
+      <div class="ml-grid">
+        <div>
+          <h3 class="v-section-title">🔥 Palavras em alta</h3>
+          <div id="ml-trends" class="card"><p class="muted">Digite um termo acima para começar.</p></div>
+        </div>
+        <div>
+          <h3 class="v-section-title">🏆 Mais vendidos da categoria</h3>
+          <div id="ml-top"><p class="muted">—</p></div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

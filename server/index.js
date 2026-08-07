@@ -2514,6 +2514,57 @@ app.get('/api/ml/trends', requireUser, async (req, res) => {
   } catch (e) { console.error('ml/trends:', e.message); return res.status(502).json({ error: e.message }); }
 });
 
+// Caça Oportunidade: anúncios novos que já vendem muito (vendas/dia)
+app.get('/api/ml/opportunities', requireUser, async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  const catText = String(req.query.category || '').trim();
+  const age = Math.min(365, Math.max(1, Number(req.query.age) || 90));
+  const minSales = Math.max(0, Number(req.query.minSales) || 0);
+  if (!q && !catText) return res.status(400).json({ error: 'Informe uma categoria ou uma palavra-chave.' });
+  try {
+    const ck = `op:${q.toLowerCase()}|${catText.toLowerCase()}`;
+    let base = mlCacheGet(ck);
+    if (!base) {
+      let categoria = null;
+      if (catText) {
+        const disc = await mlFetch(`/sites/MLB/domain_discovery/search?limit=1&q=${encodeURIComponent(catText)}`);
+        if (Array.isArray(disc) && disc[0] && disc[0].category_id) categoria = { id: disc[0].category_id, nome: disc[0].category_name || '' };
+      }
+      let path = '/sites/MLB/search?limit=50';
+      if (q) path += `&q=${encodeURIComponent(q)}`;
+      if (categoria) path += `&category=${categoria.id}`;
+      const s = await mlFetch(path);
+      const ids = (s.results || []).map((r) => r.id).filter(Boolean).slice(0, 50);
+      // detalhes em lotes de 20 (para pegar date_created e sold_quantity)
+      const detalhes = [];
+      for (let i = 0; i < ids.length; i += 20) {
+        const chunk = ids.slice(i, i + 20).join(',');
+        try {
+          const items = await mlFetch(`/items?ids=${chunk}&attributes=id,title,price,sold_quantity,date_created,thumbnail,permalink,shipping`);
+          (items || []).forEach((w) => { if (w.body && w.body.id) detalhes.push(w.body); });
+        } catch (_) {}
+      }
+      base = { categoria, detalhes };
+      mlCacheSet(ck, base, 3 * 3600 * 1000);
+    }
+    const now = Date.now();
+    let lista = (base.detalhes || []).map((b) => {
+      const created = Date.parse(b.date_created || '') || now;
+      const ageDays = Math.max(1, Math.round((now - created) / 86400000));
+      const sold = Number(b.sold_quantity) || 0;
+      return {
+        title: b.title, price: b.price, sold, ageDays,
+        vendasDia: +(sold / ageDays).toFixed(2),
+        full: b.shipping && b.shipping.logistic_type === 'fulfillment',
+        thumb: (b.thumbnail || '').replace(/^http:/, 'https:'),
+        link: b.permalink,
+      };
+    });
+    lista = lista.filter((x) => x.ageDays <= age && x.sold >= minSales).sort((a, b) => b.vendasDia - a.vendasDia);
+    return res.json({ categoria: base.categoria, total: lista.length, itens: lista.slice(0, 40) });
+  } catch (e) { console.error('ml/opportunities:', e.message); return res.status(502).json({ error: e.message }); }
+});
+
 app.get('/health', (req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => {
