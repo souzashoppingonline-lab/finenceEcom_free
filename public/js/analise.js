@@ -325,6 +325,10 @@ function renderAds(productId, ads) {
         <label>Reputação<input name="reputacao" placeholder="Ex.: MercadoLíder Platinum" /></label>
         <label>URL da imagem principal<input name="foto" placeholder="https://..." /></label>
       </div>
+      <div class="two-col">
+        <label>Cidade do vendedor<input name="cidade" placeholder="Ex.: Franca" /></label>
+        <label>Estado (UF)<input name="estado" placeholder="Ex.: SP" maxlength="2" /></label>
+      </div>
       <label class="checkbox" style="display:inline-flex;margin-right:18px"><input type="checkbox" name="is_full" /> <span>Full</span></label>
       <label class="checkbox" style="display:inline-flex"><input type="checkbox" name="is_flex" /> <span>Flex</span></label>
       <label>Ficha técnica (uma por linha, ex.: "Peso: 3kg")<textarea name="ficha" rows="3" placeholder="Marca: Quatree&#10;Peso: 3kg&#10;Indicação: Gatos castrados"></textarea></label>
@@ -344,7 +348,7 @@ function renderAds(productId, ads) {
   $('ad-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const f = e.target; const body = {};
-    ['titulo', 'ml_id', 'link', 'preco', 'nota', 'vendedor', 'vendas', 'reputacao', 'descricao', 'observacoes'].forEach((k) => { if (f[k].value) body[k] = f[k].value; });
+    ['titulo', 'ml_id', 'link', 'preco', 'nota', 'vendedor', 'vendas', 'reputacao', 'cidade', 'estado', 'descricao', 'observacoes'].forEach((k) => { if (f[k].value) body[k] = f[k].value; });
     if (f.foto.value.trim()) body.foto = f.foto.value.trim();
     if (f.ficha.value.trim()) body.ficha = f.ficha.value.trim();
     body.is_full = f.is_full.checked; body.is_flex = f.is_flex.checked;
