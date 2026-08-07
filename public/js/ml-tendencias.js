@@ -223,6 +223,7 @@ const INTEL = {
       }).join('');
       const neg = (r.negativos || []).map((x) => `<div class="dor-item"><span class="dor-nota">${'⭐'.repeat(x.nota)}</span><p>${esc(x.texto)}</p><span class="muted" style="font-size:.75rem">${esc((x.produto||'').slice(0,50))}</span></div>`).join('');
       return catHead(r.categoria, r.media ? ` <span class="ci-comp">⭐ ${r.media} · ${Number(r.total_avaliacoes).toLocaleString('pt-BR')} avaliações</span>` : '') +
+        pdfBtn('Dores do Cliente — ' + ((r.categoria && r.categoria.nome) || 'Categoria')) +
         `<div class="dor-cols">
           <div class="card"><h3 class="v-section-title" style="margin-top:0">Distribuição de notas</h3><div class="fx-chart">${bars}</div></div>
           <div class="card"><h3 class="v-section-title" style="margin-top:0">😖 O que reclamam (nota ≤ 3)</h3>${neg || '<p class="muted">Sem reclamações públicas coletadas — bom sinal, ou avaliações ainda escassas.</p>'}</div>
@@ -257,6 +258,7 @@ const INTEL = {
         <div class="fx-bar-wrap"><div class="fx-bar" style="width:${((n.total||0)/max*100).toFixed(0)}%"></div></div>
         <span class="fx-count">${n.total!=null?Number(n.total).toLocaleString('pt-BR'):'—'}</span></div>`).join('');
       return catHead(r.categoria, r.total_pai != null ? ` <span class="ci-comp">🏁 ${Number(r.total_pai).toLocaleString('pt-BR')} anúncios no total</span>` : '') +
+        pdfBtn('Mapa de Nichos — ' + ((r.categoria && r.categoria.nome) || 'Categoria')) +
         `<p class="muted" style="margin:12px 0 6px">Ordenado do <b>menos concorrido</b> (topo) ao mais concorrido — menos anúncios = mais espaço.</p>
          <div class="card"><div class="fx-chart">${rows}</div></div>`;
     },
@@ -266,6 +268,7 @@ const INTEL = {
     render: (r) => {
       const item = (a) => `<div class="ck-item"><b>${esc(a.nome)}</b>${a.catalogo?'<span class="ck-tag">catálogo</span>':''}${a.valores&&a.valores.length?`<span class="muted" style="font-size:.78rem">ex.: ${esc(a.valores.slice(0,4).join(', '))}</span>`:''}</div>`;
       return catHead(r.categoria) +
+        pdfBtn('Anúncio Perfeito — ' + ((r.categoria && r.categoria.nome) || 'Categoria')) +
         `<div class="dor-cols">
           <div class="card"><h3 class="v-section-title" style="margin-top:0">🔴 Obrigatórios (${(r.obrigatorios||[]).length})</h3>${(r.obrigatorios||[]).map(item).join('') || '<p class="muted">Sem atributos obrigatórios.</p>'}</div>
           <div class="card"><h3 class="v-section-title" style="margin-top:0">🟢 Recomendados (${(r.recomendados||[]).length})</h3>${(r.recomendados||[]).map(item).join('') || '<p class="muted">Sem atributos recomendados.</p>'}</div>
