@@ -716,3 +716,7 @@ tbody tr:hover { background: #f7f9fc; }
 .ad-ficha li { margin: 2px 0; }
 .ad-desc { margin-top: 6px; font-size: .82rem; color: var(--muted); max-height: 220px; overflow-y: auto; }
 .ad-actions { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 8px; }
+
+/* editor de avaliações no card do concorrente */
+.ad-review-edit { border-top: 1px solid var(--border); padding-top: 10px; }
+.ad-review-edit textarea { width: 100%; margin-top: 6px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: .85rem; }

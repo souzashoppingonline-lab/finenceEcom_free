@@ -294,9 +294,21 @@ function adCard(a) {
       ${a.descricao ? `<details class="ad-sec"><summary><b>📝 Descrição do anúncio</b></summary><div class="ad-desc">${esc(a.descricao).replace(/\n/g, '<br>')}</div></details>` : ''}
       ${a.observacoes ? `<div class="ad-sec"><b>🗒️ Minhas anotações:</b> ${esc(a.observacoes)}</div>` : ''}
     </div>
+    <div class="ad-review-edit" data-edit-wrap="${a.id}" hidden>
+      <label>💬 Avaliações do concorrente (cole os textos — a IA usa na análise)
+        <textarea data-review-input="${a.id}" rows="5" placeholder="Cole aqui as avaliações, principalmente as de 1 a 3 estrelas (o que reclamam, o que falta)">${esc(a.comentarios_texto || '')}</textarea>
+      </label>
+      <div class="head-actions">
+        <button class="btn-cadastrar" style="max-width:160px" data-review-save="${a.id}">Salvar</button>
+        <button class="btn-ghost" data-review-cancel="${a.id}">Cancelar</button>
+      </div>
+    </div>
     <div class="ad-actions">
-      <label class="switch-sm"><input type="checkbox" data-mon="${a.id}" ${a.monitorar ? 'checked' : ''}/> monitorar 1×/dia</label>
-      <button class="btn-ghost" data-del-ad="${a.id}">Remover</button>
+      <label class="switch-sm"><input type="checkbox" data-mon="${a.id}" ${a.monitorar ? 'checked' : ''}/> atualizar 1×/dia</label>
+      <div class="head-actions" style="gap:6px">
+        <button class="btn-ghost" data-review-btn="${a.id}">💬 Avaliações</button>
+        <button class="btn-ghost" data-del-ad="${a.id}">Remover</button>
+      </div>
     </div>
   </div>`;
 }
@@ -367,6 +379,21 @@ function renderAds(productId, ads) {
     if (!confirm('Remover este concorrente?')) return;
     await api(`/api/analise/ads/${b.dataset.delAd}`, { method: 'DELETE' });
     openDetail(productId);
+  }));
+  // editor de avaliações por card
+  $('detail-ads').querySelectorAll('[data-review-btn]').forEach((b) => b.addEventListener('click', () => {
+    const w = $('detail-ads').querySelector(`[data-edit-wrap="${b.dataset.reviewBtn}"]`);
+    if (w) w.hidden = !w.hidden;
+  }));
+  $('detail-ads').querySelectorAll('[data-review-cancel]').forEach((b) => b.addEventListener('click', () => {
+    const w = $('detail-ads').querySelector(`[data-edit-wrap="${b.dataset.reviewCancel}"]`); if (w) w.hidden = true;
+  }));
+  $('detail-ads').querySelectorAll('[data-review-save]').forEach((b) => b.addEventListener('click', async () => {
+    const id = b.dataset.reviewSave;
+    const val = $('detail-ads').querySelector(`[data-review-input="${id}"]`).value;
+    b.disabled = true;
+    try { await api(`/api/analise/ads/${id}`, { method: 'PUT', body: JSON.stringify({ comentarios_texto: val }) }); openDetail(productId); }
+    catch (e) { alert(e.message); b.disabled = false; }
   }));
 }
 

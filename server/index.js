@@ -1724,6 +1724,28 @@ app.post('/api/analise/products/:id/ads', requireUser, async (req, res) => {
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao adicionar concorrente.' }); }
 });
 
+// Edita campos do concorrente à mão (ex.: colar avaliações, corrigir dados)
+app.put('/api/analise/ads/:adId', requireUser, async (req, res) => {
+  const adId = req.params.adId; const b = req.body || {};
+  const patch = {};
+  ['titulo', 'link', 'vendedor', 'cidade', 'estado', 'reputacao', 'vendas', 'descricao', 'comentarios_texto', 'observacoes', 'aval_dist'].forEach((k) => {
+    if (b[k] !== undefined) patch[k] = String(b[k] || '').trim() || null;
+  });
+  ['preco', 'preco_original', 'nota', 'comentarios'].forEach((k) => { if (b[k] !== undefined) patch[k] = Number(b[k]) || 0; });
+  if (b.is_full !== undefined) patch.is_full = !!b.is_full;
+  if (b.is_flex !== undefined) patch.is_flex = !!b.is_flex;
+  try {
+    if (supabase) {
+      const { error } = await supabase.from('analise_product_ads').update(patch).eq('id', adId).eq('user_id', req.userId);
+      if (error) throw error;
+    } else {
+      const a = memAnaliseAds.find((x) => String(x.id) === String(adId) && x.user_id === req.userId);
+      if (a) Object.assign(a, patch);
+    }
+    return res.json({ ok: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao editar concorrente.' }); }
+});
+
 app.post('/api/analise/ads/:adId/monitorar', requireUser, async (req, res) => {
   const adId = req.params.adId; const monitorar = !!req.body?.monitorar;
   try {
