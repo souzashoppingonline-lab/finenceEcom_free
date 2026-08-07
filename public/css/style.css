@@ -793,3 +793,16 @@ tbody tr:hover { background: #f7f9fc; }
 .vendas-table th,.vendas-table td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;font-size:.88rem}
 .vendas-table input{margin-top:0}
 .ad-vendas{font-size:.85rem}
+
+/* ponto de equilíbrio + simulador */
+.be-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.be-box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column}
+.be-box span{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.be-box b{font-size:1.1rem;color:var(--text)}
+.be-box small{color:var(--muted);font-size:.72rem;margin-top:2px}
+.sim{margin-top:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px}
+.sim label{font-size:.82rem;font-weight:600}
+.sim input{margin-top:6px}
+.sim-out{display:flex;gap:16px;margin-top:10px}
+.sim-out span{display:block;font-size:.72rem}
+.sim-out b{font-size:1.15rem}

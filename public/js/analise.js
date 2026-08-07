@@ -189,12 +189,30 @@ function analysisHtml(d, when, prod) {
   const lucro = P ? (P - custoFixo - taxaVal - impVal) : 0;
   const margem = P ? (lucro / P * 100) : 0;
   const custoReal = custoFixo;
+  // Ponto de equilíbrio e preço para margem-alvo (15%)
+  const pctVar = (taxaPct + impPct) / 100;
+  const ALVO = 15;
+  const breakEven = pctVar < 1 ? custoFixo / (1 - pctVar) : 0;
+  const precoAlvo = (pctVar + ALVO / 100) < 1 ? custoFixo / (1 - pctVar - ALVO / 100) : 0;
   const breakdown = prod ? `
     <p class="ia-p" style="font-size:.78rem;margin-top:8px;color:var(--muted)">
       <b>Custo fixo</b> = Compra ${money2(compra)} + Frete ${money2(frete)} + Embalagem ${money2(emb)} = ${money2(custoFixo)}<br>
       <b>Sobre a venda ${money2(P)}</b>: Taxa ML ${taxaPct}% (${money2(taxaVal)}) + Imposto ${impPct}% (${money2(impVal)})<br>
       <b>Lucro</b> = ${money2(P)} − ${money2(custoFixo)} − ${money2(taxaVal)} − ${money2(impVal)} = <b>${money2(lucro)}</b>
-    </p>` : '';
+    </p>
+    <div class="be-grid">
+      <div class="be-box"><span>⚖️ Preço de equilíbrio</span><b>${money2(breakEven)}</b><small>margem 0% (nem lucro nem prejuízo)</small></div>
+      <div class="be-box"><span>🎯 Preço p/ margem ${ALVO}%</span><b>${money2(precoAlvo)}</b><small>lucro de ${money2(precoAlvo * ALVO / 100)}/un.</small></div>
+    </div>
+    <div class="sim" data-custo="${custoFixo}" data-taxa="${taxaPct}" data-imp="${impPct}">
+      <label>🧮 Simular preço de venda
+        <input type="number" id="sim-preco" min="0" step="0.01" value="${P ? P.toFixed(2) : ''}" placeholder="Digite um preço" />
+      </label>
+      <div class="sim-out">
+        <div><span class="muted">Lucro/un.</span><b id="sim-lucro">—</b></div>
+        <div><span class="muted">Margem líq.</span><b id="sim-margem">—</b></div>
+      </div>
+    </div>` : '';
   const score = (d.score && d.score.valor != null) ? d.score.valor : (typeof d.score === 'number' ? d.score : 0);
   const verd = {
     VALE: { t: 'Vale a pena', c: 'v-ok', i: '✅' },
@@ -237,6 +255,25 @@ function analysisHtml(d, when, prod) {
       <h5 class="ia-sub sub-op">Próximos passos</h5>${ul(dec.proximos_passos)}
     </div>
   </div>`;
+}
+
+// Simulador de preço: recalcula lucro/margem ao vivo (sem IA)
+function bindSimulator() {
+  const box = document.querySelector('.sim');
+  const inp = $('sim-preco');
+  if (!box || !inp) return;
+  const custo = Number(box.dataset.custo) || 0, taxa = Number(box.dataset.taxa) || 0, imp = Number(box.dataset.imp) || 0;
+  const calc = () => {
+    const P = Number(inp.value) || 0;
+    const lucro = P ? (P - custo - P * taxa / 100 - P * imp / 100) : 0;
+    const margem = P ? (lucro / P * 100) : 0;
+    const lel = $('sim-lucro'), mel = $('sim-margem');
+    lel.textContent = money2(lucro); mel.textContent = margem.toFixed(2) + '%';
+    const col = lucro > 0 ? '#17915f' : (lucro < 0 ? '#e04545' : 'var(--muted)');
+    lel.style.color = col; mel.style.color = col;
+  };
+  inp.addEventListener('input', calc);
+  calc();
 }
 
 async function runAnalysis(productId, btn) {
@@ -372,6 +409,7 @@ async function openDetail(id) {
       : `<div class="dash-head-row"><h3 style="margin:0">🤖 Análise por IA</h3><small class="muted">${when}</small></div>
          <p class="muted">Esta análise foi gerada numa versão anterior e ficou incompleta. Clique em <b>🤖 Analisar com IA</b> para gerar de novo no novo formato.</p>`;
     $('detail-head').insertAdjacentHTML('beforeend', `<div class="ia-report">${inner}</div>`);
+    bindSimulator();
   }
   // CRIATIVOS p/ imagem — banner (opcional, gasta crédito)
   if (iaReady()) {
