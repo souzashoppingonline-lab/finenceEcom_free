@@ -741,3 +741,4 @@ tbody tr:hover { background: #f7f9fc; }
 .pc-kpi { background: #f4f7fb; border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; display: flex; flex-direction: column; min-width: 90px; }
 .pc-kpi b { font-size: 1.05rem; }
 @media (prefers-reduced-motion: reduce) { .pc-line, .pc-area, .pc-dot { animation: none; opacity: 1; stroke-dashoffset: 0; } }
+.ad-price-tag { display: inline-block; font-size: .62rem; font-weight: 700; color: var(--muted); background: #eef2f7; border-radius: 20px; padding: 1px 7px; margin-left: 6px; vertical-align: middle; text-transform: uppercase; letter-spacing: .3px; }

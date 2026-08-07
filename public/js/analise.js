@@ -346,7 +346,7 @@ function adCard(a) {
       <div class="ad-thumb">${foto ? `<img src="${esc(foto)}" alt="" loading="lazy" />` : '<span class="ad-noimg">sem imagem</span>'}</div>
       <div class="ad-info">
         <div class="ad-title">${a.link ? `<a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.titulo || a.ml_id || 'Concorrente')}</a>` : esc(a.titulo || a.ml_id || 'Concorrente')}</div>
-        <div class="ad-price">${a.preco != null ? money(a.preco) : '—'} ${a.preco_original && a.preco_original > a.preco ? `<s class="muted">${money(a.preco_original)}</s>` : ''}</div>
+        <div class="ad-price">${a.preco != null ? money(a.preco) : '—'} ${a.preco_original && a.preco_original > a.preco ? `<s class="muted">${money(a.preco_original)}</s>` : ''}<span class="ad-price-tag">último preço</span></div>
         <div class="ad-meta">
           <span>⭐ ${a.nota && a.nota > 0 ? a.nota : 'sem nota'}${a.comentarios ? ` (${a.comentarios})` : ''}</span>
           ${a.vendas ? `<span>📦 ${esc(a.vendas)}</span>` : ''}
