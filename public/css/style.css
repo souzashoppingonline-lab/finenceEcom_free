@@ -847,3 +847,10 @@ tbody tr:hover { background: #f7f9fc; }
 /* imagens de referência nos criativos */
 .crea-refs{display:flex;align-items:center;gap:6px;margin:8px 0;flex-wrap:wrap}
 .crea-refs img{width:38px;height:38px;object-fit:cover;border-radius:6px;border:1px solid var(--border)}
+
+/* modal de ajuda do token */
+.help-list{margin:6px 0 14px;padding-left:20px}
+.help-list li{margin:6px 0;font-size:.9rem}
+.help-list code,.help-box code{background:#eef2f7;padding:1px 5px;border-radius:4px;font-size:.82rem}
+.help-box{background:#f4f7fb;border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:.85rem;line-height:1.6;margin-top:8px}
+:root[data-theme="dark"] .help-list code,:root[data-theme="dark"] .help-box{background:#0f1622}

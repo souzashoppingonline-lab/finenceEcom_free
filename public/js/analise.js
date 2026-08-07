@@ -64,6 +64,33 @@ $('save-ia').addEventListener('click', async () => {
   $('save-ia').disabled = false;
 });
 
+$('token-help').addEventListener('click', () => {
+  openModal('❓ Como configurar o token de IA', `
+    <p class="muted">Você usa a sua própria chave — o custo do uso fica na sua conta do provedor. Escolha um dos dois:</p>
+
+    <h3 class="ia-h">🔵 Claude (Anthropic)</h3>
+    <ol class="help-list">
+      <li>Acesse <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a> e faça login.</li>
+      <li>No menu, vá em <b>Settings → API Keys</b> (ou <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">clique aqui</a>).</li>
+      <li>Clique em <b>Create Key</b>, dê um nome (ex.: "FinanceEcom") e <b>copie</b> a chave — ela começa com <code>sk-ant-api03-...</code> e só aparece uma vez.</li>
+      <li>Adicione saldo em <b>Billing → Add credits</b> (a API é pré-paga; US$ 5 já dá pra muitas análises). ⚠️ É separado da assinatura do Claude.ai/Claude Code.</li>
+      <li>Aqui na página: selecione <b>Claude (Anthropic)</b>, cole no campo <b>Token Claude</b> e clique <b>Salvar</b>.</li>
+    </ol>
+
+    <h3 class="ia-h">🟢 ChatGPT (OpenAI)</h3>
+    <ol class="help-list">
+      <li>Acesse <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a> e faça login.</li>
+      <li>Clique em <b>Create new secret key</b>, dê um nome e <b>copie</b> — começa com <code>sk-...</code> (só aparece uma vez).</li>
+      <li>Adicione saldo em <b>Settings → Billing</b> (também é pré-paga, separada do ChatGPT Plus).</li>
+      <li>Aqui: selecione <b>ChatGPT (OpenAI)</b>, cole no campo <b>Token ChatGPT</b> e <b>Salvar</b>.</li>
+    </ol>
+
+    <div class="help-box">
+      <b>🔒 Segurança:</b> sua chave é guardada criptografada e nunca é exibida de novo (só mascarada, ex.: <code>sk-ant••••1234</code>).<br>
+      <b>💡 Erros comuns:</b> "insufficient credits/balance" = falta carregar saldo · "invalid x-api-key" = chave errada, gere outra · use a <b>API Key do Console</b>, não o token do Claude Code.
+    </div>`);
+});
+
 $('copy-token').addEventListener('click', () => {
   $('ext-token').select();
   navigator.clipboard?.writeText($('ext-token').value);
