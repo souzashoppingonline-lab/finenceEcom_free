@@ -165,7 +165,7 @@ async function openDetail(id) {
         <button class="btn-ghost" data-del="${p.id}">Excluir</button>
       </div>
     </div>
-    <p class="muted">${p.fornecedor ? esc(p.fornecedor) + ' · ' : ''}Compra ${money(p.preco_compra)} · Taxa MP ${money(p.taxa_mp)} · Imposto ${money(p.imposto)}</p>
+    <p class="muted">${p.fornecedor ? esc(p.fornecedor) + ' · ' : ''}Compra ${money(p.preco_compra)} · Taxa MP ${(Number(p.taxa_mp) || 0)}% · Imposto ${(Number(p.imposto) || 0)}%</p>
     ${isActive ? '<p class="c-ok">🟢 Este produto está marcado como “em coleta”. A extensão vai recoletar os concorrentes salvos 1×/dia (Fase 4).</p>' : ''}
   </div>`;
 
