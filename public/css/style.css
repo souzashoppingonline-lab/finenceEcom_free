@@ -843,3 +843,7 @@ tbody tr:hover { background: #f7f9fc; }
 .pb-lbl.pb-bot{top:20px;color:var(--muted)}
 .pb-ends{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);margin-top:44px}
 .pb-note{font-size:.85rem;color:var(--text);margin-top:10px}
+
+/* imagens de referência nos criativos */
+.crea-refs{display:flex;align-items:center;gap:6px;margin:8px 0;flex-wrap:wrap}
+.crea-refs img{width:38px;height:38px;object-fit:cover;border-radius:6px;border:1px solid var(--border)}

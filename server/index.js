@@ -2226,12 +2226,14 @@ app.get('/api/analise/monitor/:mlb', requireUser, async (req, res) => {
 // ===========================================================================
 const SYSTEM_CRIATIVOS = `Voce e diretor de arte de e-commerce. Gera BRIEFS DE IMAGEM (criativos) para anunciar um produto no Mercado Livre. Cada criativo foca UM angulo de persuasao (sem repetir), escolhendo os 7 mais fortes entre: Gancho, Proposta de valor, Beneficios, Provas, Quebra de objecoes, Autoridade, Diferenciais, Clareza, Urgencia, Confianca, Especificacoes, CTA implicito. Base: elogios das avaliacoes viram Provas/Beneficios; reclamacoes viram Quebra de objecoes; dados dos concorrentes viram Diferenciais.
 
+IMPORTANTE - IDENTIDADE VISUAL: o contexto traz "imagens_referencia" (URLs das fotos de capa dos anuncios do mesmo produto/categoria). Todo criativo deve MANTER a caracteristica visual real do produto mostrada nessas capas (formato da embalagem, cores, proporcoes, tipo de produto) — NAO invente um produto diferente. Em "composicao.detalhe_produto" descreva preservando fielmente essas caracteristicas e cite que deve usar as fotos de referencia. Em cada objeto inclua o campo "imagens_referencia" com as URLs que servem de base para aquele criativo.
+
 Responda SOMENTE com JSON valido (sem markdown, sem texto fora do JSON), EXATAMENTE assim:
 {"criativos":[ 7 objetos ]}
 Cada objeto:
-{"angulo":"","objetivo":"","composicao":{"cenario":"","sujeito":"","detalhe_produto":"","camera":""},"direcao_de_arte":{"iluminacao":"","paleta_cores":"","estilo_visual":""},"elementos_visual_copy":{"texto_principal":"","texto_secundario":"","posicao_texto":"","estilo_texto":"","grafismo":"","selo":""},"formato":"1:1"}
+{"angulo":"","objetivo":"","imagens_referencia":[],"composicao":{"cenario":"","sujeito":"","detalhe_produto":"","camera":""},"direcao_de_arte":{"iluminacao":"","paleta_cores":"","estilo_visual":""},"elementos_visual_copy":{"texto_principal":"","texto_secundario":"","posicao_texto":"","estilo_texto":"","grafismo":"","selo":""},"formato":"1:1"}
 
-Regras: copy curta em pt-BR servindo ao angulo; "detalhe_produto" pede para preservar a identidade visual do produto conforme fotos de referencia; "estilo_visual" fotorealista premium (8k, sharp focus, depth of field). Nunca invente selos, certificacoes ou provas falsas. Seja CONCISO para o JSON dos 7 caber inteiro.`;
+Regras: copy curta em pt-BR servindo ao angulo; "detalhe_produto" preserva a identidade visual do produto conforme as imagens_referencia; "estilo_visual" fotorealista premium (8k, sharp focus, depth of field). Nunca invente selos, certificacoes ou provas falsas. Seja CONCISO para o JSON dos 7 caber inteiro.`;
 
 // Recupera objetos de criativo completos mesmo se o array vier truncado
 function salvageCriativos(text) {
@@ -2261,16 +2263,30 @@ function salvageCriativos(text) {
   return out;
 }
 
+function firstFotoUrl(fotos) {
+  let arr = fotos;
+  if (typeof arr === 'string') { try { arr = JSON.parse(arr); } catch (_) { return arr; } }
+  if (Array.isArray(arr) && arr.length) return typeof arr[0] === 'object' ? (arr[0].url || arr[0].src) : arr[0];
+  return null;
+}
+
 function buildCreativesContext(product, ads) {
-  const concorrentes = (ads || []).slice(0, 5).map((a) => ({
-    titulo: a.titulo || null,
-    preco: a.preco != null ? Number(a.preco) : null,
-    ficha: a.highlights ? (Array.isArray(a.highlights) ? a.highlights.slice(0, 8) : String(a.highlights).slice(0, 200)) : null,
-    avaliacoes: a.comentarios_texto ? String(a.comentarios_texto).slice(0, 300) : null,
-  }));
+  const imagens_referencia = [];
+  const concorrentes = (ads || []).slice(0, 5).map((a) => {
+    const capa = firstFotoUrl(a.fotos);
+    if (capa) imagens_referencia.push(capa);
+    return {
+      titulo: a.titulo || null,
+      preco: a.preco != null ? Number(a.preco) : null,
+      capa: capa || null,
+      ficha: a.highlights ? (Array.isArray(a.highlights) ? a.highlights.slice(0, 8) : String(a.highlights).slice(0, 200)) : null,
+      avaliacoes: a.comentarios_texto ? String(a.comentarios_texto).slice(0, 300) : null,
+    };
+  });
   return JSON.stringify({
     produto: product.produto,
     resumo_analise: product.analise_ia ? String(product.analise_ia).slice(0, 600) : null,
+    imagens_referencia,
     concorrentes,
   });
 }

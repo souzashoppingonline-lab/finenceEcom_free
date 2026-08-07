@@ -357,6 +357,7 @@ function creativesHtml(list) {
       <div class="dash-head-row"><span class="crea-tag">${i + 1}. ${esc(ang)}</span>
         <button class="btn-ghost crea-copy" data-json='${esc(json)}'>📋 Copiar</button></div>
       ${c.objetivo ? `<p class="crea-obj">🎯 ${esc(c.objetivo)}</p>` : ''}
+      ${Array.isArray(c.imagens_referencia) && c.imagens_referencia.length ? `<div class="crea-refs"><span class="muted">🖼️ Base:</span>${c.imagens_referencia.slice(0, 4).map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="ref" loading="lazy"/></a>`).join('')}</div>` : ''}
       ${cp.texto_principal ? `<p class="crea-h">“${esc(cp.texto_principal)}”</p>` : ''}
       ${cp.texto_secundario ? `<p class="muted" style="font-size:.82rem">${esc(cp.texto_secundario)}</p>` : ''}
       <details style="margin-top:8px"><summary class="muted">Ver JSON completo</summary>
