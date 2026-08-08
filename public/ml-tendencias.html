@@ -33,6 +33,7 @@
     <section class="tab-panel" data-panel="caca">
       <div class="card" style="margin-bottom:18px">
         <p class="muted">Veja o <b>ranking de mais vendidos</b> e a <b>faixa de preço vencedora</b> de uma categoria. Preencha a categoria ou uma palavra-chave.</p>
+        <button type="button" class="btn-help" data-help="caca">❓ Como usar esta aba</button>
         <form id="op-form" class="op-filters" style="grid-template-columns:1fr 1fr auto;align-items:end">
           <label>Categoria (opcional)<input id="op-cat" placeholder="Ex.: rações" /></label>
           <label>Palavra-chave (opcional)<input id="op-q" placeholder="Ex.: ração gato castrado" /></label>
@@ -47,6 +48,7 @@
     <section class="tab-panel" data-panel="buybox" hidden>
       <div class="card" style="margin-bottom:18px">
         <p class="muted">Descubra <b>quanto custa ganhar a Buy Box</b> (a caixa de compra) de cada produto de catálogo — o preço vencedor, o 2º colocado e o quão apertada está a disputa.</p>
+        <button type="button" class="btn-help" data-help="buybox">❓ Como usar esta aba</button>
         <form class="op-filters intel-form" data-endpoint="buybox" style="grid-template-columns:1fr 1fr auto;align-items:end">
           <label>Categoria (opcional)<input name="cat" placeholder="Ex.: fones de ouvido" /></label>
           <label>Palavra-chave (opcional)<input name="q" placeholder="Ex.: fone bluetooth" /></label>
@@ -60,6 +62,7 @@
     <section class="tab-panel" data-panel="dores" hidden>
       <div class="card" style="margin-bottom:18px">
         <p class="muted">O que os clientes <b>mais reclamam</b> nos campeões da categoria. Use as dores para vender melhor que a concorrência.</p>
+        <button type="button" class="btn-help" data-help="dores">❓ Como usar esta aba</button>
         <form class="op-filters intel-form" data-endpoint="dores" style="grid-template-columns:1fr 1fr auto;align-items:end">
           <label>Categoria (opcional)<input name="cat" placeholder="Ex.: liquidificadores" /></label>
           <label>Palavra-chave (opcional)<input name="q" placeholder="Ex.: liquidificador" /></label>
@@ -73,6 +76,7 @@
     <section class="tab-panel" data-panel="barreira" hidden>
       <div class="card" style="margin-bottom:18px">
         <p class="muted">O quão <b>difícil é entrar</b> nesta categoria: % de anúncios no Full e a reputação dos vendedores que dominam.</p>
+        <button type="button" class="btn-help" data-help="barreira">❓ Como usar esta aba</button>
         <form class="op-filters intel-form" data-endpoint="barreira" style="grid-template-columns:1fr 1fr auto;align-items:end">
           <label>Categoria (opcional)<input name="cat" placeholder="Ex.: suplementos" /></label>
           <label>Palavra-chave (opcional)<input name="q" placeholder="Ex.: whey protein" /></label>
@@ -86,6 +90,7 @@
     <section class="tab-panel" data-panel="nichos" hidden>
       <div class="card" style="margin-bottom:18px">
         <p class="muted">As <b>subcategorias com menos concorrência</b> dentro do seu mercado — onde ainda dá para crescer.</p>
+        <button type="button" class="btn-help" data-help="nichos">❓ Como usar esta aba</button>
         <form class="op-filters intel-form" data-endpoint="nichos" style="grid-template-columns:1fr 1fr auto;align-items:end">
           <label>Categoria (opcional)<input name="cat" placeholder="Ex.: pet shop" /></label>
           <label>Palavra-chave (opcional)<input name="q" placeholder="Ex.: ração gato" /></label>
@@ -99,6 +104,7 @@
     <section class="tab-panel" data-panel="perfeito" hidden>
       <div class="card" style="margin-bottom:18px">
         <p class="muted">O <b>checklist de ficha técnica</b> da categoria: atributos obrigatórios e recomendados para o anúncio ranquear.</p>
+        <button type="button" class="btn-help" data-help="perfeito">❓ Como usar esta aba</button>
         <form class="op-filters intel-form" data-endpoint="perfeito" style="grid-template-columns:1fr 1fr auto;align-items:end">
           <label>Categoria (opcional)<input name="cat" placeholder="Ex.: celulares" /></label>
           <label>Palavra-chave (opcional)<input name="q" placeholder="Ex.: smartphone" /></label>
@@ -112,6 +118,7 @@
     <section class="tab-panel" data-panel="descobrir" hidden>
       <div class="card" style="margin-bottom:18px">
         <p class="muted">Busque no <b>catálogo oficial</b> do Mercado Livre — produtos que você pode anunciar por catálogo.</p>
+        <button type="button" class="btn-help" data-help="descobrir">❓ Como usar esta aba</button>
         <form class="op-filters intel-form" data-endpoint="descobrir" style="grid-template-columns:1fr auto;align-items:end">
           <label>Buscar produto<input name="q" placeholder="Ex.: echo dot 5" /></label>
           <button type="submit" class="btn-cadastrar" style="max-width:200px;margin:0">🧭 Buscar</button>
@@ -123,6 +130,7 @@
     <!-- ABA TENDÊNCIAS -->
     <section class="tab-panel" data-panel="tend" hidden>
       <div class="card" style="margin-bottom:20px">
+        <button type="button" class="btn-help" data-help="tend" style="margin-bottom:10px">❓ Como usar esta aba</button>
         <form id="ml-form" class="head-actions" style="gap:10px;flex-wrap:wrap">
           <input type="text" id="ml-q" placeholder="Digite um produto/categoria (ex.: ração gato castrado)" style="flex:1;min-width:260px" />
           <button type="submit" class="btn-cadastrar" style="max-width:180px;margin:0">🔍 Ver tendências</button>
@@ -140,6 +148,13 @@
         </div>
       </div>
     </section>
+    <!-- MODAL: Como usar a aba -->
+    <div id="help-modal" class="ia-modal" hidden>
+      <div class="ia-modal-box help-box">
+        <button type="button" id="help-close" class="ia-modal-x" aria-label="Fechar">✕</button>
+        <div id="help-content"></div>
+      </div>
+    </div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

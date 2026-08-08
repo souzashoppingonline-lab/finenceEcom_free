@@ -960,3 +960,17 @@ tbody tr:hover { background: #f7f9fc; }
 .btn-pdf{background:#eef4ff;color:#1e6fff;border:1px solid #cfe0ff;border-radius:8px;padding:8px 16px;font-weight:600;font-size:.85rem;cursor:pointer}
 .btn-pdf:hover{background:#dce9ff}
 :root[data-theme="dark"] .btn-pdf{background:#12203a;border-color:#1e3a6a;color:#7db0ff}
+/* Botão "Como usar esta aba" + modal de ajuda */
+.btn-help{display:inline-flex;align-items:center;gap:6px;background:transparent;color:#1e6fff;border:1px solid #cfe0ff;border-radius:8px;padding:7px 14px;font-weight:600;font-size:.85rem;cursor:pointer;margin:6px 0 12px}
+.btn-help:hover{background:#eef4ff}
+:root[data-theme="dark"] .btn-help{border-color:#1e3a6a;color:#7db0ff}
+:root[data-theme="dark"] .btn-help:hover{background:#12203a}
+.help-box{max-width:640px;padding:18px 24px 24px;position:relative}
+.ia-modal-x{position:absolute;top:14px;right:16px;background:transparent;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted,#889);line-height:1}
+.ia-modal-x:hover{color:var(--text)}
+.help-goal{background:#eef4ff;border-radius:8px;padding:10px 14px;font-size:.92rem}
+:root[data-theme="dark"] .help-goal{background:#12203a}
+.help-steps{margin:6px 0 6px 4px;padding-left:20px}
+.help-steps li{margin:5px 0}
+.help-tip{margin-top:16px;background:#fff8e6;border-left:3px solid #f5b301;border-radius:0 8px 8px 0;padding:10px 14px;font-size:.9rem}
+:root[data-theme="dark"] .help-tip{background:#241d0e}

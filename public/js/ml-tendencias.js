@@ -310,6 +310,90 @@ document.querySelectorAll('.intel-form').forEach((form) => {
   });
 });
 
+// ===========================================================================
+// "Como usar esta aba" — modal de ajuda por aba
+// ===========================================================================
+const HELP = {
+  caca: {
+    t: '📈 Inteligência da Categoria',
+    o: 'Ter um raio-x rápido de qualquer mercado: quem vende mais, a que preço e com quais atributos.',
+    p: ['Digite a <b>categoria</b> (ex.: <i>rações</i>) ou uma <b>palavra-chave</b> (ex.: <i>ração gato castrado</i>).', 'Clique em <b>Analisar categoria</b>.'],
+    v: ['🏆 <b>Ranking</b> dos mais vendidos com preço e se é FULL.', '💰 <b>Faixa de preço vencedora</b> — onde os campeões concentram o preço.', '🥇 <b>Marcas</b> que dominam e 🧬 <b>atributos</b> em comum entre os líderes.', '🏁 Total de anúncios competindo (tamanho da disputa).'],
+    d: 'Use para decidir <b>por quanto vender</b> e <b>quais características</b> o seu anúncio precisa ter para competir de igual para igual.',
+  },
+  buybox: {
+    t: '🥇 Buy Box',
+    o: 'Saber exatamente quanto custa <b>ganhar a caixa de compra</b> (o botão “Comprar”) nos produtos de catálogo.',
+    p: ['Informe a <b>categoria</b> ou a <b>palavra-chave</b> do produto de catálogo.', 'Clique em <b>Analisar Buy Box</b>.'],
+    v: ['💚 <b>Preço vencedor</b> atual da Buy Box.', '⚪ Preço do <b>2º colocado</b> e a <b>folga</b> entre eles.', '🎯 <b>Preço-alvo</b> sugerido para você vencer a caixa.', '👥 Quantos vendedores estão disputando aquele produto.'],
+    d: 'Priorize os produtos com <b>folga pequena</b> (marcados em vermelho): são os mais fáceis de conquistar baixando poucos centavos. Exporte em PDF para levar à reunião.',
+  },
+  dores: {
+    t: '😖 Dores do Cliente',
+    o: 'Descobrir o que os clientes <b>mais reclamam</b> nos produtos campeões — e usar isso a seu favor.',
+    p: ['Informe a <b>categoria</b> ou a <b>palavra-chave</b>.', 'Clique em <b>Ver dores</b>.'],
+    v: ['⭐ <b>Distribuição das notas</b> (1 a 5 estrelas) da categoria.', '😖 <b>Reclamações reais</b> (avaliações com nota ≤ 3), com o texto do cliente.', '📊 Nota média e total de avaliações.'],
+    d: 'Transforme cada reclamação em <b>diferencial do seu anúncio</b>: se reclamam de “bateria fraca”, destaque a autonomia na sua foto e descrição. Ótimo insumo para a IA de criativos.',
+  },
+  barreira: {
+    t: '🚧 Barreira de Entrada',
+    o: 'Medir o <b>grau de dificuldade</b> de entrar em uma categoria antes de investir.',
+    p: ['Informe a <b>categoria</b> ou a <b>palavra-chave</b>.', 'Clique em <b>Medir barreira</b>.'],
+    v: ['🧮 <b>Score 0–100</b>: Acessível, Moderada ou Difícil.', '📦 <b>% de anúncios no Full</b> (quanto mais, mais logística exige).', '🏅 Quantos vendedores são <b>Platinum/Gold</b>.', '👑 <b>Tabela dos vendedores</b> que dominam, com reputação, vendas e estado.'],
+    d: 'Categorias com score alto exigem Full e reputação para competir. Se você está começando, prefira as <b>Acessíveis</b>. Exporte o PDF para comparar mercados.',
+  },
+  nichos: {
+    t: '🗺️ Mapa de Nichos',
+    o: 'Encontrar <b>subcategorias com menos concorrência</b> dentro de um mercado grande.',
+    p: ['Informe a <b>categoria</b> ampla (ex.: <i>pet shop</i>) ou uma palavra-chave.', 'Clique em <b>Mapear nichos</b>.'],
+    v: ['📉 Subcategorias <b>ordenadas do menos ao mais concorrido</b>.', '🔢 Quantidade de anúncios em cada nicho.', '🏁 Total de anúncios da categoria-mãe.'],
+    d: 'Os nichos no <b>topo da lista</b> têm menos anúncios = mais espaço para você aparecer. Combine com a aba Barreira para achar nichos fáceis <b>e</b> pouco concorridos.',
+  },
+  perfeito: {
+    t: '✅ Anúncio Perfeito',
+    o: 'Montar a <b>ficha técnica completa</b> que o Mercado Livre espera para o anúncio ranquear.',
+    p: ['Informe a <b>categoria</b> ou a <b>palavra-chave</b> do produto.', 'Clique em <b>Ver checklist</b>.'],
+    v: ['🔴 Atributos <b>obrigatórios</b> (sem eles o anúncio nem publica direito).', '🟢 Atributos <b>recomendados</b> que ajudam no ranqueamento.', '📋 Exemplos de valores aceitos para cada campo.'],
+    d: 'Preencha <b>todos os obrigatórios</b> e o máximo de recomendados: anúncios com ficha completa aparecem mais nas buscas e nos filtros.',
+  },
+  descobrir: {
+    t: '🧭 Descobrir Produtos',
+    o: 'Buscar direto no <b>catálogo oficial</b> do Mercado Livre produtos que você pode anunciar.',
+    p: ['Digite o <b>nome do produto</b> (ex.: <i>echo dot 5</i>).', 'Clique em <b>Buscar</b>.'],
+    v: ['🧭 Produtos de <b>catálogo</b> com foto, nome e preço da Buy Box.', '🔗 Link direto para a página do produto no ML.'],
+    d: 'Encontre o produto de catálogo certo e depois analise-o nas abas <b>Buy Box</b> e <b>Dores do Cliente</b> antes de anunciar.',
+  },
+  tend: {
+    t: '🔥 Tendências',
+    o: 'Ver as <b>palavras mais buscadas</b> do momento em uma categoria.',
+    p: ['Digite um <b>produto/categoria</b>.', 'Clique em <b>Ver tendências</b>.'],
+    v: ['🔥 <b>Palavras em alta</b> (o que as pessoas estão pesquisando).', '🏆 <b>Mais vendidos</b> da categoria detectada.'],
+    d: 'Use as palavras em alta no <b>título e nas tags</b> do seu anúncio para pegar carona nas buscas do momento.',
+  },
+};
+
+function openHelp(key) {
+  const h = HELP[key]; if (!h) return;
+  const li = (arr) => '<ul>' + arr.map((x) => `<li>${x}</li>`).join('') + '</ul>';
+  $('help-content').innerHTML = `
+    <div class="ia-modal-head" style="padding:16px 0;position:static;border-radius:0"><h3>${h.t} — Como usar</h3></div>
+    <div class="ia-modal-body" style="padding:0">
+      <p class="help-goal">🎯 <b>Para que serve:</b> ${h.o}</p>
+      <h4 class="ia-h">Passo a passo</h4>
+      <ol class="help-steps">${h.p.map((x) => `<li>${x}</li>`).join('')}</ol>
+      <h4 class="ia-h">O que a aba mostra</h4>
+      ${li(h.v)}
+      <div class="help-tip">💡 <b>Como usar na prática:</b> ${h.d}</div>
+    </div>`;
+  $('help-modal').hidden = false;
+}
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.btn-help');
+  if (btn) { openHelp(btn.dataset.help); return; }
+});
+$('help-close').addEventListener('click', () => { $('help-modal').hidden = true; });
+$('help-modal').addEventListener('click', (e) => { if (e.target === $('help-modal')) $('help-modal').hidden = true; });
+
 (async () => {
   const session = await initShell('mltend');
   if (!session) return;
