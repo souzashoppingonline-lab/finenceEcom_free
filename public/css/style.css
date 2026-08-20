@@ -1082,3 +1082,6 @@ tbody tr:hover { background: #f7f9fc; }
 .tp-dot.is-active{border-color:#fff;box-shadow:0 0 0 2px var(--accent), 0 2px 8px rgba(0,0,0,.35);transform:scale(1.12)}
 :root.sidebar-collapsed .theme-picker{flex-direction:column;gap:6px;padding:8px 4px}
 :root.sidebar-collapsed .tp-dots{flex-direction:column}
+/* Seletor de horário inline no cabeçalho dos concorrentes */
+.ad-hour{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;font-weight:600;color:var(--muted)}
+.ad-hour select{margin:0}

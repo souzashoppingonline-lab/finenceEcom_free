@@ -840,6 +840,12 @@ function renderAds(productId, ads) {
           <option value="rating"${adSort === 'rating' ? ' selected' : ''}>⭐ Melhor nota</option>
           <option value="reviews"${adSort === 'reviews' ? ' selected' : ''}>💬 Mais avaliações</option>
         </select>
+        <label class="ad-hour" title="Horário em que a extensão atualiza os preços marcados (1×/dia)">⏰ Monitorar às
+          <select id="ad-monitor-hour" class="filter-inp">
+            <option value="">qualquer hora</option>
+            ${Array.from({ length: 24 }, (_, h) => `<option value="${h}"${String(aiState.monitor_hour) === String(h) ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}
+          </select>
+        </label>
         <button id="ad-refresh" class="btn-ghost">🔄 Atualizar</button>
         <button id="ad-new" class="btn-inline">+ Adicionar concorrente</button>
       </div>
@@ -889,6 +895,16 @@ function renderAds(productId, ads) {
   $('ad-filter').addEventListener('change', (e) => { adFilter = e.target.value; renderAds(lastProductId, lastAds); });
   $('ad-sort').addEventListener('change', (e) => { adSort = e.target.value; renderAds(lastProductId, lastAds); });
   $('ad-refresh').addEventListener('click', () => openDetail(productId));
+  $('ad-monitor-hour')?.addEventListener('change', async (e) => {
+    const v = e.target.value;
+    e.target.disabled = true;
+    try {
+      await api('/api/ai-settings', { method: 'PUT', body: JSON.stringify({ monitor_hour: v === '' ? null : Number(v) }) });
+      aiState.monitor_hour = v === '' ? null : Number(v);
+      if ($('monitor-hour')) $('monitor-hour').value = v; // mantém o outro seletor em sincronia
+    } catch (_) {}
+    e.target.disabled = false;
+  });
   // histórico de preço: abre modal com gráfico animado
   $('detail-ads').querySelectorAll('[data-hist-btn]').forEach((b) => b.addEventListener('click', () => {
     openModal(`📈 Histórico de preço <small class="muted" style="font-weight:400">${esc(b.dataset.histTitle || '')}</small>`, '<p class="muted">Carregando…</p>');
