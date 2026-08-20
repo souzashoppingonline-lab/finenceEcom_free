@@ -64,7 +64,16 @@
           </label>
           <button id="save-hour" class="btn-ghost" style="max-width:180px">Salvar horário</button>
         </div>
-        <small class="muted">Com a extensão instalada e o navegador aberto, os anúncios marcados como <b>“atualizar automaticamente”</b> são recoletados 1×/dia a partir do horário escolhido — sem você precisar abrir a extensão. <span id="hour-msg"></span></small>
+        <div class="info-note">
+          <b>ℹ️ Como funciona a coleta automática</b>
+          <ul>
+            <li>Basta o <b>Chrome estar aberto</b> — <u>não</u> precisa abrir a extensão, nem deixar a aba do Mercado Livre ou este painel aberto.</li>
+            <li>A extensão abre uma aba invisível, lê os dados e fecha sozinha. Você nem vê.</li>
+            <li>Cada anúncio marcado com <b>🔄 Atualizar automaticamente</b> é recoletado <b>1×/dia</b>, a partir do horário escolhido acima.</li>
+            <li>Se o Chrome ficar fechado no horário, a coleta apenas <b>adia</b> para quando você reabrir o navegador — nada é perdido.</li>
+          </ul>
+        </div>
+        <p class="muted" id="hour-msg" style="margin:6px 0 0"></p>
 
         <hr style="border:none;border-top:1px solid var(--border);margin:18px 0" />
         <span class="field-label">🔑 Token da Extensão (cole na extensão do Chrome)</span>

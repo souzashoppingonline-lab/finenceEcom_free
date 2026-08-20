@@ -1008,3 +1008,9 @@ tbody tr:hover { background: #f7f9fc; }
   background:color-mix(in srgb,var(--primary) 8%,transparent);border:1px solid color-mix(in srgb,var(--primary) 22%,var(--border));
   padding:6px 11px;border-radius:999px;cursor:pointer}
 .switch-sm input{accent-color:var(--primary);width:15px;height:15px}
+/* Aviso informativo (coleta automática) */
+.info-note{background:#eff6ff;border:1px solid #cfe0ff;border-left:3px solid #1e6fff;border-radius:0 10px 10px 0;padding:11px 14px;margin-top:10px;font-size:.86rem}
+.info-note b{color:var(--text)}
+.info-note ul{margin:8px 0 0;padding-left:18px;color:var(--muted)}
+.info-note li{margin:4px 0}
+:root[data-theme="dark"] .info-note{background:#0f1b2e;border-color:#1e3a6a}
