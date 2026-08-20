@@ -1254,3 +1254,7 @@ tbody tr:hover { background: #f7f9fc; }
 .fc-closed-badge{background:color-mix(in srgb,#12905a 12%,transparent);color:#0a7c3f;font-weight:700;padding:9px 14px;border-radius:8px;font-size:.88rem}
 .fc-obs-label{display:block;font-size:.88rem;font-weight:600}
 .fc-obs-label textarea{width:100%;margin-top:6px;padding:11px;border:1px solid var(--border);border-radius:9px;font-family:inherit;font-size:.95rem;resize:vertical}
+/* Campo de categoria com botão "Nova" */
+.cat-field{display:flex;gap:8px;align-items:stretch;margin-top:6px}
+.cat-field .cat-select{margin-top:0;flex:1}
+.cat-field .cat-add{margin:0;width:auto;flex:none;white-space:nowrap;padding:0 14px;font-size:.85rem}

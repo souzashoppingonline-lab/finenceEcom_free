@@ -161,6 +161,43 @@ document.querySelector('#exp-table tbody').addEventListener('click', async (e) =
 $('sel-month').addEventListener('change', refresh);
 $('sel-year').addEventListener('change', refresh);
 
+// ---------- Categorias predefinidas + personalizadas ----------
+const DEFAULT_CATS = [
+  'Compra de produtos / Estoque', 'Aluguel', 'Salários / Pró-labore', 'Contador',
+  'Software / Assinaturas', 'Marketing / Ads', 'Embalagens', 'Frete / Logística',
+  'Impostos', 'Taxas bancárias', 'Energia / Água', 'Internet / Telefone',
+  'Manutenção', 'Pró-labore', 'Outros',
+];
+let userCats = [];
+function allCats() {
+  const fromExp = (financeData?.expenses || []).map((e) => e.category).filter(Boolean);
+  return [...new Set([...DEFAULT_CATS, ...userCats, ...fromExp])].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+function renderCatOptions() {
+  const cats = allCats();
+  document.querySelectorAll('.cat-select').forEach((sel) => {
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Selecione…</option>' + cats.map((c) => `<option value="${escH(c)}">${escH(c)}</option>`).join('');
+    if (cur) sel.value = cur;
+  });
+}
+async function loadCategories() {
+  try { const { items } = await dreApi('/api/lists?type=despesa_categoria'); userCats = (items || []).map((i) => i.name); } catch (_) {}
+  renderCatOptions();
+}
+document.querySelectorAll('.cat-add').forEach((btn) => btn.addEventListener('click', async () => {
+  const nome = (prompt('Nome da nova categoria:') || '').trim();
+  if (!nome) return;
+  if (!allCats().includes(nome)) {
+    try { await dreApi('/api/lists', { method: 'POST', body: JSON.stringify({ type: 'despesa_categoria', name: nome }) }); } catch (e) { alert(e.message); return; }
+    userCats.push(nome);
+  }
+  renderCatOptions();
+  const target = btn.dataset.catTarget;
+  const sel = document.querySelector(`.cat-select[data-cat="${target}"]`);
+  if (sel) sel.value = nome;
+}));
+
 // ---------- Modal: custo recorrente / dividido ----------
 let recMode = 'fixed', recTipo = 'fixed';
 function addMonths(ym, n) { // 'YYYY-MM' + n meses
@@ -248,4 +285,5 @@ $('rec-save').addEventListener('click', async () => {
   $('sel-year').innerHTML = [yr - 1, yr, yr + 1].map((y) => `<option ${y === yr ? 'selected' : ''}>${y}</option>`).join('');
   $('exp-form').date.value = todayStr();
   await refresh();
+  await loadCategories();
 })();

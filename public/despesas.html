@@ -42,7 +42,12 @@
               <input type="hidden" name="type" value="fixed" />
               <div class="two-col">
                 <label>Data<input type="date" name="date" required /></label>
-                <label>Categoria<input type="text" name="category" placeholder="Ex.: Aluguel, Software..." /></label>
+                <label>Categoria
+                  <div class="cat-field">
+                    <select name="category" class="cat-select" data-cat="form"><option value="">Selecione…</option></select>
+                    <button type="button" class="btn-ghost cat-add" data-cat-target="form" title="Adicionar categoria">+ Nova</button>
+                  </div>
+                </label>
               </div>
               <label>Descrição<input type="text" name="description" required placeholder="Ex.: Aluguel de galpão, contador..." /></label>
               <label>Valor (R$)<input type="number" name="value" min="0" step="0.01" required placeholder="0,00" /></label>
@@ -78,7 +83,12 @@
 
                 <div class="two-col" style="margin-top:12px">
                   <label>Mês de início<input type="month" id="rec-start" /></label>
-                  <label>Categoria<input type="text" id="rec-cat" placeholder="Ex.: Estoque, Aluguel..." /></label>
+                  <label>Categoria
+                    <div class="cat-field">
+                      <select id="rec-cat" class="cat-select" data-cat="rec"><option value="">Selecione…</option></select>
+                      <button type="button" class="btn-ghost cat-add" data-cat-target="rec" title="Adicionar categoria">+ Nova</button>
+                    </div>
+                  </label>
                 </div>
                 <label>Descrição<input type="text" id="rec-desc" placeholder="Ex.: Compra de rações" /></label>
 
