@@ -1273,3 +1273,6 @@ tbody tr:hover { background: #f7f9fc; }
 .cat-row .btn-del:hover{background:#fdeaea;border-color:#e5484d}
 :root[data-theme="dark"] .cat-row .btn-del:hover{background:#2a1416}
 .cat-field input{flex:1;margin-top:0}
+/* Selo de desconto + parcelamento no card do concorrente */
+.ad-off{display:inline-block;background:#e5484d;color:#fff;font-size:.68rem;font-weight:800;padding:1px 7px;border-radius:6px;margin-left:6px;vertical-align:middle}
+.ad-parc{font-size:.8rem;color:var(--muted);margin-top:2px}

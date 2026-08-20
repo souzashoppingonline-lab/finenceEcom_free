@@ -86,6 +86,30 @@
     const m = t.match(/Perguntas\s*\((\d+)\)/i) || t.match(/(\d+)\s*pergunta/i);
     return m ? Number(m[1]) : null;
   }
+  // parcelamento ("12x de R$ 8,32 sem juros")
+  function getParcelamento() {
+    const el = $('.ui-pdp-payment') || $('[class*="installments"]') || $('.ui-pdp-price__subtitles');
+    const src = txt(el) || (document.body.innerText || '');
+    const m = src.match(/(\d{1,2})\s*x\s*(?:de\s*)?R\$\s*([\d.,]+)\s*(sem juros|com juros)?/i);
+    if (!m) return null;
+    const semJuros = /sem/i.test(m[3] || '');
+    return `${m[1]}x de R$ ${m[2]}${m[3] ? ' ' + (semJuros ? 'sem juros' : 'com juros') : ''}`.trim();
+  }
+  // estoque disponível
+  function getEstoque() {
+    // seletor de quantidade costuma expor "N disponíveis"
+    const q = txt($('.ui-pdp-buybox__quantity__available')) || txt($('[class*="quantity"] [class*="available"]'));
+    let m = q.match(/(\d[\d.]*)\s*dispon/i);
+    if (!m) m = (document.body.innerText || '').match(/\(\s*\+?\s*(\d[\d.]*)\s*dispon[ií]ve/i) || (document.body.innerText || '').match(/(\d[\d.]*)\s*dispon[ií]ve/i);
+    return m ? Number(m[1].replace(/\./g, '')) : null;
+  }
+  // desconto % (usa "X% OFF" ou calcula de preco vs preco_original)
+  function getDesconto(preco, precoOrig) {
+    const m = (document.body.innerText || '').match(/(\d{1,2})\s*%\s*OFF/i);
+    if (m) return Number(m[1]);
+    if (preco && precoOrig && precoOrig > preco) return Math.round((1 - preco / precoOrig) * 100);
+    return null;
+  }
 
   function getOriginalPrice() {
     const el = $('.ui-pdp-price__original-value .andes-money-amount__fraction')
@@ -235,11 +259,14 @@
       reputacao: getReputacao(),
       is_full: ff.is_full,
       is_flex: ff.is_flex,
+      parcelamento: getParcelamento(),
+      estoque: getEstoque(),
       fotos,
       videos: getVideos(),
       descricao: getDescricao(),
       highlights: getHighlights(),
     };
+    extracted.desconto_pct = getDesconto(extracted.preco, extracted.preco_original);
     // diagnóstico: campos-chave que vieram vazios (ajuda a detectar quando o ML muda o layout)
     const _missing = ['titulo', 'preco', 'nota', 'vendedor'].filter((k) => extracted[k] == null || extracted[k] === '');
     return {

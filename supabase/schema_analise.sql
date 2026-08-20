@@ -121,3 +121,8 @@ alter table public.user_ai_settings add column if not exists ai_level integer no
 
 -- Horario da atualizacao automatica (0-23, hora local do vendedor; null = qualquer hora apos 24h)
 alter table public.user_ai_settings add column if not exists monitor_hour smallint;
+
+-- Novos campos do anuncio: parcelamento, estoque, desconto
+alter table public.analise_product_ads add column if not exists parcelamento text;
+alter table public.analise_product_ads add column if not exists estoque integer;
+alter table public.analise_product_ads add column if not exists desconto_pct numeric(5,2);
