@@ -1061,3 +1061,13 @@ tbody tr:hover { background: #f7f9fc; }
 .sum-input input{border:none;background:transparent;text-align:right;font-size:1.05rem;font-weight:700;color:var(--text);
   width:110px;padding:6px 0;font-variant-numeric:tabular-nums;outline:none;-moz-appearance:textfield}
 .sum-input-int input{width:80px}
+/* Seletor visual de temas (bolinhas) no menu lateral */
+.theme-picker{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.05)}
+.tp-label{font-size:.85rem;color:#cdd6e6}
+.tp-dots{display:flex;gap:8px}
+.tp-dot{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.25);cursor:pointer;padding:0;
+  transition:transform .15s, border-color .15s, box-shadow .15s}
+.tp-dot:hover{transform:scale(1.18)}
+.tp-dot.is-active{border-color:#fff;box-shadow:0 0 0 2px var(--accent), 0 2px 8px rgba(0,0,0,.35);transform:scale(1.12)}
+:root.sidebar-collapsed .theme-picker{flex-direction:column;gap:6px;padding:8px 4px}
+:root.sidebar-collapsed .tp-dots{flex-direction:column}

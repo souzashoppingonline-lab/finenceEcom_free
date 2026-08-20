@@ -12,13 +12,11 @@ function applyCollapsed(collapsed) {
 }
 
 const THEME_ORDER = ['light', 'dark', 'sepia', 'emerald'];
-// mostra o PRÓXIMO tema no botão (o que será aplicado ao clicar)
-const THEME_NEXT_LABEL = { light: '🌙 Tema escuro', dark: '📜 Tema sépia', sepia: '🌿 Tema verde', emerald: '☀️ Tema claro' };
 function applyTheme(theme) {
+  if (!THEME_ORDER.includes(theme)) theme = 'light';
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('theme', theme);
-  const btn = document.getElementById('theme-toggle');
-  if (btn) btn.innerHTML = THEME_NEXT_LABEL[theme] || THEME_NEXT_LABEL.light;
+  document.querySelectorAll('.tp-dot').forEach((d) => d.classList.toggle('is-active', d.dataset.theme === theme));
 }
 
 function renderSidebar(active) {
@@ -51,7 +49,15 @@ function renderSidebar(active) {
         ${link('/ml-tendencias.html', 'mltend', '📊', 'ML Tendências')}
       </nav>
       <div class="side-bottom">
-        <button id="theme-toggle" class="side-link side-btn"></button>
+        <div class="theme-picker" id="theme-picker" title="Escolher tema">
+          <span class="side-txt tp-label">🎨 Tema</span>
+          <div class="tp-dots">
+            <button type="button" class="tp-dot" data-theme="light"   title="Claro"   style="background:linear-gradient(135deg,#eef1f7 50%,#1e6fff 50%)"></button>
+            <button type="button" class="tp-dot" data-theme="dark"    title="Escuro"  style="background:linear-gradient(135deg,#0e1525 50%,#22d3ee 50%)"></button>
+            <button type="button" class="tp-dot" data-theme="sepia"   title="Sépia"   style="background:linear-gradient(135deg,#f3ead7 50%,#b06a2c 50%)"></button>
+            <button type="button" class="tp-dot" data-theme="emerald" title="Verde"   style="background:linear-gradient(135deg,#081712 50%,#35c486 50%)"></button>
+          </div>
+        </div>
         <button id="side-logout" class="side-link side-btn"><span class="side-ico">🚪</span><span class="side-txt">Sair</span></button>
       </div>
     </aside>
@@ -62,11 +68,8 @@ function renderSidebar(active) {
     applyCollapsed(!(localStorage.getItem('sidebar_collapsed') === '1'));
   });
   applyTheme(localStorage.getItem('theme') || 'light');
-  document.getElementById('theme-toggle').addEventListener('click', () => {
-    const cur = document.documentElement.getAttribute('data-theme') || 'light';
-    const idx = THEME_ORDER.indexOf(cur);
-    applyTheme(THEME_ORDER[(idx + 1) % THEME_ORDER.length]);
-  });
+  document.querySelectorAll('.tp-dot').forEach((d) =>
+    d.addEventListener('click', () => applyTheme(d.dataset.theme)));
   document.getElementById('side-logout').addEventListener('click', async () => {
     await sb.auth.signOut();
     location.href = '/entrar.html';
