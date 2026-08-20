@@ -734,19 +734,26 @@ function openVendas(adId, productId) {
   });
 }
 
-// Faixa dos últimos preços coletados (sem precisar clicar no botão)
+// Mini-histórico dos últimos preços coletados (aparece no card, sem clicar)
 function recentPrices(list) {
   if (!Array.isArray(list) || !list.length) return '';
   const pts = list.filter((p) => p.preco != null).slice(-5);
-  if (!pts.length) return '';
+  if (pts.length < 1) return '';
   const fmtD = (d) => { const [ , m, day] = String(d).split('-'); return day && m ? `${day}/${m}` : String(d).slice(5); };
-  const chips = pts.map((p, i) => {
+  const items = pts.map((p, i) => {
     const prev = i > 0 ? Number(pts[i - 1].preco) : null;
     const cur = Number(p.preco);
-    const trend = prev == null ? '' : cur > prev ? '<span class="rp-up">▲</span>' : cur < prev ? '<span class="rp-down">▼</span>' : '<span class="rp-eq">▬</span>';
-    return `<span class="rp-chip" title="${esc(fmtD(p.snap_date))}"><i>${esc(fmtD(p.snap_date))}</i>${money(cur)}${trend}</span>`;
-  }).join('');
-  return `<div class="rp-strip"><span class="rp-label">últimos ${pts.length}:</span>${chips}</div>`;
+    const cls = prev == null ? 'ph-flat' : cur > prev ? 'ph-up' : cur < prev ? 'ph-down' : 'ph-flat';
+    const arrow = prev == null ? '' : cur > prev ? '▲' : cur < prev ? '▼' : '';
+    return `<div class="ph-item ${cls}">
+      <span class="ph-date">${esc(fmtD(p.snap_date))}</span>
+      <span class="ph-price">${money(cur)} <em>${arrow}</em></span>
+    </div>`;
+  }).join('<span class="ph-sep">›</span>');
+  return `<div class="ph-block">
+    <div class="ph-head">📈 Histórico de preço <span class="muted">(últimas ${pts.length} coletas)</span></div>
+    <div class="ph-track">${items}</div>
+  </div>`;
 }
 
 function adCard(a) {
@@ -764,7 +771,6 @@ function adCard(a) {
       <div class="ad-info">
         <div class="ad-title">${a.link ? `<a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.titulo || a.ml_id || 'Concorrente')}</a>` : esc(a.titulo || a.ml_id || 'Concorrente')}</div>
         <div class="ad-price">${a.preco != null ? money(a.preco) : '—'} ${a.preco_original && a.preco_original > a.preco ? `<s class="muted">${money(a.preco_original)}</s>` : ''}<span class="ad-price-tag">último preço</span></div>
-        ${recentPrices(a.precos_recentes)}
         <div class="ad-meta">
           <span>⭐ ${a.nota && a.nota > 0 ? a.nota : 'sem nota'}${a.comentarios ? ` (${a.comentarios})` : ''}</span>
           ${a.vendas ? `<span>📦 ${esc(a.vendas)}</span>` : ''}
@@ -775,6 +781,7 @@ function adCard(a) {
         <div class="ad-badges">${badges}</div>
       </div>
     </div>
+    ${recentPrices(a.precos_recentes)}
     <div class="ad-sections">
       ${kws.length ? `<div class="ad-sec"><b>🔑 SEO / palavras-chave</b><div class="ad-kws">${kws.map((k) => `<span class="kw">${esc(k)}</span>`).join('')}</div></div>` : ''}
       ${ficha.length ? `<details class="ad-sec"><summary><b>📋 Ficha técnica</b> (${ficha.length})</summary><ul class="ad-ficha">${ficha.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></details>` : ''}

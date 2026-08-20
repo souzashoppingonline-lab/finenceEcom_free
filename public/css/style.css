@@ -980,11 +980,31 @@ tbody tr:hover { background: #f7f9fc; }
   background:color-mix(in srgb,var(--primary,#12905A) 8%,transparent)}
 .ext-install-txt{display:flex;flex-direction:column;gap:3px;min-width:220px;flex:1}
 .ext-install-btn{max-width:280px;margin:0;white-space:nowrap}
-/* Faixa dos últimos preços coletados no card do concorrente */
-.rp-strip{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:6px}
-.rp-label{font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
-.rp-chip{display:inline-flex;align-items:center;gap:4px;font-size:.78rem;font-weight:600;
-  background:var(--bg-soft,#f4f7fb);border:1px solid var(--border);border-radius:8px;padding:2px 7px;font-variant-numeric:tabular-nums}
-.rp-chip i{font-style:normal;font-size:.66rem;color:var(--muted);font-weight:600}
-.rp-up{color:#c62828} .rp-down{color:#0a7c3f} .rp-eq{color:var(--muted)}
-:root[data-theme="dark"] .rp-chip{background:#0f1622}
+/* Mini-histórico de preço no card do concorrente */
+.ph-block{background:#f6f9fc;border:1px solid var(--border);border-radius:10px;padding:9px 11px}
+.ph-head{font-size:.74rem;font-weight:700;color:var(--text);margin-bottom:8px;letter-spacing:.01em}
+.ph-head .muted{font-weight:500}
+.ph-track{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding-bottom:2px}
+.ph-item{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:74px;flex:1;
+  padding:6px 4px;border-radius:8px;background:var(--card);border:1px solid var(--border)}
+.ph-date{font-size:.66rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.ph-price{font-size:.82rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);white-space:nowrap}
+.ph-price em{font-style:normal;font-size:.72rem}
+.ph-up .ph-price em{color:#e5484d}
+.ph-down .ph-price em{color:#12905a}
+.ph-up .ph-price{color:#c62828}
+.ph-down .ph-price{color:#0a7c3f}
+.ph-sep{display:flex;align-items:center;color:var(--border);font-size:1rem;padding:0 3px;flex:none}
+:root[data-theme="dark"] .ph-block{background:#0f1622}
+:root[data-theme="dark"] .ph-item{background:#131c2b}
+/* Polimento do card do concorrente */
+.ad-card{transition:box-shadow .18s, border-color .18s, transform .18s}
+.ad-card:hover{box-shadow:0 10px 30px -16px rgba(15,26,40,.28);border-color:color-mix(in srgb,var(--primary) 35%,var(--border))}
+.ad-actions{flex-wrap:wrap;gap:10px}
+.ad-actions .head-actions{flex-wrap:wrap}
+.ad-actions .btn-ghost{padding:6px 12px;font-size:.82rem;border-radius:8px}
+.ad-price{display:inline-flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.switch-sm{display:inline-flex;align-items:center;gap:7px;font-size:.82rem;font-weight:600;color:var(--text);
+  background:color-mix(in srgb,var(--primary) 8%,transparent);border:1px solid color-mix(in srgb,var(--primary) 22%,var(--border));
+  padding:6px 11px;border-radius:999px;cursor:pointer}
+.switch-sm input{accent-color:var(--primary);width:15px;height:15px}
