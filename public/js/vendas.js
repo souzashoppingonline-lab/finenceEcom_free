@@ -584,7 +584,7 @@ function impRenderPreview() {
   $('preview-step').hidden = false;
   const roRow = (k, v) => `<div class="sum-row"><span>${k}</span><b>${v}</b></div>`;
   const edRow = (k, id, val, step) => `<div class="sum-row sum-row-edit"><span>${k}</span>
-    <span class="sum-input"><i>R$</i><input type="number" id="${id}" step="${step}" min="0" value="${Number(val) || 0}"></span></div>`;
+    <span class="sum-input"><i>R$</i><input type="number" id="${id}" step="${step}" min="0" value="${(Number(val) || 0).toFixed(2)}"></span></div>`;
   const edInt = (k, id, val) => `<div class="sum-row sum-row-edit"><span>${k}</span>
     <span class="sum-input sum-input-int"><input type="number" id="${id}" step="1" min="0" value="${Math.round(Number(val) || 0)}"></span></div>`;
   $('summary').innerHTML =
