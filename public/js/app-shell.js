@@ -11,9 +11,9 @@ function applyCollapsed(collapsed) {
   if (btn) btn.textContent = collapsed ? '»' : '«';
 }
 
-const THEME_ORDER = ['light', 'dark', 'sepia'];
+const THEME_ORDER = ['light', 'dark', 'sepia', 'emerald'];
 // mostra o PRÓXIMO tema no botão (o que será aplicado ao clicar)
-const THEME_NEXT_LABEL = { light: '🌙 Tema escuro', dark: '📜 Tema sépia', sepia: '☀️ Tema claro' };
+const THEME_NEXT_LABEL = { light: '🌙 Tema escuro', dark: '📜 Tema sépia', sepia: '🌿 Tema verde', emerald: '☀️ Tema claro' };
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('theme', theme);

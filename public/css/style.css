@@ -348,6 +348,17 @@ tbody tr:hover { background: #f7f9fc; }
 :root[data-theme="sepia"] select { background: #fffaf0; color: var(--text); border-color: var(--border); }
 :root[data-theme="sepia"] th { background: #f0e6d2; }
 :root[data-theme="sepia"] tbody tr:hover { background: #f5eeddc0; }
+/* Tema Esmeralda (escuro esverdeado, cor da marca) — quarto tema */
+:root[data-theme="emerald"] {
+  --bg-soft: #0c1f18; --card: #12241d; --text: #e4f1ea; --muted: #8fb0a0;
+  --border: #234438; --primary: #16a06a; --primary-dark: #0f7d51; --accent: #35c486;
+}
+:root[data-theme="emerald"] .app-body { background: #081712; }
+:root[data-theme="emerald"] input,
+:root[data-theme="emerald"] select { background: #0c1c16; color: var(--text); border-color: var(--border); }
+:root[data-theme="emerald"] th { background: #0e201a; }
+:root[data-theme="emerald"] tbody tr:hover { background: #0e201a; }
+:root[data-theme="emerald"] .btn-ghost { color: var(--text); }
 :root[data-theme="dark"] .app-body { background: #0e1525; }
 :root[data-theme="dark"] input,
 :root[data-theme="dark"] select { background: #0f1622; color: var(--text); }
