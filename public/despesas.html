@@ -51,6 +51,52 @@
               <button type="button" id="exp-cancel" class="btn-ghost" hidden>Cancelar</button>
               <p id="exp-msg" class="form-msg"></p>
             </form>
+            <hr style="border:none;border-top:1px solid var(--border);margin:16px 0" />
+            <button type="button" id="open-rec" class="btn-ghost" style="width:100%">Custo recorrente ou dividido em parcelas</button>
+          </div>
+
+          <!-- MODAL: custo recorrente / dividido -->
+          <div id="rec-modal" class="ia-modal" hidden>
+            <div class="ia-modal-box" style="max-width:520px">
+              <div class="ia-modal-head">
+                <h3>Custo recorrente ou dividido</h3>
+                <button type="button" id="rec-close" class="ia-modal-x" aria-label="Fechar">✕</button>
+              </div>
+              <div class="ia-modal-body">
+                <span class="field-label">Como este custo se repete?</span>
+                <div class="status-select" id="rec-mode" style="grid-template-columns:1fr 1fr">
+                  <button type="button" class="status-btn is-active" data-m="fixed">Fixo Mensal</button>
+                  <button type="button" class="status-btn" data-m="split">Dividido em parcelas</button>
+                </div>
+                <p class="muted" id="rec-hint" style="margin:8px 0 0"></p>
+
+                <span class="field-label" style="margin-top:14px">Tipo de custo</span>
+                <div class="status-select" id="rec-tipo" style="grid-template-columns:1fr 1fr">
+                  <button type="button" class="status-btn is-active" data-t="fixed">Custo Fixo</button>
+                  <button type="button" class="status-btn" data-t="operational">Custo Operacional</button>
+                </div>
+
+                <div class="two-col" style="margin-top:12px">
+                  <label>Mês de início<input type="month" id="rec-start" /></label>
+                  <label>Categoria<input type="text" id="rec-cat" placeholder="Ex.: Estoque, Aluguel..." /></label>
+                </div>
+                <label>Descrição<input type="text" id="rec-desc" placeholder="Ex.: Compra de rações" /></label>
+
+                <div id="rec-fixed-fields">
+                  <label>Valor mensal (R$)<input type="number" id="rec-val-month" min="0" step="0.01" placeholder="0,00" /></label>
+                </div>
+                <div id="rec-split-fields" hidden>
+                  <div class="two-col">
+                    <label>Valor total (R$)<input type="number" id="rec-val-total" min="0" step="0.01" placeholder="Ex.: 1000,00" /></label>
+                    <label>Nº de parcelas<input type="number" id="rec-parcels" min="2" max="60" step="1" placeholder="Ex.: 10" /></label>
+                  </div>
+                  <p class="muted" id="rec-preview" style="margin:6px 0 0"></p>
+                </div>
+
+                <button type="button" id="rec-save" class="btn-cadastrar" style="margin-top:16px">Lançar custo</button>
+                <p id="rec-msg" class="form-msg"></p>
+              </div>
+            </div>
           </div>
 
           <h3 class="v-section-title" id="lanc-title">Lançamentos</h3>

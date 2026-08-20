@@ -161,6 +161,83 @@ document.querySelector('#exp-table tbody').addEventListener('click', async (e) =
 $('sel-month').addEventListener('change', refresh);
 $('sel-year').addEventListener('change', refresh);
 
+// ---------- Modal: custo recorrente / dividido ----------
+let recMode = 'fixed', recTipo = 'fixed';
+function addMonths(ym, n) { // 'YYYY-MM' + n meses
+  let [y, m] = ym.split('-').map(Number);
+  m += n; y += Math.floor((m - 1) / 12); m = ((m - 1) % 12) + 1;
+  return `${y}-${String(m).padStart(2, '0')}`;
+}
+function recUpdatePreview() {
+  const total = +$('rec-val-total').value || 0;
+  const n = Math.max(0, parseInt($('rec-parcels').value, 10) || 0);
+  if (recMode === 'split' && total > 0 && n >= 2) {
+    const start = $('rec-start').value || todayStr().slice(0, 7);
+    $('rec-preview').innerHTML = `${n}x de <b>${money(total / n)}</b> — de ${start} até ${addMonths(start, n - 1)}.`;
+  } else $('rec-preview').textContent = '';
+}
+function openRecModal() {
+  recMode = 'fixed'; recTipo = 'fixed';
+  document.querySelectorAll('#rec-mode .status-btn').forEach((b) => b.classList.toggle('is-active', b.dataset.m === 'fixed'));
+  document.querySelectorAll('#rec-tipo .status-btn').forEach((b) => b.classList.toggle('is-active', b.dataset.t === 'fixed'));
+  $('rec-fixed-fields').hidden = false; $('rec-split-fields').hidden = true;
+  $('rec-hint').textContent = 'O mesmo valor entra automaticamente em todos os meses a partir do início.';
+  $('rec-start').value = todayStr().slice(0, 7);
+  ['rec-cat', 'rec-desc', 'rec-val-month', 'rec-val-total', 'rec-parcels'].forEach((id) => ($(id).value = ''));
+  $('rec-preview').textContent = ''; $('rec-msg').textContent = '';
+  $('rec-modal').hidden = false;
+}
+$('open-rec').addEventListener('click', openRecModal);
+$('rec-close').addEventListener('click', () => { $('rec-modal').hidden = true; });
+$('rec-modal').addEventListener('click', (e) => { if (e.target === $('rec-modal')) $('rec-modal').hidden = true; });
+document.querySelectorAll('#rec-mode .status-btn').forEach((b) => b.addEventListener('click', () => {
+  recMode = b.dataset.m;
+  document.querySelectorAll('#rec-mode .status-btn').forEach((x) => x.classList.toggle('is-active', x === b));
+  $('rec-fixed-fields').hidden = recMode !== 'fixed';
+  $('rec-split-fields').hidden = recMode !== 'split';
+  $('rec-hint').textContent = recMode === 'fixed'
+    ? 'O mesmo valor entra automaticamente em todos os meses a partir do início.'
+    : 'O valor total é dividido em parcelas iguais, uma em cada mês seguinte.';
+  recUpdatePreview();
+}));
+document.querySelectorAll('#rec-tipo .status-btn').forEach((b) => b.addEventListener('click', () => {
+  recTipo = b.dataset.t;
+  document.querySelectorAll('#rec-tipo .status-btn').forEach((x) => x.classList.toggle('is-active', x === b));
+}));
+$('rec-val-total').addEventListener('input', recUpdatePreview);
+$('rec-parcels').addEventListener('input', recUpdatePreview);
+$('rec-start').addEventListener('input', recUpdatePreview);
+
+$('rec-save').addEventListener('click', async () => {
+  const msg = $('rec-msg'); msg.textContent = ''; msg.className = 'form-msg';
+  const start = $('rec-start').value || todayStr().slice(0, 7);
+  const desc = $('rec-desc').value.trim();
+  const cat = $('rec-cat').value.trim();
+  if (!desc) { msg.textContent = 'Informe a descrição.'; msg.classList.add('err'); return; }
+  $('rec-save').disabled = true;
+  try {
+    if (recMode === 'fixed') {
+      const val = +$('rec-val-month').value || 0;
+      if (val <= 0) throw new Error('Informe o valor mensal.');
+      await dreApi('/api/expenses', { method: 'POST', body: JSON.stringify({ date: `${start}-01`, description: desc, category: cat, type: recTipo, value: val, recurring: true }) });
+    } else {
+      const total = +$('rec-val-total').value || 0;
+      const n = parseInt($('rec-parcels').value, 10) || 0;
+      if (total <= 0 || n < 2) throw new Error('Informe o valor total e nº de parcelas (mínimo 2).');
+      const parcela = Math.round((total / n) * 100) / 100;
+      for (let i = 0; i < n; i++) {
+        const m = addMonths(start, i);
+        // ajuste de centavos na última parcela para fechar o total exato
+        const val = i === n - 1 ? Math.round((total - parcela * (n - 1)) * 100) / 100 : parcela;
+        await dreApi('/api/expenses', { method: 'POST', body: JSON.stringify({ date: `${m}-01`, description: `${desc} (${i + 1}/${n})`, category: cat, type: recTipo, value: val, recurring: false }) });
+      }
+    }
+    $('rec-modal').hidden = true;
+    await refresh();
+  } catch (e) { msg.textContent = e.message; msg.classList.add('err'); }
+  $('rec-save').disabled = false;
+});
+
 // ---------- Init ----------
 (async () => {
   const session = await initShell('despesas');
