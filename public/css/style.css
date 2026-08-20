@@ -1174,3 +1174,83 @@ tbody tr:hover { background: #f7f9fc; }
 .app-content .dash-head-row > h3{
   font-size: 1.06rem; font-weight: 700; letter-spacing: -.015em;
 }
+
+/* ============================================================
+   FECHAMENTO MENSAL
+   ============================================================ */
+.fc-summary{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin:18px 0 8px}
+@media(max-width:1000px){.fc-summary{grid-template-columns:repeat(2,1fr)}}
+.fc-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:4px}
+.fc-card-lbl{font-size:.78rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.fc-card-val{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.fc-card-val.pos{color:#12905a}.fc-card-val.neg{color:#e5484d}
+.fc-card-sub{font-size:.78rem;color:var(--muted)}
+
+.fc-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+@media(max-width:900px){.fc-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:520px){.fc-grid{grid-template-columns:repeat(2,1fr)}}
+.fc-cell{display:flex;flex-direction:column;align-items:flex-start;gap:4px;background:var(--card);border:1px solid var(--border);
+  border-radius:12px;padding:14px;cursor:pointer;text-align:left;transition:transform .15s,box-shadow .15s,border-color .15s;position:relative}
+.fc-cell:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.fc-cell.is-future{opacity:.55}
+.fc-cell-dot,.fc-dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.st-open>.fc-cell-dot,.fc-dot.st-open{background:#9aa6bd}
+.st-in_progress>.fc-cell-dot,.fc-dot.st-in_progress,.fc-dot.st-progress{background:#f5b301}
+.st-closed>.fc-cell-dot,.fc-dot.st-closed{background:#12905a}
+.fc-cell.st-closed{border-color:color-mix(in srgb,#12905a 45%,var(--border))}
+.fc-cell.st-in_progress{border-color:color-mix(in srgb,#f5b301 45%,var(--border))}
+.fc-cell-name{font-weight:800;font-size:1.05rem;letter-spacing:-.01em}
+.fc-cell-st{font-size:.74rem;color:var(--muted);font-weight:600}
+.fc-cell-val{font-size:.82rem;font-weight:700;color:#12905a;font-variant-numeric:tabular-nums}
+
+.fc-cols{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-top:8px}
+@media(max-width:900px){.fc-cols{grid-template-columns:1fr}}
+.fc-hist-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
+.fc-hist-row:last-child{border-bottom:none}
+.fc-hist-info{flex:1;display:flex;flex-direction:column}
+.fc-legend .fc-leg-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:.9rem}
+.fc-legend hr{border:none;border-top:1px solid var(--border);margin:12px 0}
+.fc-rules{margin:6px 0 0;padding-left:18px;color:var(--muted);font-size:.88rem}
+.fc-rules li{margin:5px 0}
+
+/* modal */
+.fc-modal-box{max-width:720px}
+.fc-status-line{font-size:.9rem;padding:8px 12px;border-radius:8px;margin-bottom:14px;background:var(--bg-soft,#f4f7fb)}
+:root[data-theme="dark"] .fc-status-line{background:#0f1622}
+.fc-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+@media(max-width:640px){.fc-kpis{grid-template-columns:repeat(2,1fr)}}
+.fc-kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+.fc-kpi span{font-size:.72rem;color:var(--muted);font-weight:600}
+.fc-kpi b{font-size:1.05rem;font-variant-numeric:tabular-nums}
+.fc-kpi b.pos{color:#12905a}.fc-kpi b.neg{color:#e5484d}
+.fc-tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--border);margin-bottom:14px}
+.fc-tab{width:auto;margin:0;background:transparent;border:none;color:var(--muted);font-weight:600;font-size:.88rem;padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent}
+.fc-tab.is-active{color:var(--primary);border-bottom-color:var(--primary)}
+.fc-tab-body{min-height:60px}
+.fc-dre-row{display:flex;justify-content:space-between;padding:8px 4px;border-bottom:1px solid var(--border);font-size:.92rem}
+.fc-dre-row.is-strong{font-weight:800;background:var(--bg-soft,#f4f7fb);border-radius:6px;padding:9px 8px}
+:root[data-theme="dark"] .fc-dre-row.is-strong{background:#0f1622}
+.fc-dre-row b.pos{color:#12905a}.fc-dre-row b.neg{color:#e5484d}
+.fc-meta-head{display:flex;justify-content:space-between;font-size:.9rem;margin-bottom:6px}
+.fc-meta-bar{height:10px;background:var(--border);border-radius:999px;overflow:hidden}
+.fc-meta-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--primary));border-radius:999px}
+.fc-comp-row{display:grid;grid-template-columns:1.2fr 1fr 1fr .8fr;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:.88rem}
+.fc-comp-prev{color:var(--muted);font-size:.8rem}
+.fc-comp-diff.pos{color:#12905a}.fc-comp-diff.neg{color:#e5484d}
+.fc-cat-row{display:grid;grid-template-columns:1.3fr 2fr .8fr;align-items:center;gap:10px;padding:6px 0;font-size:.88rem}
+.fc-cat-bar{height:8px;background:var(--border);border-radius:999px;overflow:hidden}
+.fc-cat-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--primary))}
+.fc-cat-val{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.fc-h{margin:16px 0 8px;font-size:1rem;font-weight:750}
+.fc-check{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:600px){.fc-check{grid-template-columns:1fr}}
+.fc-check-item{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--border);border-radius:9px;font-size:.88rem;cursor:pointer;transition:background .15s,border-color .15s}
+.fc-check-item.is-on{background:color-mix(in srgb,#12905a 9%,transparent);border-color:color-mix(in srgb,#12905a 40%,var(--border))}
+.fc-check-item input{width:16px;height:16px;accent-color:#12905a;margin:0}
+.fc-req{color:#e5484d;font-style:normal}
+.fc-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:16px}
+.fc-actions .btn-cadastrar{margin:0;max-width:260px}
+.fc-export{display:flex;gap:8px}
+.fc-closed-badge{background:color-mix(in srgb,#12905a 12%,transparent);color:#0a7c3f;font-weight:700;padding:9px 14px;border-radius:8px;font-size:.88rem}
+.fc-obs-label{display:block;font-size:.88rem;font-weight:600}
+.fc-obs-label textarea{width:100%;margin-top:6px;padding:11px;border:1px solid var(--border);border-radius:9px;font-family:inherit;font-size:.95rem;resize:vertical}

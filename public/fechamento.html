@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <link rel="icon" type="image/svg+xml" href="/img/logo-mark.svg" />
+  <link rel="apple-touch-icon" href="/img/logo-mark.svg" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fechamento Mensal — FinanceEcom Free</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="app-body">
+  <div id="sidebar-root"></div>
+  <main class="app-content">
+    <div class="dash-head-row">
+      <div class="dash-head" style="margin:0">
+        <h1>Fechamento Mensal</h1>
+        <p class="muted">Consolide e trave o resultado de cada mês — a fonte oficial da verdade para o DRE anual.</p>
+      </div>
+      <div class="head-actions" style="gap:8px">
+        <select id="fc-year" class="filter-inp"></select>
+        <button id="fc-refresh" class="btn-ghost">Atualizar</button>
+      </div>
+    </div>
+
+    <!-- SUMMARY CARDS -->
+    <div id="fc-summary" class="fc-summary"></div>
+
+    <!-- MONTH GRID -->
+    <h3 class="v-section-title">Meses do ano</h3>
+    <div id="fc-grid" class="fc-grid"></div>
+
+    <!-- HISTÓRICO + LEGENDA -->
+    <div class="fc-cols">
+      <div>
+        <h3 class="v-section-title">Histórico</h3>
+        <div id="fc-history" class="card"></div>
+      </div>
+      <div>
+        <h3 class="v-section-title">Legenda &amp; Regras</h3>
+        <div class="card fc-legend">
+          <div class="fc-leg-row"><span class="fc-dot st-closed"></span> <b>Fechado</b> — mês travado e consolidado</div>
+          <div class="fc-leg-row"><span class="fc-dot st-progress"></span> <b>Em fechamento</b> — conferência em andamento</div>
+          <div class="fc-leg-row"><span class="fc-dot st-open"></span> <b>Aberto</b> — ainda não iniciado</div>
+          <hr />
+          <p class="muted"><b>Como funciona:</b></p>
+          <ul class="fc-rules">
+            <li>Clique num mês para abrir o fechamento.</li>
+            <li>Marque o checklist de conferência (itens obrigatórios).</li>
+            <li>Só é possível <b>finalizar</b> com todos os obrigatórios marcados.</li>
+            <li>O mês fechado alimenta o DRE anual e os comparativos.</li>
+            <li>Um mês fechado pode ser <b>reaberto</b> a qualquer momento.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL DE FECHAMENTO -->
+  <div id="fc-modal" class="ia-modal" hidden>
+    <div class="ia-modal-box fc-modal-box">
+      <div class="ia-modal-head">
+        <h3 id="fc-modal-title">Fechamento</h3>
+        <button type="button" id="fc-close" class="ia-modal-x" aria-label="Fechar">✕</button>
+      </div>
+      <div class="ia-modal-body" id="fc-modal-body"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/auth-common.js"></script>
+  <script src="/js/app-shell.js"></script>
+  <script src="/js/fechamento.js"></script>
+</body>
+</html>

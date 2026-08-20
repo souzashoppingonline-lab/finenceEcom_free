@@ -97,6 +97,7 @@ const memLists = []; // fornecedores, categorias, etc.
 const memExpenses = [];
 const memAlerts = [];
 const memManual = []; // fluxo de caixa anual manual
+const memClosing = []; // fechamento mensal
 const memCards = [];
 const memParcelas = [];
 const memFaturaPagtos = [];
@@ -2834,6 +2835,163 @@ app.get('/api/ml/catalog-search', requireUser, async (req, res) => {
     }
     return res.json(out);
   } catch (e) { return intelErr(res, e, 'ml/catalog-search'); }
+});
+
+// ===========================================================================
+// FECHAMENTO MENSAL — consolida o resultado do mês (fonte da verdade do DRE)
+// ===========================================================================
+const ym = (year, month) => `${year}-${String(month).padStart(2, '0')}`;
+
+async function fetchMonth(table, userId, dateCol, monthStr) {
+  if (supabase) {
+    const { data } = await supabase.from(table).select('*').eq('user_id', userId)
+      .gte(dateCol, `${monthStr}-01`).lte(dateCol, `${monthStr}-31`);
+    return data || [];
+  }
+  const mem = { sales: memSales, expenses: memExpenses, cash_flow_entries: memCF, boletos: memBoletos }[table] || [];
+  return mem.filter((r) => r.user_id === userId && String(r[dateCol] || '').startsWith(monthStr));
+}
+
+async function getClosing(userId, year, month) {
+  if (supabase) {
+    const { data } = await supabase.from('monthly_closing').select('*')
+      .eq('user_id', userId).eq('year', year).eq('month', month).maybeSingle();
+    return data || null;
+  }
+  return memClosing.find((c) => c.user_id === userId && c.year === year && c.month === month) || null;
+}
+
+// Calcula o DRE consolidado do mês a partir das 6 fontes (regime de competência)
+async function computeClosing(userId, year, month) {
+  const monthStr = ym(year, month);
+  const [sales, expenses, cf, boletos] = await Promise.all([
+    fetchMonth('sales', userId, 'date', monthStr),
+    fetchMonth('expenses', userId, 'date', monthStr),
+    fetchMonth('cash_flow_entries', userId, 'date', monthStr),
+    fetchMonth('boletos', userId, 'due_date', monthStr),
+  ]);
+  const sum = (arr, f) => arr.reduce((a, x) => a + (Number(f(x)) || 0), 0);
+
+  const receita_bruta = sum(sales, (s) => s.revenue);
+  const impostos = sum(sales, (s) => s.tax);
+  const receita_liquida = receita_bruta - impostos;
+  const cogs = sum(sales, (s) => s.cmv);
+  const lucro_bruto = receita_liquida - cogs;
+  const taxas_mp = sum(sales, (s) => s.fee_mp);
+  const frete = sum(sales, (s) => s.freight);
+  const ads = sum(sales, (s) => (Number(s.ads_ml) || 0) + (Number(s.ads_ext) || 0));
+  const qtd = sum(sales, (s) => s.qty);
+
+  const custos_fixos = sum(expenses.filter((e) => e.type === 'fixed'), (e) => e.value);
+  const custos_variaveis = sum(expenses.filter((e) => e.type === 'operational'), (e) => e.value);
+
+  const margem_contrib = receita_bruta - cogs - taxas_mp - frete - ads - impostos;
+  const lucro_liquido = margem_contrib - custos_fixos - custos_variaveis;
+  const margem_contrib_pct = receita_bruta > 0 ? (margem_contrib / receita_bruta) * 100 : 0;
+  const margem_liquida_pct = receita_bruta > 0 ? (lucro_liquido / receita_bruta) * 100 : 0;
+  const ticket_medio = qtd > 0 ? receita_bruta / qtd : 0;
+
+  const cf_in = sum(cf.filter((e) => e.type === 'income'), (e) => e.value);
+  const cf_out = sum(cf.filter((e) => e.type === 'expense'), (e) => e.value);
+
+  const bol_pagos = boletos.filter((b) => b.status === 'pago');
+  const bol_pend = boletos.filter((b) => b.status !== 'pago');
+
+  // gastos por categoria (despesas + boletos a pagar)
+  const catMap = {};
+  for (const e of expenses) { const k = e.category || 'Sem categoria'; catMap[k] = (catMap[k] || 0) + (Number(e.value) || 0); }
+  const categorias = Object.entries(catMap).map(([nome, valor]) => ({ nome, valor })).sort((a, b) => b.valor - a.valor);
+
+  // meta do mês (loja geral)
+  let meta = 0;
+  if (supabase) {
+    const { data } = await supabase.from('goals').select('amount').eq('user_id', userId).eq('month', monthStr).is('store_id', null);
+    meta = (data || []).reduce((a, g) => a + (Number(g.amount) || 0), 0);
+  } else {
+    meta = memGoals.filter((g) => g.user_id === userId && g.month === monthStr && !g.store_id).reduce((a, g) => a + (Number(g.amount) || 0), 0);
+  }
+
+  // comparativo com o mês anterior fechado
+  const prevM = month === 1 ? 12 : month - 1;
+  const prevY = month === 1 ? year - 1 : year;
+  const prev = await getClosing(userId, prevY, prevM);
+  const comparativo = prev ? {
+    receita: Number(prev.revenue_gross) || 0,
+    margem_contrib: Number(prev.contribution_margin) || 0,
+    lucro_liquido: Number(prev.net_profit) || 0,
+  } : null;
+
+  return {
+    month, year, monthStr,
+    receita_bruta, impostos, receita_liquida, cogs, lucro_bruto,
+    taxas_mp, frete, ads, custos_fixos, custos_variaveis,
+    margem_contrib, margem_contrib_pct, lucro_liquido, margem_liquida_pct,
+    qtd, ticket_medio,
+    cash_flow: { in: cf_in, out: cf_out, saldo: cf_in - cf_out },
+    boletos: {
+      pagos_count: bol_pagos.length, pagos_total: sum(bol_pagos, (b) => b.value),
+      pend_count: bol_pend.length, pend_total: sum(bol_pend, (b) => b.value),
+      lista: boletos.map((b) => ({ name: b.name, value: b.value, due_date: b.due_date, status: b.status, direction: b.direction })),
+    },
+    categorias, meta, meta_pct: meta > 0 ? (receita_bruta / meta) * 100 : 0,
+    comparativo,
+  };
+}
+
+// GET lista de fechamentos do ano (status + snapshot por mês)
+app.get('/api/closing', requireUser, async (req, res) => {
+  const year = Number(req.query.year) || new Date().getFullYear();
+  try {
+    let rows;
+    if (supabase) {
+      const { data } = await supabase.from('monthly_closing').select('*').eq('user_id', req.userId).eq('year', year);
+      rows = data || [];
+    } else rows = memClosing.filter((c) => c.user_id === req.userId && c.year === year);
+    return res.json({ year, closings: rows });
+  } catch (err) { console.error('closing list:', err.message); return res.status(500).json({ error: 'Erro ao listar fechamentos.' }); }
+});
+
+// GET relatório calculado de um mês (não grava)
+app.get('/api/closing/compute', requireUser, async (req, res) => {
+  const year = Number(req.query.year), month = Number(req.query.month);
+  if (!year || !month || month < 1 || month > 12) return res.status(400).json({ error: 'Ano e mês válidos são obrigatórios.' });
+  try {
+    const report = await computeClosing(req.userId, year, month);
+    const saved = await getClosing(req.userId, year, month);
+    return res.json({ report, closing: saved });
+  } catch (err) { console.error('closing compute:', err.message); return res.status(500).json({ error: 'Erro ao calcular fechamento.' }); }
+});
+
+// PUT upsert do fechamento (status / checklist / notes) — recalcula e grava snapshot
+app.put('/api/closing', requireUser, async (req, res) => {
+  const b = req.body || {};
+  const year = Number(b.year), month = Number(b.month);
+  if (!year || !month || month < 1 || month > 12) return res.status(400).json({ error: 'Ano e mês válidos são obrigatórios.' });
+  const status = ['open', 'in_progress', 'closed'].includes(b.status) ? b.status : 'open';
+  try {
+    const report = await computeClosing(req.userId, year, month);
+    const rec = {
+      user_id: req.userId, year, month, status,
+      checklist: b.checklist || {}, notes: (b.notes || '').slice(0, 500),
+      report_data: report,
+      revenue_gross: report.receita_bruta,
+      contribution_margin: report.margem_contrib,
+      net_profit: report.lucro_liquido,
+      total_sales: report.qtd,
+      closed_at: status === 'closed' ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    };
+    if (supabase) {
+      const { data: existing } = await supabase.from('monthly_closing').select('id').eq('user_id', req.userId).eq('year', year).eq('month', month).maybeSingle();
+      if (existing) await supabase.from('monthly_closing').update(rec).eq('id', existing.id);
+      else await supabase.from('monthly_closing').insert({ ...rec, created_at: new Date().toISOString() });
+    } else {
+      const i = memClosing.findIndex((c) => c.user_id === req.userId && c.year === year && c.month === month);
+      if (i >= 0) memClosing[i] = { ...memClosing[i], ...rec };
+      else memClosing.push({ id: makeId(), ...rec, created_at: new Date().toISOString() });
+    }
+    return res.json({ ok: true, closing: rec });
+  } catch (err) { console.error('closing save:', err.message); return res.status(500).json({ error: 'Erro ao salvar fechamento.' }); }
 });
 
 app.get('/health', (req, res) => res.json({ ok: true }));

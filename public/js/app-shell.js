@@ -33,6 +33,7 @@ const ICONS = {
   cartoes: SVG('<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 9.5h19"/><path d="M6 15h4"/>'),
   despesas: SVG('<path d="M6 2.5l1.5 1.5L9 2.5 10.5 4 12 2.5 13.5 4 15 2.5 16.5 4 18 2.5V21l-1.5-1.5L15 21l-1.5-1.5L12 21l-1.5-1.5L9 21l-1.5-1.5L6 21z"/><path d="M9 8h6M9 12h6"/>'),
   dre: SVG('<path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/>'),
+  fechamento: SVG('<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="m9 15 2 2 4-4"/>'),
   analise: SVG('<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>'),
   mltend: SVG('<path d="M3 3v18h18"/><path d="M6 15l4-5 3.5 3L20 8"/>'),
 };
@@ -62,6 +63,7 @@ function renderSidebar(active) {
         ${link('/cartoes.html', 'cartoes', '💳', 'Cartões')}
         ${link('/despesas.html', 'despesas', '🧾', 'Despesas')}
         ${link('/dre.html', 'dre', '📈', 'DRE')}
+        ${link('/fechamento.html', 'fechamento', '📅', 'Fechamento Mensal')}
         ${link('/analise.html', 'analise', '🔎', 'Análise de Produtos')}
         ${link('/ml-tendencias.html', 'mltend', '📊', 'ML Tendências')}
       </nav>
