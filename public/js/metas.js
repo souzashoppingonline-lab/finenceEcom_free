@@ -45,7 +45,7 @@ function calc(meta, realizado, filteredSales) {
   const diasRestantes = isCurrent ? Math.max(dim - diaOntem, 0) : 0;
   const metaDia = diasRestantes > 0 ? restante / diasRestantes : 0;
   let status;
-  if (realizado >= meta) status = { label: '🏆 META ATINGIDA', cls: 'c-ok', bar: 'bar-ok' };
+  if (realizado >= meta) status = { label: 'META ATINGIDA', cls: 'c-ok', bar: 'bar-ok' };
   else if (projecao > meta * 1.05) status = { label: '🟢 ADIANTADO', cls: 'c-ok', bar: 'bar-ok' };
   else if (projecao >= meta * 0.95) status = { label: '🟡 EM RISCO', cls: 'c-warn', bar: 'bar-warn' };
   else status = { label: '🔴 ATRASADO', cls: 'c-danger', bar: 'bar-danger' };

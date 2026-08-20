@@ -129,7 +129,7 @@ function renderTable() {
     if (b.virtual) {
       return `<tr class="row-fatura">
         <td class="${late ? 'venc-late' : ''}">${fmtDate(b.due_date)}${late ? ' <span class="tag-late">ATRASADO</span>' : ''}</td>
-        <td><span class="type-badge badge-cartao">💳 Cartão</span></td>
+        <td><span class="type-badge badge-cartao">Cartão</span></td>
         <td><b>${esc(b.name)}</b></td>
         <td>—</td><td>—</td>
         <td><b>${money(b.value)}</b></td>

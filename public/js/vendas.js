@@ -200,7 +200,7 @@ function goalCalc(metaAmount) {
   const gap = projecao - metaAmount;
   const ontemFat = sales.filter((s) => s.date === yesterday).reduce((a, s) => a + (+s.revenue), 0);
   let status;
-  if (acumulado >= metaAmount) status = { label: '🏆 META ATINGIDA', cls: 'c-ok' };
+  if (acumulado >= metaAmount) status = { label: 'META ATINGIDA', cls: 'c-ok' };
   else if (projecao > metaAmount * 1.05) status = { label: '🟢 ADIANTADO', cls: 'c-ok' };
   else if (projecao >= metaAmount * 0.95) status = { label: '🟡 EM RISCO', cls: 'c-warn' };
   else status = { label: '🔴 ATRASADO', cls: 'c-danger' };

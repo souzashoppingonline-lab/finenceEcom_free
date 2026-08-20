@@ -133,7 +133,7 @@
         if (e1) { msg.textContent = e1.message; msg.classList.add('err'); return; }
         const { error: e2 } = await sb.auth.mfa.verify({ factorId, challengeId: ch.id, code });
         if (e2) { msg.textContent = 'Código inválido.'; msg.classList.add('err'); return; }
-        msg.textContent = '✔ Verificação em duas etapas ativada!'; msg.classList.add('ok');
+        msg.textContent = 'Verificação em duas etapas ativada!'; msg.classList.add('ok');
         document.getElementById('mfa-setup').hidden = true;
       });
     })();

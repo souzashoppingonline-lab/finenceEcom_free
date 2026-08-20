@@ -35,7 +35,7 @@ async function loadAiSettings() {
   $('ext-token').value = s.ext_token || '';
   // status resumo no cabeçalho do card
   const keyOk = (s.provider === 'openai' && s.has_openai) || (s.provider === 'anthropic' && s.has_anthropic);
-  $('ia-status').textContent = keyOk ? '✅ IA configurada' : '⚠️ IA não configurada';
+  $('ia-status').textContent = keyOk ? 'IA configurada' : '⚠️ IA não configurada';
   $('ia-status').className = keyOk ? 'c-ok' : 'c-warn';
 }
 
@@ -74,7 +74,7 @@ $('save-ia').addEventListener('click', async () => {
   try {
     await api('/api/ai-settings', { method: 'PUT', body: JSON.stringify(body) });
     $('key-anthropic').value = ''; $('key-openai').value = '';
-    $('ia-msg').textContent = 'Configurações salvas ✅'; $('ia-msg').className = 'form-msg c-ok';
+    $('ia-msg').textContent = 'Configurações salvas'; $('ia-msg').className = 'form-msg c-ok';
     await loadAiSettings();
     renderProducts(); // atualiza estado dos botões "Analisar com IA"
   } catch (e) { $('ia-msg').textContent = e.message; $('ia-msg').className = 'form-msg c-danger'; }
@@ -82,7 +82,7 @@ $('save-ia').addEventListener('click', async () => {
 });
 
 $('token-help').addEventListener('click', () => {
-  openModal('❓ Como configurar o token de IA', `
+  openModal('Como configurar o token de IA', `
     <p class="muted">Você usa a sua própria chave — o custo do uso fica na sua conta do provedor. Escolha um dos dois:</p>
 
     <h3 class="ia-h">🔵 Claude (Anthropic)</h3>
@@ -137,7 +137,7 @@ $('save-hour')?.addEventListener('click', async () => {
   $('save-hour').disabled = true;
   try {
     await api('/api/ai-settings', { method: 'PUT', body: JSON.stringify({ monitor_hour: v === '' ? null : Number(v) }) });
-    msg.textContent = v === '' ? '✅ Atualização a qualquer hora salva.' : `✅ Atualização diária a partir das ${String(v).padStart(2, '0')}:00.`;
+    msg.textContent = v === '' ? 'Atualização a qualquer hora salva.' : `Atualização diária a partir das ${String(v).padStart(2, '0')}:00.`;
     msg.className = 'c-ok';
   } catch (e) { msg.textContent = e.message; msg.className = 'c-danger'; }
   $('save-hour').disabled = false;
@@ -165,8 +165,8 @@ function renderProducts() {
   el.innerHTML = products.map((p) => {
     const isActive = String(p.id) === String(activeId);
     const iaBtn = iaReady()
-      ? `<button class="btn-inline" data-ia="${p.id}">🤖 Analisar com IA</button>`
-      : '<button class="btn-ghost" disabled title="Configure seu token de IA acima">🤖 IA (configure o token)</button>';
+      ? `<button class="btn-inline" data-ia="${p.id}">Analisar com IA</button>`
+      : '<button class="btn-ghost" disabled title="Configure seu token de IA acima">IA (configure o token)</button>';
     return `<div class="card period-card" data-id="${p.id}">
       <div class="dash-head-row">
         <h4 style="margin:0">${esc(p.produto)}</h4>
@@ -176,7 +176,7 @@ function renderProducts() {
       <div class="head-actions" style="margin-top:10px;flex-wrap:wrap;gap:8px">
         <button class="btn-inline" data-open="${p.id}">Abrir</button>
         ${iaBtn}
-        <button class="btn-ghost" data-del-prod="${p.id}" title="Excluir produto">🗑️ Excluir</button>
+        <button class="btn-ghost" data-del-prod="${p.id}" title="Excluir produto">Excluir</button>
       </div>
     </div>`;
   }).join('');
@@ -265,7 +265,7 @@ function priceBar(ads, P, breakEven) {
   let situa = 'no meio da faixa';
   if (P) { if (P <= media * 0.97) situa = 'mais barato que a média'; else if (P >= media * 1.03) situa = 'mais caro que a média'; }
   return `<div class="pb-card">
-    <div class="pb-title">💲 Seu preço vs. concorrentes <span class="muted">— ${prices.length} anúncios · média ${money2(media)}</span></div>
+    <div class="pb-title">Seu preço vs. concorrentes <span class="muted">— ${prices.length} anúncios · média ${money2(media)}</span></div>
     <div class="pb-track">
       ${dots}
       ${markTop(P, 'pb-p', 'Sugerido')}
@@ -302,11 +302,11 @@ function analysisHtml(d, when, prod, ads) {
       <b>Lucro</b> = ${money2(P)} − ${money2(custoFixo)} − ${money2(taxaVal)} − ${money2(impVal)} = <b>${money2(lucro)}</b>
     </p>
     <div class="be-grid">
-      <div class="be-box"><span>⚖️ Preço de equilíbrio</span><b>${money2(breakEven)}</b><small>margem 0% (nem lucro nem prejuízo)</small></div>
-      <div class="be-box"><span>🎯 Preço p/ margem ${ALVO}%</span><b>${money2(precoAlvo)}</b><small>lucro de ${money2(precoAlvo * ALVO / 100)}/un.</small></div>
+      <div class="be-box"><span>Preço de equilíbrio</span><b>${money2(breakEven)}</b><small>margem 0% (nem lucro nem prejuízo)</small></div>
+      <div class="be-box"><span>Preço p/ margem ${ALVO}%</span><b>${money2(precoAlvo)}</b><small>lucro de ${money2(precoAlvo * ALVO / 100)}/un.</small></div>
     </div>
     <div class="sim no-print" data-custo="${custoFixo}" data-taxa="${taxaPct}" data-imp="${impPct}">
-      <label>🧮 Simular preço de venda
+      <label>Simular preço de venda
         <input type="number" id="sim-preco" min="0" step="0.01" value="${P ? P.toFixed(2) : ''}" placeholder="Digite um preço" />
       </label>
       <div class="sim-out">
@@ -316,32 +316,32 @@ function analysisHtml(d, when, prod, ads) {
     </div>` : '';
   const score = (d.score && d.score.valor != null) ? d.score.valor : (typeof d.score === 'number' ? d.score : 0);
   const verd = {
-    VALE: { t: 'Vale a pena', c: 'v-ok', i: '✅' },
+    VALE: { t: 'Vale a pena', c: 'v-ok', i: '🟢' },
     ATENCAO: { t: 'Atenção', c: 'v-warn', i: '🟡' },
     NAO_VALE: { t: 'Não vale', c: 'v-bad', i: '🔴' },
   }[String(dec.veredito || '').toUpperCase()] || { t: dec.veredito || '—', c: 'v-warn', i: '•' };
   const kpi = (l, v) => `<div class="fin-kpi"><span>${l}</span><b>${v}</b></div>`;
   return `
-  <div class="ia-report-actions no-print"><button class="btn-ghost" id="ia-pdf">📄 Baixar PDF</button></div>
+  <div class="ia-report-actions no-print"><button class="btn-ghost" id="ia-pdf">Baixar PDF</button></div>
   <div class="ia-hero">
     ${scoreDonut(score)}
     <div class="ia-hero-txt">
       <span class="verd ${verd.c}">${verd.i} ${esc(verd.t)}</span>
       ${dec.justificativa ? `<p class="ia-resumo">${esc(dec.justificativa)}</p>` : ''}
       ${(d.score && d.score.explicacao) ? `<p class="ia-detalhe">${esc(d.score.explicacao)}</p>` : ''}
-      <small class="muted">🤖 Análise por IA · ${when}</small>
+      <small class="muted">Análise por IA · ${when}</small>
     </div>
   </div>
   <div class="ia-cols">
     <div class="ia-col">
-      <h4>💬 Comentários</h4>
+      <h4>Comentários</h4>
       <p class="ia-p">${esc(com.resumo || '—')}</p>
       <h5 class="ia-sub sub-bad">Reclamações</h5>${ul(com.reclamacoes)}
       <h5 class="ia-sub sub-ok">Elogios</h5>${ul(com.elogios)}
       <h5 class="ia-sub sub-op">Oportunidades</h5>${ul(com.oportunidades)}
     </div>
     <div class="ia-col">
-      <h4>💰 Financeiro</h4>
+      <h4>Financeiro</h4>
       <div class="fin-grid">
         ${kpi('Custo total', money2(custoReal))}
         ${kpi('Preço sugerido', money2(P))}
@@ -352,7 +352,7 @@ function analysisHtml(d, when, prod, ads) {
       <p class="ia-p" style="margin-top:10px">${esc(f.explicacao || '')}</p>
     </div>
     <div class="ia-col">
-      <h4>⚖️ Decisão</h4>
+      <h4>Decisão</h4>
       <h5 class="ia-sub sub-bad">Riscos</h5>${ul(dec.riscos)}
       <h5 class="ia-sub sub-op">Próximos passos</h5>${ul(dec.proximos_passos)}
     </div>
@@ -391,7 +391,7 @@ function exportAnalysisPDF(titleText) {
   const compRows = ads.map((a) => `<tr>
     <td>${esc((a.titulo || a.ml_id || '—')).slice(0, 60)}</td>
     <td>${a.preco != null ? money2(a.preco) : '—'}</td>
-    <td>${a.nota ? '⭐ ' + a.nota : '—'}</td>
+    <td>${a.nota ? '' + a.nota : '—'}</td>
     <td>${a.comentarios || '—'}</td>
     <td>${a.vendas_30d != null ? a.vendas_30d : '—'}</td>
     <td>${a.is_full ? 'FULL' : ''}</td>
@@ -448,7 +448,7 @@ function exportAnalysisPDF(titleText) {
 async function runAnalysis(productId, btn) {
   if (!iaReady()) { alert('Configure seu token de IA nas Configurações acima.'); return; }
   const original = btn ? btn.textContent : '';
-  if (btn) { btn.disabled = true; btn.textContent = '🤖 Analisando…'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Analisando…'; }
   try {
     await api(`/api/analise/products/${productId}/analyze`, { method: 'POST' });
     loadUsage();
@@ -470,9 +470,9 @@ function creativesHtml(list) {
     const ang = c.angulo || c.objecao || '';
     return `<div class="crea-card">
       <div class="dash-head-row"><span class="crea-tag">${i + 1}. ${esc(ang)}</span>
-        <button class="btn-ghost crea-copy" data-json='${esc(json)}'>📋 Copiar</button></div>
-      ${c.objetivo ? `<p class="crea-obj">🎯 ${esc(c.objetivo)}</p>` : ''}
-      ${Array.isArray(c.imagens_referencia) && c.imagens_referencia.length ? `<div class="crea-refs"><span class="muted">🖼️ Base:</span>${c.imagens_referencia.slice(0, 4).map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="ref" loading="lazy"/></a>`).join('')}</div>` : ''}
+        <button class="btn-ghost crea-copy" data-json='${esc(json)}'>Copiar</button></div>
+      ${c.objetivo ? `<p class="crea-obj">${esc(c.objetivo)}</p>` : ''}
+      ${Array.isArray(c.imagens_referencia) && c.imagens_referencia.length ? `<div class="crea-refs"><span class="muted">Base:</span>${c.imagens_referencia.slice(0, 4).map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="ref" loading="lazy"/></a>`).join('')}</div>` : ''}
       ${cp.texto_principal ? `<p class="crea-h">“${esc(cp.texto_principal)}”</p>` : ''}
       ${cp.texto_secundario ? `<p class="muted" style="font-size:.82rem">${esc(cp.texto_secundario)}</p>` : ''}
       <details style="margin-top:8px"><summary class="muted">Ver JSON completo</summary>
@@ -484,7 +484,7 @@ function creativesHtml(list) {
 function bindCreativeCopies() {
   document.querySelectorAll('.crea-copy').forEach((b) => b.addEventListener('click', () => {
     navigator.clipboard?.writeText(b.dataset.json);
-    const o = b.textContent; b.textContent = '✅ Copiado!'; setTimeout(() => (b.textContent = o), 1500);
+    const o = b.textContent; b.textContent = 'Copiado!'; setTimeout(() => (b.textContent = o), 1500);
   }));
 }
 
@@ -492,7 +492,7 @@ async function runCreatives(productId, btn) {
   if (!iaReady()) { alert('Configure seu token de IA nas Configurações acima.'); return; }
   if (!confirm(`Gerar ${CREATIVES_N} criativos usa a IA e consome créditos da sua chave. Deseja continuar?`)) return;
   const original = btn ? btn.textContent : '';
-  if (btn) { btn.disabled = true; btn.textContent = '✨ Gerando…'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Gerando…'; }
   const out = $('crea-out');
   if (out) out.innerHTML = '<p class="muted">A IA está montando os briefs (quebrando as objeções dos comentários)…</p>';
   try {
@@ -549,10 +549,10 @@ async function openDetail(id) {
       <h2 style="margin:0">${esc(p.produto)}</h2>
       <div class="head-actions" style="flex-wrap:wrap;gap:8px">
         ${iaReady()
-          ? `<button class="btn-inline" data-ia="${p.id}">🤖 Analisar com IA</button>`
-          : '<button class="btn-ghost" disabled title="Configure seu token de IA acima">🤖 IA (configure o token)</button>'}
+          ? `<button class="btn-inline" data-ia="${p.id}">Analisar com IA</button>`
+          : '<button class="btn-ghost" disabled title="Configure seu token de IA acima">IA (configure o token)</button>'}
         ${isActive
-          ? `<button class="btn-ghost" data-finalize="${p.id}">⏹ Finalizar coleta</button>`
+          ? `<button class="btn-ghost" data-finalize="${p.id}">Finalizar coleta</button>`
           : `<button class="btn-inline" data-activate="${p.id}">▶ Coleta ativa</button>`}
         <button class="btn-ghost" data-edit="${p.id}">Editar</button>
         <button class="btn-ghost" data-del="${p.id}">Excluir</button>
@@ -579,7 +579,7 @@ async function openDetail(id) {
     try { data = JSON.parse(p.analise_ia); } catch (_) {}
     const inner = (data && data.decisao)
       ? analysisHtml(data, when, p, ads)
-      : `<div class="dash-head-row"><h3 style="margin:0">🤖 Análise por IA</h3><small class="muted">${when}</small></div>
+      : `<div class="dash-head-row"><h3 style="margin:0">Análise por IA</h3><small class="muted">${when}</small></div>
          <p class="muted">Esta análise foi gerada numa versão anterior e ficou incompleta. Clique em <b>Analisar com IA</b> para gerar de novo no novo formato.</p>`;
     $('detail-head').insertAdjacentHTML('beforeend', `<div class="ia-report">${inner}</div>`);
     bindSimulator();
@@ -593,12 +593,12 @@ async function openDetail(id) {
     $('detail-head').insertAdjacentHTML('beforeend', `
       <div class="crea-banner" id="crea-banner">
         <div class="crea-bn-txt">
-          <h3>✨ Criativos p/ imagem <span class="muted">(${n} JSONs pro ChatGPT)</span></h3>
+          <h3>Criativos p/ imagem <span class="muted">(${n} JSONs pro ChatGPT)</span></h3>
           <p class="muted">Cada JSON quebra uma objeção dos comentários. Clique em <b>Copiar</b> e cole no ChatGPT (com suas fotos) pra gerar a imagem.</p>
         </div>
         <div class="crea-actions">
-          <label class="crea-vis"><input type="checkbox" id="crea-vision" checked /> 👁️ Usar imagens (visão) <span class="muted">— mais fiel, gasta mais</span></label>
-          <button class="crea-gen" data-creatives="${p.id}">✨ Gerar ${n} criativos</button>
+          <label class="crea-vis"><input type="checkbox" id="crea-vision" checked /> Usar imagens (visão) <span class="muted">— mais fiel, gasta mais</span></label>
+          <button class="crea-gen" data-creatives="${p.id}">Gerar ${n} criativos</button>
         </div>
       </div>
       <div id="crea-out">${saved ? creativesHtml(saved) : ''}</div>`);
@@ -682,10 +682,10 @@ async function loadHistory(mlId, container) {
   try {
     const r = await api(`/api/analise/monitor/${encodeURIComponent(mlId)}`);
     const h = (r.historico || []).map((s) => ({ ...s, preco: Number(s.preco) }));
-    if (!h.length) { container.innerHTML = '<p class="muted">Sem histórico ainda. A cada dia que a extensão recoletar, um ponto de preço é gravado aqui. Use “⚡ Forçar recoleta” no popup da extensão para gravar um ponto agora.</p>'; return; }
+    if (!h.length) { container.innerHTML = '<p class="muted">Sem histórico ainda. A cada dia que a extensão recoletar, um ponto de preço é gravado aqui. Use “Forçar recoleta” no popup da extensão para gravar um ponto agora.</p>'; return; }
     const first = h[0].preco, last = h[h.length - 1].preco, delta = last - first;
     const menor = Math.min(...h.map((p) => p.preco)), maior = Math.max(...h.map((p) => p.preco));
-    const deltaTxt = delta === 0 ? '➡️ estável' : (delta > 0 ? `🔺 subiu ${money(delta)}` : `🔻 caiu ${money(-delta)}`);
+    const deltaTxt = delta === 0 ? 'estável' : (delta > 0 ? `subiu ${money(delta)}` : `caiu ${money(-delta)}`);
     const kpi = (l, v) => `<div class="pc-kpi"><span class="muted">${l}</span><b>${v}</b></div>`;
     const rows = h.slice(-30).reverse().map((s) => `<tr><td>${new Date(s.snap_date + 'T00:00:00').toLocaleDateString('pt-BR')}</td><td>${money(s.preco)}</td></tr>`).join('');
     container.innerHTML = `
@@ -721,7 +721,7 @@ function openVendas(adId, productId) {
     </table></div>
     <button class="btn-cadastrar" id="vendas-save" style="max-width:220px">Salvar vendas</button>
     <p id="vendas-msg" class="form-msg"></p>`;
-  openModal('📊 Vendas dos últimos 30 dias', html);
+  openModal('Vendas dos últimos 30 dias', html);
   $('vendas-save').addEventListener('click', async () => {
     const body = {};
     ['vendas_7d', 'vendas_15d', 'vendas_21d', 'vendas_30d', 'preco_medio_7d', 'preco_medio_15d', 'preco_medio_21d', 'preco_medio_30d'].forEach((k) => { body[k] = $('v_' + k).value; });
@@ -772,11 +772,11 @@ function adCard(a) {
         <div class="ad-title">${a.link ? `<a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.titulo || a.ml_id || 'Concorrente')}</a>` : esc(a.titulo || a.ml_id || 'Concorrente')}</div>
         <div class="ad-price">${a.preco != null ? money(a.preco) : '—'} ${a.preco_original && a.preco_original > a.preco ? `<s class="muted">${money(a.preco_original)}</s>` : ''}<span class="ad-price-tag">último preço</span></div>
         <div class="ad-meta">
-          <span>⭐ ${a.nota && a.nota > 0 ? a.nota : 'sem nota'}${a.comentarios ? ` (${a.comentarios})` : ''}</span>
-          ${a.vendas ? `<span>📦 ${esc(a.vendas)}</span>` : ''}
-          ${a.vendedor ? `<span>🏷️ ${esc(a.vendedor)}</span>` : ''}
-          ${a.cidade ? `<span>📍 ${esc(a.cidade)}${a.estado ? '/' + esc(a.estado) : ''}</span>` : ''}
-          ${a.data_criacao ? `<span>🗓️ criado ${esc(a.data_criacao)}</span>` : ''}
+          <span>${a.nota && a.nota > 0 ? a.nota : 'sem nota'}${a.comentarios ? ` (${a.comentarios})` : ''}</span>
+          ${a.vendas ? `<span>${esc(a.vendas)}</span>` : ''}
+          ${a.vendedor ? `<span>${esc(a.vendedor)}</span>` : ''}
+          ${a.cidade ? `<span>${esc(a.cidade)}${a.estado ? '/' + esc(a.estado) : ''}</span>` : ''}
+          ${a.data_criacao ? `<span>criado ${esc(a.data_criacao)}</span>` : ''}
         </div>
         <div class="ad-badges">${badges}</div>
       </div>
@@ -791,7 +791,7 @@ function adCard(a) {
       ${a.observacoes ? `<div class="ad-sec"><b>Minhas anotações:</b> ${esc(a.observacoes)}</div>` : ''}
     </div>
     <div class="ad-review-edit" data-edit-wrap="${a.id}" hidden>
-      <label>💬 Avaliações do concorrente (cole os textos — a IA usa na análise)
+      <label>Avaliações do concorrente (cole os textos — a IA usa na análise)
         <textarea data-review-input="${a.id}" rows="5" placeholder="Cole aqui as avaliações, principalmente as de 1 a 3 estrelas (o que reclamam, o que falta)">${esc(a.comentarios_texto || '')}</textarea>
       </label>
       <div class="head-actions">
@@ -801,7 +801,7 @@ function adCard(a) {
     </div>
     ${(a.vendas_30d != null || a.vendas_7d != null) ? `<div class="ad-sec ad-vendas"><b>Vendas:</b> ${[['7d', a.vendas_7d], ['15d', a.vendas_15d], ['21d', a.vendas_21d], ['30d', a.vendas_30d]].filter(([, v]) => v != null).map(([l, v]) => `${l}: <b>${v}</b>`).join(' · ')}</div>` : ''}
     <div class="ad-actions">
-      <label class="switch-sm" title="Quando ligado, a extensão recoleta este anúncio 1×/dia automaticamente, só com o navegador aberto."><input type="checkbox" data-mon="${a.id}" ${a.monitorar ? 'checked' : ''}/> 🔄 Atualizar automaticamente</label>
+      <label class="switch-sm" title="Quando ligado, a extensão recoleta este anúncio 1×/dia automaticamente, só com o navegador aberto."><input type="checkbox" data-mon="${a.id}" ${a.monitorar ? 'checked' : ''}/> Atualizar automaticamente</label>
       <div class="head-actions" style="gap:6px">
         <button class="btn-ghost" data-vendas="${a.id}">Vendas 30d</button>
         ${a.ml_id ? `<button class="btn-ghost" data-hist-btn="${esc(a.ml_id)}" data-hist-title="${esc(a.titulo || a.ml_id)}">Preço</button>` : ''}
@@ -835,18 +835,18 @@ function renderAds(productId, ads) {
         </select>
         <select id="ad-sort" class="filter-inp">
           <option value="default"${adSort === 'default' ? ' selected' : ''}>Ordenar…</option>
-          <option value="cheap"${adSort === 'cheap' ? ' selected' : ''}>💲 Mais barato</option>
-          <option value="exp"${adSort === 'exp' ? ' selected' : ''}>💲 Mais caro</option>
-          <option value="rating"${adSort === 'rating' ? ' selected' : ''}>⭐ Melhor nota</option>
-          <option value="reviews"${adSort === 'reviews' ? ' selected' : ''}>💬 Mais avaliações</option>
+          <option value="cheap"${adSort === 'cheap' ? ' selected' : ''}>Mais barato</option>
+          <option value="exp"${adSort === 'exp' ? ' selected' : ''}>Mais caro</option>
+          <option value="rating"${adSort === 'rating' ? ' selected' : ''}>Melhor nota</option>
+          <option value="reviews"${adSort === 'reviews' ? ' selected' : ''}>Mais avaliações</option>
         </select>
-        <label class="ad-hour" title="Horário em que a extensão atualiza os preços marcados (1×/dia)">⏰ Monitorar às
+        <label class="ad-hour" title="Horário em que a extensão atualiza os preços marcados (1×/dia)">Monitorar às
           <select id="ad-monitor-hour" class="filter-inp">
             <option value="">qualquer hora</option>
             ${Array.from({ length: 24 }, (_, h) => `<option value="${h}"${String(aiState.monitor_hour) === String(h) ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}
           </select>
         </label>
-        <button id="ad-refresh" class="btn-ghost">🔄 Atualizar</button>
+        <button id="ad-refresh" class="btn-ghost">Atualizar</button>
         <button id="ad-new" class="btn-inline">+ Adicionar concorrente</button>
       </div>
     </div>
@@ -875,7 +875,7 @@ function renderAds(productId, ads) {
         <label>Estado (UF)<input name="estado" placeholder="Ex.: SP" maxlength="2" /></label>
       </div>
       <label>Data de criação do anúncio<input name="data_criacao" placeholder="Ex.: 07/08/2026" /></label>
-      <p class="muted" style="margin-top:8px">💡 As vendas dos últimos 7/15/21/30 dias você preenche depois, no botão <b>Vendas 30d</b> de cada card.</p>
+      <p class="muted" style="margin-top:8px">As vendas dos últimos 7/15/21/30 dias você preenche depois, no botão <b>Vendas 30d</b> de cada card.</p>
       <label class="checkbox" style="display:inline-flex;margin-right:18px"><input type="checkbox" name="is_full" /> <span>Full</span></label>
       <label class="checkbox" style="display:inline-flex"><input type="checkbox" name="is_flex" /> <span>Flex</span></label>
       <label>Ficha técnica (uma por linha, ex.: "Peso: 3kg")<textarea name="ficha" rows="3" placeholder="Marca: Quatree&#10;Peso: 3kg&#10;Indicação: Gatos castrados"></textarea></label>
@@ -907,7 +907,7 @@ function renderAds(productId, ads) {
   });
   // histórico de preço: abre modal com gráfico animado
   $('detail-ads').querySelectorAll('[data-hist-btn]').forEach((b) => b.addEventListener('click', () => {
-    openModal(`📈 Histórico de preço <small class="muted" style="font-weight:400">${esc(b.dataset.histTitle || '')}</small>`, '<p class="muted">Carregando…</p>');
+    openModal(`Histórico de preço <small class="muted" style="font-weight:400">${esc(b.dataset.histTitle || '')}</small>`, '<p class="muted">Carregando…</p>');
     loadHistory(b.dataset.histBtn, $('ia-modal-body'));
   }));
   $('ad-new').addEventListener('click', () => { $('ad-form').hidden = false; });
@@ -964,11 +964,11 @@ async function loadUsage() {
     if (!u.total.calls) { $('ia-usage').hidden = true; return; }
     $('ia-usage').hidden = false;
     $('ia-usage').innerHTML = `
-      <span class="usage-title">💸 Gastos de IA</span>
+      <span class="usage-title">Gastos de IA</span>
       <span class="usage-item"><b>${u.total.calls}</b> chamadas</span>
-      <span class="usage-item">🔍 <b>${u.analises}</b> análises</span>
-      <span class="usage-item">🎨 <b>${u.criativos}</b> criativos</span>
-      <span class="usage-item">📅 mês: <b>${brl(u.mes.cost_usd)}</b></span>
+      <span class="usage-item"><b>${u.analises}</b> análises</span>
+      <span class="usage-item"><b>${u.criativos}</b> criativos</span>
+      <span class="usage-item">mês: <b>${brl(u.mes.cost_usd)}</b></span>
       <span class="usage-item usage-total">Total: <b>${brl(u.total.cost_usd)}</b></span>`;
   } catch (_) { $('ia-usage').hidden = true; }
 }

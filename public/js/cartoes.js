@@ -112,7 +112,7 @@ async function loadFaturas() {
   const el = $('faturas-list');
   el.innerHTML = faturas.length === 0 ? '<p class="muted">Nenhuma fatura em aberto.</p>' : faturas.map((ft) => `
     <div class="card fatura-card">
-      <h4>💳 ${esc(ft.cartao)}</h4>
+      <h4>${esc(ft.cartao)}</h4>
       <p class="muted">Fatura ${mesLabel(ft.fatura_mes)} · ${ft.count} parcela(s)</p>
       <div class="fatura-total">${money(ft.total)}</div>
       <button class="btn-add-sale pay-fatura" data-card="${ft.cartao_id}" data-mes="${ft.fatura_mes}" data-total="${ft.total}" data-cardname="${esc(ft.cartao)}">Pagar Fatura</button>
@@ -134,7 +134,7 @@ $('faturas-list').addEventListener('click', async (e) => {
   if (!data) return;
   try {
     const r = await api('/api/faturas/pay', { method: 'POST', body: JSON.stringify({ cartao_id: btn.dataset.card, fatura_mes: btn.dataset.mes, data_pagamento: data }) });
-    alert(`✓ Fatura paga: ${r.parcelas} parcelas, ${r.lancamentos} lançamento(s) no Fluxo de Caixa.`);
+    alert(`Fatura paga: ${r.parcelas} parcelas, ${r.lancamentos} lançamento(s) no Fluxo de Caixa.`);
     await loadAll(); loadFaturas();
   } catch (err) { alert(err.message); }
 });

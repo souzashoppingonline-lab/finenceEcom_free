@@ -17,8 +17,8 @@
         <p class="muted">Planeje seus compromissos. Ao marcar como pago, vira lançamento no Fluxo de Caixa.</p>
       </div>
       <div class="head-actions">
-        <button id="add-fornecedor" class="btn-ghost">🚚 Cadastrar Fornecedor</button>
-        <button id="add-categoria" class="btn-ghost">🏷️ Cadastrar Categoria</button>
+        <button id="add-fornecedor" class="btn-ghost">Cadastrar Fornecedor</button>
+        <button id="add-categoria" class="btn-ghost">Cadastrar Categoria</button>
         <span id="export-box" class="export-group"></span>
       </div>
     </div>
@@ -48,14 +48,14 @@
 
         <span class="field-label">Tipo de dívida</span>
         <div class="kind-grid" id="kind-grid">
-          <button type="button" class="kind-btn is-active" data-kind="boleto">🧾 Boleto</button>
-          <button type="button" class="kind-btn" data-kind="cartao">💳 Cartão</button>
-          <button type="button" class="kind-btn" data-kind="imposto">📋 Imposto</button>
-          <button type="button" class="kind-btn" data-kind="pessoal">👤 Pessoal</button>
-          <button type="button" class="kind-btn" data-kind="fatura_ml">🛒 Fatura ML</button>
-          <button type="button" class="kind-btn" data-kind="flex">⚡ Flex</button>
-          <button type="button" class="kind-btn" data-kind="custo_fixo">📌 Custo Fixo</button>
-          <button type="button" class="kind-btn" data-kind="custo_variavel">📈 Custo Variável</button>
+          <button type="button" class="kind-btn is-active" data-kind="boleto">Boleto</button>
+          <button type="button" class="kind-btn" data-kind="cartao">Cartão</button>
+          <button type="button" class="kind-btn" data-kind="imposto">Imposto</button>
+          <button type="button" class="kind-btn" data-kind="pessoal">Pessoal</button>
+          <button type="button" class="kind-btn" data-kind="fatura_ml">Fatura ML</button>
+          <button type="button" class="kind-btn" data-kind="flex">Flex</button>
+          <button type="button" class="kind-btn" data-kind="custo_fixo">Custo Fixo</button>
+          <button type="button" class="kind-btn" data-kind="custo_variavel">Custo Variável</button>
         </div>
 
         <form id="boleto-form">
@@ -109,16 +109,16 @@
         </div>
 
         <div class="debt-filters">
-          <label class="filt">📅 Dia <input type="number" id="b-dia" min="1" max="31" placeholder="01-31" class="filter-inp filter-day" /></label>
-          <label class="filt">🚚 Fornecedor <select id="b-forn" class="filter-inp"><option value="">Todos</option></select></label>
-          <label class="filt">💳 Cartão <select id="b-cartao" class="filter-inp"><option value="">Todos</option></select></label>
-          <label class="filt">🏦 Banco <select id="b-banco" class="filter-inp"><option value="">Todos</option></select></label>
-          <label class="filt">🏢 Empresa <select id="b-empresa" class="filter-inp"><option value="">Todas</option></select></label>
+          <label class="filt">Dia <input type="number" id="b-dia" min="1" max="31" placeholder="01-31" class="filter-inp filter-day" /></label>
+          <label class="filt">Fornecedor <select id="b-forn" class="filter-inp"><option value="">Todos</option></select></label>
+          <label class="filt">Cartão <select id="b-cartao" class="filter-inp"><option value="">Todos</option></select></label>
+          <label class="filt">Banco <select id="b-banco" class="filter-inp"><option value="">Todos</option></select></label>
+          <label class="filt">Empresa <select id="b-empresa" class="filter-inp"><option value="">Todas</option></select></label>
         </div>
 
         <div class="debt-filters">
-          <label class="filt">🧾 NF <input type="search" id="b-nf" placeholder="Número da NF..." class="filter-inp" /></label>
-          <label class="filt">📄 Direção <select id="b-dir" class="filter-inp"><option value="">Todos</option><option value="pagar">A pagar</option><option value="receber">A receber</option></select></label>
+          <label class="filt">NF <input type="search" id="b-nf" placeholder="Número da NF..." class="filter-inp" /></label>
+          <label class="filt">Direção <select id="b-dir" class="filter-inp"><option value="">Todos</option><option value="pagar">A pagar</option><option value="receber">A receber</option></select></label>
           <div class="type-tabs" id="type-tabs">
           <button class="ttab is-active" data-k="">Todos</button>
           <button class="ttab" data-k="boleto">Boleto</button>
