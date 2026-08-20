@@ -118,3 +118,6 @@ alter table public.ai_usage_log enable row level security;
 
 -- Nivel de profundidade da analise por IA (1=economico ... 5=profundo)
 alter table public.user_ai_settings add column if not exists ai_level integer not null default 3;
+
+-- Horario da atualizacao automatica (0-23, hora local do vendedor; null = qualquer hora apos 24h)
+alter table public.user_ai_settings add column if not exists monitor_hour smallint;

@@ -1517,6 +1517,7 @@ app.get('/api/ai-settings', requireUser, async (req, res) => {
       has_anthropic: !!decryptSecret(s?.anthropic_key),
       has_openai: !!decryptSecret(s?.openai_key),
       ai_level: s?.ai_level || 3,
+      monitor_hour: (s && s.monitor_hour != null) ? Number(s.monitor_hour) : null,
       ext_token: ext,
     });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao carregar configuracoes.' }); }
@@ -1553,7 +1554,11 @@ app.put('/api/ai-settings', requireUser, async (req, res) => {
       anthropic_key: cur.anthropic_key || null,
       openai_key: cur.openai_key || null,
       ai_level: Math.min(5, Math.max(1, Number(b.ai_level) || cur.ai_level || 3)),
+      monitor_hour: (cur.monitor_hour != null ? Number(cur.monitor_hour) : null),
     };
+    if (b.monitor_hour !== undefined) {
+      patch.monitor_hour = (b.monitor_hour === null || b.monitor_hour === '') ? null : Math.min(23, Math.max(0, Number(b.monitor_hour)));
+    }
     if (b.anthropic_key !== undefined) patch.anthropic_key = b.anthropic_key ? encryptSecret(String(b.anthropic_key).trim()) : null;
     if (b.openai_key !== undefined) patch.openai_key = b.openai_key ? encryptSecret(String(b.openai_key).trim()) : null;
     await saveAiSettings(req.userId, patch);
@@ -2173,6 +2178,14 @@ app.get('/extension/monitoramento/proximos', requireExtToken, async (req, res) =
   try {
     const limit = Math.min(Number(req.query.limit) || 5, 20);
     const force = req.query.force === '1';
+    // horário escolhido pelo cliente: a extensão manda a hora LOCAL dela (?hour=).
+    // Antes da hora marcada não recoleta (a atualização diária acontece a partir dela).
+    if (!force) {
+      const st = await getAiSettings(req.userId);
+      const mh = (st && st.monitor_hour != null) ? Number(st.monitor_hour) : null;
+      const clientHour = req.query.hour != null && req.query.hour !== '' ? Number(req.query.hour) : null;
+      if (mh != null && clientHour != null && clientHour < mh) return res.json({ itens: [], waiting_hour: mh });
+    }
     const cutoff = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
     let list;
     if (supabase) {

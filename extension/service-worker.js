@@ -96,7 +96,8 @@ async function runMonitorCycle(force) {
   if (!c.monitorEnabled && !force) return { skipped: true };
   let itens = [];
   try {
-    const r = await apiFetch(`/extension/monitoramento/proximos?limit=${c.batchSize}${force ? '&force=1' : ''}`);
+    const hour = new Date().getHours(); // hora LOCAL do vendedor — o backend usa pra respeitar o horário escolhido
+    const r = await apiFetch(`/extension/monitoramento/proximos?limit=${c.batchSize}&hour=${hour}${force ? '&force=1' : ''}`);
     itens = r.itens || [];
   } catch (e) { return { ok: 0, fail: 0, error: e.message, at: Date.now() }; }
 

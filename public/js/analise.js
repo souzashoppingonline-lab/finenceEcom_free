@@ -31,6 +31,7 @@ async function loadAiSettings() {
   $('mask-anthropic').textContent = s.has_anthropic ? `Salvo: ${s.anthropic_mask}` : 'Nenhuma chave salva.';
   $('mask-openai').textContent = s.has_openai ? `Salvo: ${s.openai_mask}` : 'Nenhuma chave salva.';
   if ($('ai-level')) { $('ai-level').value = s.ai_level || 3; updateLevelLabel(); }
+  if ($('monitor-hour')) $('monitor-hour').value = (s.monitor_hour != null ? String(s.monitor_hour) : '');
   $('ext-token').value = s.ext_token || '';
   // status resumo no cabeçalho do card
   const keyOk = (s.provider === 'openai' && s.has_openai) || (s.provider === 'anthropic' && s.has_anthropic);
@@ -117,6 +118,29 @@ $('regen-token').addEventListener('click', async () => {
   if (!confirm('Gerar um novo token vai desconectar a extensão atual. Continuar?')) return;
   const r = await api('/api/ai-settings/regen-token', { method: 'POST' });
   $('ext-token').value = r.ext_token;
+});
+
+// Preenche o seletor de horário (00h–23h) e salva
+(function fillHours() {
+  const sel = $('monitor-hour');
+  if (!sel) return;
+  for (let h = 0; h < 24; h++) {
+    const o = document.createElement('option');
+    o.value = String(h);
+    o.textContent = String(h).padStart(2, '0') + ':00';
+    sel.appendChild(o);
+  }
+})();
+$('save-hour')?.addEventListener('click', async () => {
+  const v = $('monitor-hour').value;
+  const msg = $('hour-msg');
+  $('save-hour').disabled = true;
+  try {
+    await api('/api/ai-settings', { method: 'PUT', body: JSON.stringify({ monitor_hour: v === '' ? null : Number(v) }) });
+    msg.textContent = v === '' ? '✅ Atualização a qualquer hora salva.' : `✅ Atualização diária a partir das ${String(v).padStart(2, '0')}:00.`;
+    msg.className = 'c-ok';
+  } catch (e) { msg.textContent = e.message; msg.className = 'c-danger'; }
+  $('save-hour').disabled = false;
 });
 
 // ---------------------------------------------------------------------------
@@ -754,7 +778,7 @@ function adCard(a) {
     </div>
     ${(a.vendas_30d != null || a.vendas_7d != null) ? `<div class="ad-sec ad-vendas"><b>📊 Vendas:</b> ${[['7d', a.vendas_7d], ['15d', a.vendas_15d], ['21d', a.vendas_21d], ['30d', a.vendas_30d]].filter(([, v]) => v != null).map(([l, v]) => `${l}: <b>${v}</b>`).join(' · ')}</div>` : ''}
     <div class="ad-actions">
-      <label class="switch-sm"><input type="checkbox" data-mon="${a.id}" ${a.monitorar ? 'checked' : ''}/> atualizar 1×/dia</label>
+      <label class="switch-sm" title="Quando ligado, a extensão recoleta este anúncio 1×/dia automaticamente, só com o navegador aberto."><input type="checkbox" data-mon="${a.id}" ${a.monitorar ? 'checked' : ''}/> 🔄 Atualizar automaticamente</label>
       <div class="head-actions" style="gap:6px">
         <button class="btn-ghost" data-vendas="${a.id}">📊 Vendas 30d</button>
         ${a.ml_id ? `<button class="btn-ghost" data-hist-btn="${esc(a.ml_id)}" data-hist-title="${esc(a.titulo || a.ml_id)}">📈 Preço</button>` : ''}
