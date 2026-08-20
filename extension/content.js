@@ -14,6 +14,39 @@
     return Number(int + (m[2] ? '.' + m[2] : ''));
   }
 
+  // Meta tags (og:/product:/itemprop) — fonte estável, muda muito menos que as classes CSS
+  const metaC = (sel) => { const el = $(sel); return el ? (el.getAttribute('content') || '').trim() : ''; };
+  function getMetaPrice() {
+    const a = metaC('meta[itemprop="price"]') || metaC('meta[property="product:price:amount"]') || metaC('meta[property="og:price:amount"]');
+    if (!a) return null;
+    // og:price:amount normalmente vem em formato "69.90" (ponto decimal)
+    const n = Number(a);
+    return (!isNaN(n) && n > 0) ? n : parseMoney(a);
+  }
+  const getMetaTitle = () => metaC('meta[property="og:title"]') || metaC('meta[name="twitter:title"]') || '';
+  const getMetaImage = () => metaC('meta[property="og:image"]') || metaC('meta[name="twitter:image"]') || '';
+
+  // Lê o "estado" que o ML injeta na página (texto do <script>, não a variável — content script é isolado)
+  let _stateCache;
+  function getStateRaw() {
+    if (_stateCache !== undefined) return _stateCache;
+    _stateCache = '';
+    try {
+      for (const s of $$('script')) {
+        const t = s.textContent || '';
+        if (/__PRELOADED_STATE__|__NEXT_DATA__|"initialState"|"components"/.test(t)) { _stateCache += t; }
+      }
+    } catch (_) {}
+    return _stateCache;
+  }
+  function statePrice() {
+    const raw = getStateRaw();
+    // pega o primeiro preço "de venda" plausível do estado
+    const m = raw.match(/"price"\s*:\s*(\d{1,9}(?:\.\d{1,2})?)/) || raw.match(/"amount"\s*:\s*(\d{1,9}(?:\.\d{1,2})?)/);
+    const n = m ? Number(m[1]) : null;
+    return n && n > 0 ? n : null;
+  }
+
   function getJsonLd() {
     for (const s of $$('script[type="application/ld+json"]')) {
       try {
@@ -34,13 +67,24 @@
     return null;
   }
 
-  function getPrice() {
+  function getPriceDom() {
     const el = $('.ui-pdp-price__second-line .andes-money-amount__fraction')
       || $('[data-testid="price-part"] .andes-money-amount__fraction')
       || $('.andes-money-amount__fraction');
     const cents = $('.ui-pdp-price__second-line .andes-money-amount__cents');
     if (!el) return null;
-    return Number(txt(el).replace(/\./g, '') + '.' + (cents ? txt(cents) : '00'));
+    const n = Number(txt(el).replace(/\./g, '') + '.' + (cents ? txt(cents) : '00'));
+    return isNaN(n) ? null : n;
+  }
+  // preço com cascata de fontes: DOM -> meta -> JSON-LD -> estado da página
+  function getPrice() {
+    return getPriceDom() ?? getMetaPrice() ?? (() => { const j = getJsonLd(); return j && j.offers ? parseMoney(j.offers.price) : null; })() ?? statePrice();
+  }
+  // nº de perguntas do anúncio (já havia o campo, estava sempre nulo)
+  function getPerguntas() {
+    const t = document.body.innerText || '';
+    const m = t.match(/Perguntas\s*\((\d+)\)/i) || t.match(/(\d+)\s*pergunta/i);
+    return m ? Number(m[1]) : null;
   }
 
   function getOriginalPrice() {
@@ -171,16 +215,18 @@
     const reviews = getReviews();
     const loc = getLocation();
     const ff = getFullFlex();
+    let fotos = getFotos();
+    if (!fotos.length) { const mi = getMetaImage(); if (mi) fotos = [mi]; }
     const extracted = {
       ml_id: getMlId(),
       link: location.href.split('#')[0],
-      titulo: txt($('.ui-pdp-title')) || (jsonLd && jsonLd.name) || document.title,
-      preco: getPrice() ?? (jsonLd && jsonLd.offers && parseMoney(jsonLd.offers.price)),
+      titulo: txt($('.ui-pdp-title')) || getMetaTitle() || (jsonLd && jsonLd.name) || document.title,
+      preco: getPrice(),
       preco_original: getOriginalPrice(),
       nota: getRating() ?? (jsonLd && jsonLd.aggregateRating && Number(jsonLd.aggregateRating.ratingValue)),
       vendas: getVendas(),
-      perguntas: null,
-      comentarios: reviews.count,
+      perguntas: getPerguntas(),
+      comentarios: reviews.count ?? (jsonLd && jsonLd.aggregateRating && Number(jsonLd.aggregateRating.reviewCount)) ?? null,
       aval_dist: reviews.dist,
       data_criacao: getCreationDate(jsonLd),
       vendedor: getSeller(),
@@ -189,17 +235,20 @@
       reputacao: getReputacao(),
       is_full: ff.is_full,
       is_flex: ff.is_flex,
-      fotos: getFotos(),
+      fotos,
       videos: getVideos(),
       descricao: getDescricao(),
       highlights: getHighlights(),
     };
+    // diagnóstico: campos-chave que vieram vazios (ajuda a detectar quando o ML muda o layout)
+    const _missing = ['titulo', 'preco', 'nota', 'vendedor'].filter((k) => extracted[k] == null || extracted[k] === '');
     return {
       url: extracted.link,
       title: extracted.titulo,
       pageText: (document.body.innerText || '').slice(0, 4000),
       jsonLd,
       extracted,
+      _diag: { missing: _missing, source: getPriceDom() != null ? 'dom' : getMetaPrice() != null ? 'meta' : statePrice() != null ? 'state' : 'none' },
     };
   }
 
