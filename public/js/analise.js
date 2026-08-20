@@ -871,6 +871,7 @@ function renderAds(productId, ads) {
             ${Array.from({ length: 24 }, (_, h) => `<option value="${h}"${String(aiState.monitor_hour) === String(h) ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}
           </select>
         </label>
+        <button id="ad-recollect-all" class="btn-ghost">🔄 Recoletar todos</button>
         <button id="ad-refresh" class="btn-ghost">Atualizar</button>
         <button id="ad-new" class="btn-inline">+ Adicionar concorrente</button>
       </div>
@@ -920,6 +921,20 @@ function renderAds(productId, ads) {
   $('ad-filter').addEventListener('change', (e) => { adFilter = e.target.value; renderAds(lastProductId, lastAds); });
   $('ad-sort').addEventListener('change', (e) => { adSort = e.target.value; renderAds(lastProductId, lastAds); });
   $('ad-refresh').addEventListener('click', () => openDetail(productId));
+  // recoletar TODOS os concorrentes (sequencial, via extensão)
+  $('ad-recollect-all')?.addEventListener('click', async () => {
+    const alvos = (lastAds || []).filter((a) => a.link);
+    if (!alvos.length) return;
+    const btn = $('ad-recollect-all'); btn.disabled = true;
+    let ok = 0, fail = 0;
+    for (let i = 0; i < alvos.length; i++) {
+      btn.textContent = `🔄 Recoletando ${i + 1}/${alvos.length}…`;
+      const r = await recollectAd(alvos[i].link);
+      if (r && r.ok) ok++; else fail++;
+    }
+    btn.textContent = `✅ ${ok} atualizados${fail ? ` · ${fail} falhas` : ''}`;
+    setTimeout(() => openDetail(productId), 1200);
+  });
   $('ad-monitor-hour')?.addEventListener('change', async (e) => {
     const v = e.target.value;
     e.target.disabled = true;
