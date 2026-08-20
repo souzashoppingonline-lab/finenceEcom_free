@@ -12,19 +12,19 @@
   <div id="sidebar-root"></div>
   <main class="app-content">
     <div class="dash-head">
-      <h1>🔎 Análise de Produtos</h1>
+      <h1>Análise de Produtos</h1>
       <p class="muted">Monitore concorrentes do Mercado Livre e analise seus produtos com IA.</p>
     </div>
 
     <!-- ============ CONFIG DE IA + EXTENSÃO ============ -->
     <div class="card" id="ia-card" style="margin-bottom:22px">
       <div class="dash-head-row" style="cursor:pointer" id="ia-toggle">
-        <h3 style="margin:0">⚙️ Configurações de IA e Extensão</h3>
+        <h3 style="margin:0">Configurações de IA e Extensão</h3>
         <span class="muted" id="ia-status">carregando…</span>
       </div>
       <div id="ia-body" hidden style="margin-top:16px">
         <p class="muted">Cole sua própria chave de IA. O custo do uso é da sua conta na OpenAI/Anthropic. Sem chave, a análise por IA fica desativada.</p>
-        <button id="token-help" class="btn-inline" style="margin:4px 0 8px">❓ Como configurar o token (passo a passo)</button>
+        <button id="token-help" class="btn-inline" style="margin:4px 0 8px">Como configurar o token (passo a passo)</button>
 
         <span class="field-label">Qual IA usar</span>
         <div class="status-select" id="prov-select" style="grid-template-columns:1fr 1fr;max-width:420px">
@@ -42,7 +42,7 @@
             <small class="muted" id="mask-openai"></small>
           </label>
         </div>
-        <span class="field-label" style="margin-top:18px">🧠 Profundidade da análise dos concorrentes</span>
+        <span class="field-label" style="margin-top:18px">Profundidade da análise dos concorrentes</span>
         <div class="slider-wrap">
           <input type="range" id="ai-level" min="1" max="5" step="1" value="3" class="ui-slider" />
           <div class="slider-row">
@@ -55,7 +55,7 @@
         <p id="ia-msg" class="form-msg"></p>
 
         <hr style="border:none;border-top:1px solid var(--border);margin:18px 0" />
-        <span class="field-label">⏰ Horário da atualização automática</span>
+        <span class="field-label">Horário da atualização automática</span>
         <div class="two-col" style="align-items:end">
           <label>Atualizar os concorrentes marcados a partir de
             <select id="monitor-hour">
@@ -76,7 +76,7 @@
         <p class="muted" id="hour-msg" style="margin:6px 0 0"></p>
 
         <hr style="border:none;border-top:1px solid var(--border);margin:18px 0" />
-        <span class="field-label">🔑 Token da Extensão (cole na extensão do Chrome)</span>
+        <span class="field-label">Token da Extensão (cole na extensão do Chrome)</span>
         <div class="ext-token-row">
           <input type="text" id="ext-token" readonly />
           <button id="copy-token" class="btn-ghost">Copiar</button>
@@ -144,7 +144,7 @@
   <div id="ia-modal" class="ia-modal" hidden>
     <div class="ia-modal-box">
       <div class="ia-modal-head">
-        <h3 id="ia-modal-title">🤖 Análise por IA</h3>
+        <h3 id="ia-modal-title">Análise por IA</h3>
         <button id="ia-modal-close" class="btn-ghost">✕</button>
       </div>
       <div id="ia-modal-body" class="ia-modal-body"></div>
