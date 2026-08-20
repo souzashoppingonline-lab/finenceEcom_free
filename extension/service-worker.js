@@ -35,6 +35,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const r = await runMonitorCycle(false); sendResponse(r);
       } else if (msg.action === 'run_monitor_force') {
         const r = await runMonitorCycle(true); sendResponse(r);
+      } else if (msg.action === 'recollect_one') {
+        // recoleta imediata de UM anúncio (pedida pelo painel via bridge)
+        if (!msg.url) { sendResponse({ error: 'URL não informada.' }); return; }
+        const c = await cfg();
+        const rawData = await captureInHiddenTab(msg.url, c.tabTimeoutMs);
+        if (!rawData) { sendResponse({ error: 'Não consegui ler o anúncio (a página pode ter bloqueado ou demorado).' }); return; }
+        const r = await apiFetch('/extension/monitoramento', { method: 'POST', body: JSON.stringify({ rawData }) });
+        sendResponse({ ok: true, ...r });
       } else if (msg.action === 'get_monitor_status') {
         const s = await chrome.storage.local.get({ lastCycle: null });
         sendResponse(s.lastCycle || { ok: 0, fail: 0, at: null });

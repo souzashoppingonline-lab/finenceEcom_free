@@ -20,6 +20,27 @@ async function api(path, options = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Ponte com a extensão (recoleta imediata de um anúncio)
+// ---------------------------------------------------------------------------
+let extBridgeReady = false;
+window.addEventListener('message', (e) => {
+  if (e.source === window && e.data && e.data.__fec === 'ready') extBridgeReady = true;
+});
+function recollectAd(url) {
+  return new Promise((resolve) => {
+    const id = 'r' + Date.now() + Math.random().toString(36).slice(2, 6);
+    const onMsg = (e) => {
+      if (e.source === window && e.data && e.data.__fec === 'res' && e.data.id === id) {
+        window.removeEventListener('message', onMsg); resolve(e.data.resp || { error: 'sem resposta' });
+      }
+    };
+    window.addEventListener('message', onMsg);
+    window.postMessage({ __fec: 'req', id, action: 'recollect_one', url }, '*');
+    setTimeout(() => { window.removeEventListener('message', onMsg); resolve({ error: 'tempo esgotado' }); }, 30000);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Config de IA + extensão
 // ---------------------------------------------------------------------------
 async function loadAiSettings() {
@@ -806,6 +827,7 @@ function adCard(a) {
     <div class="ad-actions">
       <label class="switch-sm" title="Quando ligado, a extensão recoleta este anúncio 1×/dia automaticamente, só com o navegador aberto."><input type="checkbox" data-mon="${a.id}" ${a.monitorar ? 'checked' : ''}/> Atualizar automaticamente</label>
       <div class="head-actions" style="gap:6px">
+        ${a.link ? `<button class="btn-ghost" data-recollect="${esc(a.link)}" data-recollect-id="${a.id}">🔄 Recoletar agora</button>` : ''}
         <button class="btn-ghost" data-vendas="${a.id}">Vendas 30d</button>
         ${a.ml_id ? `<button class="btn-ghost" data-hist-btn="${esc(a.ml_id)}" data-hist-title="${esc(a.titulo || a.ml_id)}">Preço</button>` : ''}
         <button class="btn-ghost" data-review-btn="${a.id}">Avaliações</button>
@@ -934,6 +956,18 @@ function renderAds(productId, ads) {
     if (!confirm('Remover este concorrente?')) return;
     await api(`/api/analise/ads/${b.dataset.delAd}`, { method: 'DELETE' });
     openDetail(productId);
+  }));
+  // recoleta imediata via extensão
+  $('detail-ads').querySelectorAll('[data-recollect]').forEach((b) => b.addEventListener('click', async () => {
+    const url = b.dataset.recollect;
+    const orig = b.textContent;
+    b.disabled = true; b.textContent = '🔄 Recoletando…';
+    const r = await recollectAd(url);
+    if (r && r.ok) { b.textContent = '✅ Atualizado'; setTimeout(() => openDetail(productId), 800); }
+    else {
+      b.disabled = false; b.textContent = orig;
+      alert(r && r.error ? `Não foi possível recoletar: ${r.error}\n\nVerifique se a extensão FinanceEcom (v1.3.2+) está instalada e ativa.` : 'Falha ao recoletar. A extensão está instalada?');
+    }
   }));
   // modal de vendas (7/15/21/30 dias) por card
   $('detail-ads').querySelectorAll('[data-vendas]').forEach((b) => b.addEventListener('click', () => openVendas(b.dataset.vendas, productId)));
