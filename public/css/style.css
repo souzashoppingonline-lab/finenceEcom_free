@@ -980,3 +980,11 @@ tbody tr:hover { background: #f7f9fc; }
   background:color-mix(in srgb,var(--primary,#12905A) 8%,transparent)}
 .ext-install-txt{display:flex;flex-direction:column;gap:3px;min-width:220px;flex:1}
 .ext-install-btn{max-width:280px;margin:0;white-space:nowrap}
+/* Faixa dos últimos preços coletados no card do concorrente */
+.rp-strip{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:6px}
+.rp-label{font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.rp-chip{display:inline-flex;align-items:center;gap:4px;font-size:.78rem;font-weight:600;
+  background:var(--bg-soft,#f4f7fb);border:1px solid var(--border);border-radius:8px;padding:2px 7px;font-variant-numeric:tabular-nums}
+.rp-chip i{font-style:normal;font-size:.66rem;color:var(--muted);font-weight:600}
+.rp-up{color:#c62828} .rp-down{color:#0a7c3f} .rp-eq{color:var(--muted)}
+:root[data-theme="dark"] .rp-chip{background:#0f1622}

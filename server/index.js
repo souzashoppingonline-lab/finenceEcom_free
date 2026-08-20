@@ -1631,6 +1631,24 @@ app.get('/api/analise/products/:id', requireUser, async (req, res) => {
       if (!product) return res.status(404).json({ error: 'Produto nao encontrado.' });
       ads = memAnaliseAds.filter((a) => String(a.product_id) === String(id) && a.user_id === req.userId);
     }
+    // anexa os ultimos 5 precos coletados de cada anuncio (mostra no card sem clicar)
+    try {
+      const mlIds = [...new Set(ads.map((a) => a.ml_id).filter(Boolean))];
+      if (mlIds.length) {
+        let snaps;
+        if (supabase) {
+          const { data } = await supabase.from('analise_monitor_snapshots').select('ml_id, snap_date, preco')
+            .eq('user_id', req.userId).in('ml_id', mlIds).order('snap_date');
+          snaps = data || [];
+        } else {
+          snaps = memAnaliseSnaps.filter((s) => s.user_id === req.userId && mlIds.includes(s.ml_id))
+            .sort((a, b) => (a.snap_date < b.snap_date ? -1 : 1));
+        }
+        const byMl = {};
+        for (const s of snaps) (byMl[s.ml_id] = byMl[s.ml_id] || []).push({ snap_date: s.snap_date, preco: s.preco });
+        ads.forEach((a) => { a.precos_recentes = a.ml_id && byMl[a.ml_id] ? byMl[a.ml_id].slice(-5) : []; });
+      }
+    } catch (e) { console.error('precos_recentes:', e.message); }
     return res.json({ product, ads, active_id: await activeProductId(req.userId) });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao carregar produto.' }); }
 });
