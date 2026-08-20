@@ -198,6 +198,20 @@ document.querySelectorAll('.cat-add').forEach((btn) => btn.addEventListener('cli
   if (sel) sel.value = nome;
 }));
 
+// botão do cabeçalho: adicionar categoria
+$('cat-manage')?.addEventListener('click', async () => {
+  const nome = (prompt('Nome da nova categoria de despesa:') || '').trim();
+  if (!nome) return;
+  if (!allCats().includes(nome)) {
+    try { await dreApi('/api/lists', { method: 'POST', body: JSON.stringify({ type: 'despesa_categoria', name: nome }) }); }
+    catch (e) { alert(e.message); return; }
+    userCats.push(nome);
+  }
+  renderCatOptions();
+  const sel = document.querySelector('.cat-select[data-cat="form"]');
+  if (sel) sel.value = nome;
+});
+
 // ---------- Modal: custo recorrente / dividido ----------
 let recMode = 'fixed', recTipo = 'fixed';
 function addMonths(ym, n) { // 'YYYY-MM' + n meses
