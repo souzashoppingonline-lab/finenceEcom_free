@@ -1149,3 +1149,28 @@ tbody tr:hover { background: #f7f9fc; }
 
 /* Títulos com leve aperto de tracking (mais moderno) */
 .dash-head h1, .app-content h1{ letter-spacing:-.02em; }
+
+/* ============================================================
+   REFINO — títulos internos das páginas (moderno)
+   ============================================================ */
+/* Título principal da página */
+.app-content .dash-head h1{
+  font-size: clamp(1.55rem, 2.6vw, 2rem); font-weight: 800; letter-spacing: -.03em; line-height: 1.1;
+}
+.app-content .dash-head .muted{ font-size: .98rem; }
+
+/* Títulos de seção: peso forte + marcador em gradiente à esquerda */
+.app-content .v-section-title{
+  display: flex; align-items: center; gap: 10px;
+  font-size: 1.12rem; font-weight: 750; letter-spacing: -.015em; color: var(--text);
+}
+.app-content .v-section-title::before{
+  content:""; width: 4px; height: 1.05em; border-radius: 999px; flex: none;
+  background: linear-gradient(180deg, var(--accent), var(--primary));
+  box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--primary) 70%, transparent);
+}
+
+/* Cabeçalhos de sub-seção (linha com ações) */
+.app-content .dash-head-row > h3{
+  font-size: 1.06rem; font-weight: 700; letter-spacing: -.015em;
+}
