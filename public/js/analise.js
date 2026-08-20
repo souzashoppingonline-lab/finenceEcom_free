@@ -103,8 +103,8 @@ $('token-help').addEventListener('click', () => {
     </ol>
 
     <div class="help-box">
-      <b>🔒 Segurança:</b> sua chave é guardada criptografada e nunca é exibida de novo (só mascarada, ex.: <code>sk-ant••••1234</code>).<br>
-      <b>💡 Erros comuns:</b> "insufficient credits/balance" = falta carregar saldo · "invalid x-api-key" = chave errada, gere outra · use a <b>API Key do Console</b>, não o token do Claude Code.
+      <b>Segurança:</b> sua chave é guardada criptografada e nunca é exibida de novo (só mascarada, ex.: <code>sk-ant••••1234</code>).<br>
+      <b>Erros comuns:</b> "insufficient credits/balance" = falta carregar saldo · "invalid x-api-key" = chave errada, gere outra · use a <b>API Key do Console</b>, não o token do Claude Code.
     </div>`);
 });
 
@@ -580,7 +580,7 @@ async function openDetail(id) {
     const inner = (data && data.decisao)
       ? analysisHtml(data, when, p, ads)
       : `<div class="dash-head-row"><h3 style="margin:0">🤖 Análise por IA</h3><small class="muted">${when}</small></div>
-         <p class="muted">Esta análise foi gerada numa versão anterior e ficou incompleta. Clique em <b>🤖 Analisar com IA</b> para gerar de novo no novo formato.</p>`;
+         <p class="muted">Esta análise foi gerada numa versão anterior e ficou incompleta. Clique em <b>Analisar com IA</b> para gerar de novo no novo formato.</p>`;
     $('detail-head').insertAdjacentHTML('beforeend', `<div class="ia-report">${inner}</div>`);
     bindSimulator();
     $('detail-head').querySelector('#ia-pdf')?.addEventListener('click', () => exportAnalysisPDF(p.produto));
@@ -751,7 +751,7 @@ function recentPrices(list) {
     </div>`;
   }).join('<span class="ph-sep">›</span>');
   return `<div class="ph-block">
-    <div class="ph-head">📈 Histórico de preço <span class="muted">(últimas ${pts.length} coletas)</span></div>
+    <div class="ph-head">Histórico de preço <span class="muted">(últimas ${pts.length} coletas)</span></div>
     <div class="ph-track">${items}</div>
   </div>`;
 }
@@ -783,12 +783,12 @@ function adCard(a) {
     </div>
     ${recentPrices(a.precos_recentes)}
     <div class="ad-sections">
-      ${kws.length ? `<div class="ad-sec"><b>🔑 SEO / palavras-chave</b><div class="ad-kws">${kws.map((k) => `<span class="kw">${esc(k)}</span>`).join('')}</div></div>` : ''}
-      ${ficha.length ? `<details class="ad-sec"><summary><b>📋 Ficha técnica</b> (${ficha.length})</summary><ul class="ad-ficha">${ficha.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></details>` : ''}
-      ${a.aval_dist ? `<div class="ad-sec"><b>⭐ Avaliações:</b> ${a.nota ? a.nota + ' · ' : ''}${a.comentarios || 0} no total<div class="ad-kws" style="margin-top:5px">${esc(a.aval_dist).split('·').map((d) => `<span class="kw">${esc(d.trim())}</span>`).join('')}</div></div>` : ''}
-      ${a.comentarios_texto ? `<details class="ad-sec"><summary><b>💬 Avaliações (texto)</b></summary><div class="ad-desc">${esc(a.comentarios_texto).replace(/\n/g, '<br>')}</div></details>` : ''}
-      ${a.descricao ? `<details class="ad-sec"><summary><b>📝 Descrição do anúncio</b></summary><div class="ad-desc">${esc(a.descricao).replace(/\n/g, '<br>')}</div></details>` : ''}
-      ${a.observacoes ? `<div class="ad-sec"><b>🗒️ Minhas anotações:</b> ${esc(a.observacoes)}</div>` : ''}
+      ${kws.length ? `<div class="ad-sec"><b>SEO / palavras-chave</b><div class="ad-kws">${kws.map((k) => `<span class="kw">${esc(k)}</span>`).join('')}</div></div>` : ''}
+      ${ficha.length ? `<details class="ad-sec"><summary><b>Ficha técnica</b> (${ficha.length})</summary><ul class="ad-ficha">${ficha.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></details>` : ''}
+      ${a.aval_dist ? `<div class="ad-sec"><b>Avaliações:</b> ${a.nota ? a.nota + ' · ' : ''}${a.comentarios || 0} no total<div class="ad-kws" style="margin-top:5px">${esc(a.aval_dist).split('·').map((d) => `<span class="kw">${esc(d.trim())}</span>`).join('')}</div></div>` : ''}
+      ${a.comentarios_texto ? `<details class="ad-sec"><summary><b>Avaliações (texto)</b></summary><div class="ad-desc">${esc(a.comentarios_texto).replace(/\n/g, '<br>')}</div></details>` : ''}
+      ${a.descricao ? `<details class="ad-sec"><summary><b>Descrição do anúncio</b></summary><div class="ad-desc">${esc(a.descricao).replace(/\n/g, '<br>')}</div></details>` : ''}
+      ${a.observacoes ? `<div class="ad-sec"><b>Minhas anotações:</b> ${esc(a.observacoes)}</div>` : ''}
     </div>
     <div class="ad-review-edit" data-edit-wrap="${a.id}" hidden>
       <label>💬 Avaliações do concorrente (cole os textos — a IA usa na análise)
@@ -799,13 +799,13 @@ function adCard(a) {
         <button class="btn-ghost" data-review-cancel="${a.id}">Cancelar</button>
       </div>
     </div>
-    ${(a.vendas_30d != null || a.vendas_7d != null) ? `<div class="ad-sec ad-vendas"><b>📊 Vendas:</b> ${[['7d', a.vendas_7d], ['15d', a.vendas_15d], ['21d', a.vendas_21d], ['30d', a.vendas_30d]].filter(([, v]) => v != null).map(([l, v]) => `${l}: <b>${v}</b>`).join(' · ')}</div>` : ''}
+    ${(a.vendas_30d != null || a.vendas_7d != null) ? `<div class="ad-sec ad-vendas"><b>Vendas:</b> ${[['7d', a.vendas_7d], ['15d', a.vendas_15d], ['21d', a.vendas_21d], ['30d', a.vendas_30d]].filter(([, v]) => v != null).map(([l, v]) => `${l}: <b>${v}</b>`).join(' · ')}</div>` : ''}
     <div class="ad-actions">
       <label class="switch-sm" title="Quando ligado, a extensão recoleta este anúncio 1×/dia automaticamente, só com o navegador aberto."><input type="checkbox" data-mon="${a.id}" ${a.monitorar ? 'checked' : ''}/> 🔄 Atualizar automaticamente</label>
       <div class="head-actions" style="gap:6px">
-        <button class="btn-ghost" data-vendas="${a.id}">📊 Vendas 30d</button>
-        ${a.ml_id ? `<button class="btn-ghost" data-hist-btn="${esc(a.ml_id)}" data-hist-title="${esc(a.titulo || a.ml_id)}">📈 Preço</button>` : ''}
-        <button class="btn-ghost" data-review-btn="${a.id}">💬 Avaliações</button>
+        <button class="btn-ghost" data-vendas="${a.id}">Vendas 30d</button>
+        ${a.ml_id ? `<button class="btn-ghost" data-hist-btn="${esc(a.ml_id)}" data-hist-title="${esc(a.titulo || a.ml_id)}">Preço</button>` : ''}
+        <button class="btn-ghost" data-review-btn="${a.id}">Avaliações</button>
         <button class="btn-ghost" data-del-ad="${a.id}">Remover</button>
       </div>
     </div>
@@ -875,7 +875,7 @@ function renderAds(productId, ads) {
         <label>Estado (UF)<input name="estado" placeholder="Ex.: SP" maxlength="2" /></label>
       </div>
       <label>Data de criação do anúncio<input name="data_criacao" placeholder="Ex.: 07/08/2026" /></label>
-      <p class="muted" style="margin-top:8px">💡 As vendas dos últimos 7/15/21/30 dias você preenche depois, no botão <b>📊 Vendas 30d</b> de cada card.</p>
+      <p class="muted" style="margin-top:8px">💡 As vendas dos últimos 7/15/21/30 dias você preenche depois, no botão <b>Vendas 30d</b> de cada card.</p>
       <label class="checkbox" style="display:inline-flex;margin-right:18px"><input type="checkbox" name="is_full" /> <span>Full</span></label>
       <label class="checkbox" style="display:inline-flex"><input type="checkbox" name="is_flex" /> <span>Flex</span></label>
       <label>Ficha técnica (uma por linha, ex.: "Peso: 3kg")<textarea name="ficha" rows="3" placeholder="Marca: Quatree&#10;Peso: 3kg&#10;Indicação: Gatos castrados"></textarea></label>
