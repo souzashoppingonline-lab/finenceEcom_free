@@ -1638,7 +1638,8 @@ app.get('/api/analise/products/:id', requireUser, async (req, res) => {
       if (mlIds.length) {
         let snaps;
         if (supabase) {
-          const { data } = await supabase.from('analise_monitor_snapshots').select('ml_id, snap_date, preco, vendas')
+          // '*' para não quebrar caso a coluna 'vendas' ainda não exista no banco
+          const { data } = await supabase.from('analise_monitor_snapshots').select('*')
             .eq('user_id', req.userId).in('ml_id', mlIds).order('snap_date');
           snaps = data || [];
         } else {
@@ -2136,7 +2137,9 @@ async function recordSnapshot(userId, ml_id, preco, preco_original, vendas) {
   try {
     if (supabase) {
       await supabase.from('analise_monitor_snapshots').delete().eq('ml_id', ml_id).eq('snap_date', snap_date);
-      await supabase.from('analise_monitor_snapshots').insert({ user_id: userId, ml_id, snap_date, preco, preco_original, vendas: vendasNum });
+      const { error } = await supabase.from('analise_monitor_snapshots').insert({ user_id: userId, ml_id, snap_date, preco, preco_original, vendas: vendasNum });
+      // se a coluna 'vendas' ainda não existe no banco, grava sem ela (não quebra o histórico de preço)
+      if (error) await supabase.from('analise_monitor_snapshots').insert({ user_id: userId, ml_id, snap_date, preco, preco_original });
     } else {
       const i = memAnaliseSnaps.findIndex((s) => s.ml_id === ml_id && s.snap_date === snap_date);
       if (i >= 0) memAnaliseSnaps.splice(i, 1);
