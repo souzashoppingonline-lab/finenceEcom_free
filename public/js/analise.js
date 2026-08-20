@@ -849,7 +849,10 @@ function adCard(a) {
     </div>
     ${(a.vendas_30d != null || a.vendas_7d != null) ? `<div class="ad-sec ad-vendas"><b>Vendas:</b> ${[['7d', a.vendas_7d], ['15d', a.vendas_15d], ['21d', a.vendas_21d], ['30d', a.vendas_30d]].filter(([, v]) => v != null).map(([l, v]) => `${l}: <b>${v}</b>`).join(' · ')}</div>` : ''}
     <div class="ad-actions">
-      <label class="switch-sm" title="Quando ligado, a extensão recoleta este anúncio 1×/dia automaticamente, só com o navegador aberto."><input type="checkbox" data-mon="${a.id}" ${a.monitorar ? 'checked' : ''}/> Atualizar automaticamente</label>
+      <div class="mon-wrap">
+        <label class="switch-sm" title="Quando ligado, a extensão recoleta este anúncio 1×/dia automaticamente, só com o navegador aberto."><input type="checkbox" data-mon="${a.id}" ${a.monitorar ? 'checked' : ''}/> Atualizar automaticamente</label>
+        <span class="mon-hint">Funciona mesmo com o produto fora de coleta — só depende deste botão.</span>
+      </div>
       <div class="head-actions" style="gap:6px">
         ${a.link ? `<button class="btn-ghost" data-recollect="${esc(a.link)}" data-recollect-id="${a.id}">🔄 Recoletar agora</button>` : ''}
         <button class="btn-ghost" data-vendas="${a.id}">Vendas 30d</button>

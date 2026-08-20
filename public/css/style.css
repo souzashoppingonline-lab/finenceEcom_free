@@ -1280,3 +1280,6 @@ tbody tr:hover { background: #f7f9fc; }
 .ph-sales .ph-up-good .ph-price{color:#0a7c3f}
 .ph-sales .ph-up-good .ph-price em{color:#12905a}
 .ph-sales .ph-down-bad .ph-price em{color:#e5484d}
+/* Dica abaixo do toggle "Atualizar automaticamente" */
+.mon-wrap{display:flex;flex-direction:column;gap:4px}
+.mon-hint{font-size:.72rem;color:var(--muted);max-width:280px;line-height:1.35}
