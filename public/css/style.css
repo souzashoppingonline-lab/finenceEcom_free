@@ -1085,3 +1085,67 @@ tbody tr:hover { background: #f7f9fc; }
 /* Seletor de horário inline no cabeçalho dos concorrentes */
 .ad-hour{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;font-weight:600;color:var(--muted)}
 .ad-hour select{margin:0}
+
+/* ============================================================
+   REFINO VISUAL — menu lateral moderno (ícones SVG + divisórias)
+   ============================================================ */
+.side-ico .ic{width:20px;height:20px;display:block;stroke-width:1.7;opacity:.9}
+.side-ico{display:inline-flex;align-items:center;justify-content:center;width:24px}
+.side-link{display:flex;align-items:center;gap:12px;font-weight:500;letter-spacing:.005em;
+  transition:background .16s, color .16s, box-shadow .16s}
+.side-nav .side-link{position:relative}
+/* divisória sutil entre as páginas */
+.side-nav .side-link + .side-link::before{content:"";position:absolute;top:-2px;left:14px;right:14px;height:1px;
+  background:rgba(255,255,255,.06)}
+.side-link:hover{background:rgba(255,255,255,.06);color:#fff}
+.side-link:hover .ic{opacity:1}
+/* item ativo: destaque com brilho suave, sem preencher tudo de azul chapado */
+.side-link.is-active{
+  background:linear-gradient(100deg, color-mix(in srgb,var(--accent) 22%,transparent), color-mix(in srgb,var(--primary) 26%,transparent));
+  color:#fff; box-shadow:inset 3px 0 0 var(--accent), 0 6px 18px -8px color-mix(in srgb,var(--primary) 80%,transparent);
+}
+.side-link.is-active .ic{opacity:1;stroke-width:2}
+.side-nav .side-link.is-active + .side-link::before,
+.side-nav .side-link:has(+ .side-link.is-active)::before{background:transparent}
+:root.sidebar-collapsed .side-link{justify-content:center;gap:0}
+:root.sidebar-collapsed .side-nav .side-link + .side-link::before{left:8px;right:8px}
+.side-user .ic{width:18px;height:18px}
+
+/* ============================================================
+   REFINO VISUAL GLOBAL — limpo, moderno, brilho suave
+   ============================================================ */
+:root{
+  --radius: 16px;
+  --shadow: 0 1px 2px rgba(20,40,90,.04), 0 14px 40px -18px rgba(20,40,90,.18);
+  --ring: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+  --glow: 0 8px 24px -8px color-mix(in srgb, var(--primary) 65%, transparent);
+}
+.app-body{ background:
+  radial-gradient(900px 500px at 100% -8%, color-mix(in srgb,var(--primary) 6%, transparent), transparent 60%),
+  radial-gradient(800px 460px at -10% 0%, color-mix(in srgb,var(--accent) 6%, transparent), transparent 55%),
+  #f3f5fb; }
+:root[data-theme="dark"] .app-body,:root[data-theme="oled"] .app-body,:root[data-theme="emerald"] .app-body{
+  background-image: radial-gradient(900px 500px at 100% -8%, color-mix(in srgb,var(--primary) 12%, transparent), transparent 62%); }
+
+/* Cards mais leves + hairline */
+.app-body .card, .app-body .stat-card, .app-body .chart-card, .app-body .report-card, .app-body .period-card{
+  border:1px solid var(--border); box-shadow:var(--shadow);
+}
+
+/* Botões: brilho suave + microinteração */
+.app-body button:not(.side-link):not(.tp-dot):not(.side-collapse):not(.status-btn):not(.tab),
+.btn-cadastrar, .btn-add-sale{
+  box-shadow: var(--glow); transition: transform .16s, box-shadow .2s, background .16s, filter .16s;
+}
+.app-body button:not(.side-link):not(.tp-dot):not(.side-collapse):not(.status-btn):not(.tab):hover,
+.btn-cadastrar:hover, .btn-add-sale:hover{ transform: translateY(-2px); filter: brightness(1.03); }
+.app-body .btn-ghost{ box-shadow:none; }
+.app-body .btn-ghost:hover{ border-color: color-mix(in srgb,var(--primary) 45%, var(--border)); color: var(--primary); background: color-mix(in srgb,var(--primary) 7%, transparent); }
+
+/* Foco acessível com brilho da cor de destaque */
+.app-body input:focus, .app-body select:focus, .app-body textarea:focus{
+  outline:none; border-color: var(--primary); box-shadow: var(--ring);
+}
+
+/* Títulos com leve aperto de tracking (mais moderno) */
+.dash-head h1, .app-content h1{ letter-spacing:-.02em; }
