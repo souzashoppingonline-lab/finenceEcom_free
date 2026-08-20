@@ -18,10 +18,10 @@
     </div>
 
     <div class="stats-grid">
-      <div class="stat-card"><span class="stat-label">Receita do dia</span><span class="stat-value" id="k-rev">—</span></div>
-      <div class="stat-card"><span class="stat-label">Lucro do dia</span><span class="stat-value" id="k-profit">—</span></div>
-      <div class="stat-card"><span class="stat-label">Margem</span><span class="stat-value" id="k-margin">—</span></div>
-      <div class="stat-card"><span class="stat-label">Meta do dia</span><span class="stat-value" id="k-goal">—</span></div>
+      <div class="stat-card"><span class="stat-label">Receita do mês (D-1)</span><span class="stat-value" id="k-rev">—</span><span class="muted" id="k-rev-sub"></span></div>
+      <div class="stat-card"><span class="stat-label">Lucro do mês (D-1)</span><span class="stat-value" id="k-profit">—</span><span class="muted" id="k-profit-sub"></span></div>
+      <div class="stat-card"><span class="stat-label">Margem do mês</span><span class="stat-value" id="k-margin">—</span></div>
+      <div class="stat-card"><span class="stat-label">Meta do mês</span><span class="stat-value" id="k-goal">—</span><span class="muted" id="k-goal-sub"></span></div>
     </div>
 
     <div class="dash-cards">
@@ -77,23 +77,32 @@
       const money = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
       const today = new Date().toLocaleDateString('en-CA');
       const month = today.slice(0, 7);
+      // D-1: considera vendas do mês ATÉ ontem (dado de hoje ainda não é confiável)
+      const y = new Date(); y.setDate(y.getDate() - 1);
+      const ontem = y.toLocaleDateString('en-CA');
       try {
         const h = await authHeader();
         const [salesRes, goalsRes] = await Promise.all([
           fetch(`/api/sales?month=${month}`, { headers: h }).then((r) => r.json()),
           fetch(`/api/goals?month=${month}`, { headers: h }).then((r) => r.json()),
         ]);
-        const todaySales = (salesRes.sales || []).filter((s) => s.date === today);
-        const rev = todaySales.reduce((a, s) => a + (+s.revenue), 0);
-        const profit = todaySales.reduce((a, s) => a + ((+s.revenue) - (+s.fee_mp) - (+s.freight) - (+s.cmv) - (+s.ads_ml) - (+s.tax)), 0);
+        // soma TODAS as empresas/marketplaces do mês, até D-1
+        const mesSales = (salesRes.sales || []).filter((s) => s.date <= ontem);
+        const rev = mesSales.reduce((a, s) => a + (+s.revenue), 0);
+        const profit = mesSales.reduce((a, s) => a + ((+s.revenue) - (+s.fee_mp) - (+s.freight) - (+s.cmv) - (+s.ads_ml) - (+s.ads_ext) - (+s.tax)), 0);
         const margin = rev > 0 ? (profit / rev) * 100 : 0;
-        const geral = (goalsRes.goals || []).find((g) => !g.store_id);
-        const dim = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
-        const metaDia = geral ? (+geral.amount) / dim : 0;
+        // meta do mês = soma das metas de TODAS as empresas (evita duplicar geral + por loja)
+        const goals = goalsRes.goals || [];
+        const geral = goals.find((g) => !g.store_id);
+        const metaTotal = geral ? (+geral.amount) : goals.reduce((a, g) => a + (+g.amount || 0), 0);
+        const metaPct = metaTotal > 0 ? (rev / metaTotal) * 100 : 0;
         document.getElementById('k-rev').textContent = money(rev);
+        document.getElementById('k-rev-sub').textContent = `até ${ontem.split('-').reverse().join('/')}`;
         document.getElementById('k-profit').textContent = money(profit);
+        document.getElementById('k-profit-sub').textContent = `até ${ontem.split('-').reverse().join('/')}`;
         document.getElementById('k-margin').textContent = margin.toFixed(1) + '%';
-        document.getElementById('k-goal').textContent = geral ? money(metaDia) : '—';
+        document.getElementById('k-goal').textContent = metaTotal > 0 ? money(metaTotal) : '—';
+        document.getElementById('k-goal-sub').textContent = metaTotal > 0 ? `${metaPct.toFixed(0)}% atingido` : 'defina em Metas';
       } catch (_) {}
 
       // Cards: recebíveis, a pagar, empresas
