@@ -1014,3 +1014,12 @@ tbody tr:hover { background: #f7f9fc; }
 .info-note ul{margin:8px 0 0;padding-left:18px;color:var(--muted)}
 .info-note li{margin:4px 0}
 :root[data-theme="dark"] .info-note{background:#0f1b2e;border-color:#1e3a6a}
+/* Campos editáveis no resumo da importação */
+.sum-row-edit{align-items:center}
+.sum-input{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);
+  border-radius:8px;padding:2px 10px;transition:border-color .15s;min-width:150px;justify-content:flex-end}
+.sum-input:focus-within{border-color:var(--primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--primary) 22%,transparent)}
+.sum-input i{font-style:normal;color:var(--muted);font-size:.9rem}
+.sum-input input{border:none;background:transparent;text-align:right;font-size:1.05rem;font-weight:700;color:var(--text);
+  width:110px;padding:6px 0;font-variant-numeric:tabular-nums;outline:none;-moz-appearance:textfield}
+.sum-input-int input{width:80px}

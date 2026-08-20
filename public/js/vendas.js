@@ -582,17 +582,21 @@ function impRefresh() {
 function impRenderPreview() {
   const s = parsedTurbo;
   $('preview-step').hidden = false;
-  const rows = [
-    ['Empresa', storeName($('imp-store').value)],
-    ['Conta na planilha', s.account || '—'],
-    ['Pedidos', s.orders],
-    ['Receita', money(s.revenue)],
-    ['COGS (custo)', money(s.cmv)],
-    ['Imposto', money(s.tax)],
-    ['Taxas', money(s.fee)],
-    ['Frete Subsidiado', money(s.freight)],
-  ];
-  $('summary').innerHTML = rows.map(([k, v]) => `<div class="sum-row"><span>${k}</span><b>${v}</b></div>`).join('');
+  const roRow = (k, v) => `<div class="sum-row"><span>${k}</span><b>${v}</b></div>`;
+  const edRow = (k, id, val, step) => `<div class="sum-row sum-row-edit"><span>${k}</span>
+    <span class="sum-input"><i>R$</i><input type="number" id="${id}" step="${step}" min="0" value="${Number(val) || 0}"></span></div>`;
+  const edInt = (k, id, val) => `<div class="sum-row sum-row-edit"><span>${k}</span>
+    <span class="sum-input sum-input-int"><input type="number" id="${id}" step="1" min="0" value="${Math.round(Number(val) || 0)}"></span></div>`;
+  $('summary').innerHTML =
+    roRow('Empresa', esc(storeName($('imp-store').value))) +
+    roRow('Conta na planilha', esc(s.account || '—')) +
+    edInt('Pedidos', 'sum-orders', s.orders) +
+    edRow('Receita', 'sum-revenue', s.revenue, '0.01') +
+    edRow('COGS (custo)', 'sum-cmv', s.cmv, '0.01') +
+    edRow('Imposto', 'sum-tax', s.tax, '0.01') +
+    edRow('Taxas', 'sum-fee', s.fee, '0.01') +
+    edRow('Frete Subsidiado', 'sum-freight', s.freight, '0.01');
+  $('summary').querySelectorAll('input').forEach((i) => i.addEventListener('input', impValidate));
   const storeNm = normH(storeName($('imp-store').value));
   const acc = normH(s.account);
   const warn = $('account-warn');
@@ -610,7 +614,9 @@ function impValidate() {
   const warn = $('account-warn');
   const needForce = !warn.hidden;
   const forced = needForce ? $('force-account')?.checked : true;
-  $('process-btn').disabled = !(parsedTurbo && parsedTurbo.orders > 0 && forced);
+  const orders = Number($('sum-orders')?.value) || (parsedTurbo ? parsedTurbo.orders : 0);
+  const revenue = $('sum-revenue') ? Number($('sum-revenue').value) : (parsedTurbo ? parsedTurbo.revenue : 0);
+  $('process-btn').disabled = !(parsedTurbo && orders > 0 && revenue > 0 && forced);
 }
 
 async function impHandleFile(file) {
@@ -651,19 +657,23 @@ $('process-btn').addEventListener('click', async () => {
   const storeId = $('imp-store').value;
   const date = $('imp-date').value || todayStr();
   const ads = Number($('ads-input').value) || 0;
+  // lê os valores (possivelmente editados) do resumo
+  const g = (id, def) => { const v = Number($(id)?.value); return isNaN(v) ? def : v; };
+  const orders = Math.round(g('sum-orders', parsedTurbo.orders));
   const payload = {
-    date, store_id: storeId, qty: Math.round(parsedTurbo.qty), revenue: parsedTurbo.revenue,
-    fee_mp: parsedTurbo.fee, freight: parsedTurbo.freight, cmv: parsedTurbo.cmv, ads_ml: ads, tax: parsedTurbo.tax,
+    date, store_id: storeId, qty: orders, revenue: g('sum-revenue', parsedTurbo.revenue),
+    fee_mp: g('sum-fee', parsedTurbo.fee), freight: g('sum-freight', parsedTurbo.freight),
+    cmv: g('sum-cmv', parsedTurbo.cmv), ads_ml: ads, tax: g('sum-tax', parsedTurbo.tax),
   };
   $('process-btn').disabled = true;
   try {
     await api('/api/sales', { method: 'POST', body: JSON.stringify(payload) });
-    await api('/api/imports', { method: 'POST', body: JSON.stringify({ date, store_id: storeId, orders: parsedTurbo.orders, revenue: parsedTurbo.revenue }) }).catch(() => {});
+    await api('/api/imports', { method: 'POST', body: JSON.stringify({ date, store_id: storeId, orders, revenue: payload.revenue }) }).catch(() => {});
     $('preview-step').hidden = true;
     $('success-box').hidden = false;
-    $('success-body').innerHTML = `<h3>${parsedTurbo.orders} pedidos importados</h3>
+    $('success-body').innerHTML = `<h3>${orders} pedidos importados</h3>
       <div class="turbo-summary">
-        <div class="sum-row"><span>Receita</span><b>${money(parsedTurbo.revenue)}</b></div>
+        <div class="sum-row"><span>Receita</span><b>${money(payload.revenue)}</b></div>
         <div class="sum-row"><span>Empresa</span><b>${esc(storeName(storeId))}</b></div>
       </div>`;
     if (date.slice(0, 7) === state.month) await loadAll();
