@@ -139,6 +139,25 @@
     <section class="tab-panel" data-panel="be" hidden>
       <div id="be-content"></div>
     </section>
+    <!-- MODAL: gerenciar categorias -->
+    <div id="cat-modal" class="ia-modal" hidden>
+      <div class="ia-modal-box" style="max-width:480px">
+        <div class="ia-modal-head">
+          <h3>Categorias de despesa</h3>
+          <button type="button" id="cat-modal-close" class="ia-modal-x" aria-label="Fechar">✕</button>
+        </div>
+        <div class="ia-modal-body">
+          <div class="cat-field">
+            <input type="text" id="cat-new-name" placeholder="Nome da nova categoria" />
+            <button type="button" id="cat-new-save" class="btn-cadastrar" style="margin:0;width:auto;padding:0 18px">Adicionar</button>
+          </div>
+          <p id="cat-modal-msg" class="form-msg"></p>
+          <h4 class="fc-h" style="margin-top:8px">Suas categorias</h4>
+          <div id="cat-list" class="cat-list"></div>
+          <p class="muted" style="font-size:.82rem;margin-top:10px">As categorias predefinidas do sistema não podem ser excluídas. Uma categoria com despesas lançadas fica protegida contra exclusão.</p>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

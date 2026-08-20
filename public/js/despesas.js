@@ -169,6 +169,7 @@ const DEFAULT_CATS = [
   'Manutenção', 'Pró-labore', 'Outros',
 ];
 let userCats = [];
+let userCatItems = []; // {id, name} das categorias criadas pelo usuário
 function allCats() {
   const fromExp = (financeData?.expenses || []).map((e) => e.category).filter(Boolean);
   return [...new Set([...DEFAULT_CATS, ...userCats, ...fromExp])].sort((a, b) => a.localeCompare(b, 'pt-BR'));
@@ -182,8 +183,12 @@ function renderCatOptions() {
   });
 }
 async function loadCategories() {
-  try { const { items } = await dreApi('/api/lists?type=despesa_categoria'); userCats = (items || []).map((i) => i.name); } catch (_) {}
+  try { const { items } = await dreApi('/api/lists?type=despesa_categoria'); userCatItems = items || []; userCats = userCatItems.map((i) => i.name); } catch (_) {}
   renderCatOptions();
+}
+// quantas despesas usam uma categoria (trava de exclusão)
+function countExpensesUsing(name) {
+  return (financeData?.expenses || []).filter((e) => (e.category || '') === name).length;
 }
 document.querySelectorAll('.cat-add').forEach((btn) => btn.addEventListener('click', async () => {
   const nome = (prompt('Nome da nova categoria:') || '').trim();
@@ -198,19 +203,53 @@ document.querySelectorAll('.cat-add').forEach((btn) => btn.addEventListener('cli
   if (sel) sel.value = nome;
 }));
 
-// botão do cabeçalho: adicionar categoria
-$('cat-manage')?.addEventListener('click', async () => {
-  const nome = (prompt('Nome da nova categoria de despesa:') || '').trim();
-  if (!nome) return;
-  if (!allCats().includes(nome)) {
-    try { await dreApi('/api/lists', { method: 'POST', body: JSON.stringify({ type: 'despesa_categoria', name: nome }) }); }
-    catch (e) { alert(e.message); return; }
-    userCats.push(nome);
-  }
-  renderCatOptions();
-  const sel = document.querySelector('.cat-select[data-cat="form"]');
-  if (sel) sel.value = nome;
+// Gerenciar categorias (modal do cabeçalho)
+function renderCatList() {
+  const box = $('cat-list');
+  if (!userCatItems.length) { box.innerHTML = '<p class="muted">Você ainda não criou categorias. As predefinidas já estão disponíveis no menu.</p>'; return; }
+  box.innerHTML = userCatItems.slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((c) => {
+    const n = countExpensesUsing(c.name);
+    return `<div class="cat-row">
+      <span class="cat-row-name">${escH(c.name)}</span>
+      ${n > 0
+        ? `<span class="cat-lock" title="Há ${n} despesa(s) nesta categoria">${n} em uso · protegida</span>`
+        : `<button class="btn-del" data-del-cat="${escH(c.id)}" title="Excluir categoria">Excluir</button>`}
+    </div>`;
+  }).join('');
+  box.querySelectorAll('[data-del-cat]').forEach((b) => b.addEventListener('click', () => deleteCategory(b.dataset.delCat)));
+}
+async function deleteCategory(id) {
+  const item = userCatItems.find((c) => String(c.id) === String(id));
+  if (!item) return;
+  const n = countExpensesUsing(item.name);
+  if (n > 0) { $('cat-modal-msg').textContent = `Não é possível excluir "${item.name}": há ${n} despesa(s) usando esta categoria.`; $('cat-modal-msg').className = 'form-msg err'; return; }
+  if (!confirm(`Excluir a categoria "${item.name}"?`)) return;
+  try {
+    await dreApi(`/api/lists/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    userCatItems = userCatItems.filter((c) => String(c.id) !== String(id));
+    userCats = userCatItems.map((c) => c.name);
+    renderCatOptions(); renderCatList();
+    $('cat-modal-msg').textContent = 'Categoria excluída.'; $('cat-modal-msg').className = 'form-msg ok';
+  } catch (e) { $('cat-modal-msg').textContent = e.message; $('cat-modal-msg').className = 'form-msg err'; }
+}
+$('cat-manage')?.addEventListener('click', () => { $('cat-modal-msg').textContent = ''; $('cat-new-name').value = ''; renderCatList(); $('cat-modal').hidden = false; });
+$('cat-modal-close')?.addEventListener('click', () => { $('cat-modal').hidden = true; });
+$('cat-modal')?.addEventListener('click', (e) => { if (e.target === $('cat-modal')) $('cat-modal').hidden = true; });
+$('cat-new-save')?.addEventListener('click', async () => {
+  const nome = ($('cat-new-name').value || '').trim();
+  const msg = $('cat-modal-msg'); msg.textContent = '';
+  if (!nome) { msg.textContent = 'Digite o nome da categoria.'; msg.className = 'form-msg err'; return; }
+  if (allCats().includes(nome)) { msg.textContent = 'Essa categoria já existe.'; msg.className = 'form-msg err'; return; }
+  try {
+    const { item } = await dreApi('/api/lists', { method: 'POST', body: JSON.stringify({ type: 'despesa_categoria', name: nome }) });
+    userCatItems.push(item || { id: makeIdLocal(), name: nome });
+    userCats = userCatItems.map((c) => c.name);
+    $('cat-new-name').value = '';
+    renderCatOptions(); renderCatList();
+    msg.textContent = 'Categoria adicionada.'; msg.className = 'form-msg ok';
+  } catch (e) { msg.textContent = e.message; msg.className = 'form-msg err'; }
 });
+function makeIdLocal() { return 'c' + Date.now(); }
 
 // ---------- Modal: custo recorrente / dividido ----------
 let recMode = 'fixed', recTipo = 'fixed';

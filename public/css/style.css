@@ -1258,3 +1258,13 @@ tbody tr:hover { background: #f7f9fc; }
 .cat-field{display:flex;gap:8px;align-items:stretch;margin-top:6px}
 .cat-field .cat-select{margin-top:0;flex:1}
 .cat-field .cat-add{margin:0;width:auto;flex:none;white-space:nowrap;padding:0 14px;font-size:.85rem}
+/* Gerenciar categorias */
+.cat-list{display:flex;flex-direction:column;gap:6px}
+.cat-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:9px}
+.cat-row-name{font-weight:600;font-size:.92rem}
+.cat-lock{font-size:.76rem;color:var(--muted);font-weight:600;background:var(--bg-soft,#f4f7fb);padding:3px 9px;border-radius:999px}
+:root[data-theme="dark"] .cat-lock{background:#0f1622}
+.cat-row .btn-del{width:auto;margin:0;padding:5px 12px;font-size:.82rem;background:transparent;border:1px solid var(--border);color:#e5484d;border-radius:8px}
+.cat-row .btn-del:hover{background:#fdeaea;border-color:#e5484d}
+:root[data-theme="dark"] .cat-row .btn-del:hover{background:#2a1416}
+.cat-field input{flex:1;margin-top:0}
