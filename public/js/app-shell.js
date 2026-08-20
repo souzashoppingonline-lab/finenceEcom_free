@@ -11,11 +11,14 @@ function applyCollapsed(collapsed) {
   if (btn) btn.textContent = collapsed ? '»' : '«';
 }
 
+const THEME_ORDER = ['light', 'dark', 'sepia'];
+// mostra o PRÓXIMO tema no botão (o que será aplicado ao clicar)
+const THEME_NEXT_LABEL = { light: '🌙 Tema escuro', dark: '📜 Tema sépia', sepia: '☀️ Tema claro' };
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('theme', theme);
   const btn = document.getElementById('theme-toggle');
-  if (btn) btn.innerHTML = theme === 'dark' ? '☀️ Tema claro' : '🌙 Tema escuro';
+  if (btn) btn.innerHTML = THEME_NEXT_LABEL[theme] || THEME_NEXT_LABEL.light;
 }
 
 function renderSidebar(active) {
@@ -60,8 +63,9 @@ function renderSidebar(active) {
   });
   applyTheme(localStorage.getItem('theme') || 'light');
   document.getElementById('theme-toggle').addEventListener('click', () => {
-    const cur = document.documentElement.getAttribute('data-theme');
-    applyTheme(cur === 'dark' ? 'light' : 'dark');
+    const cur = document.documentElement.getAttribute('data-theme') || 'light';
+    const idx = THEME_ORDER.indexOf(cur);
+    applyTheme(THEME_ORDER[(idx + 1) % THEME_ORDER.length]);
   });
   document.getElementById('side-logout').addEventListener('click', async () => {
     await sb.auth.signOut();

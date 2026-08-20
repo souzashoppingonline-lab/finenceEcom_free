@@ -338,6 +338,16 @@ tbody tr:hover { background: #f7f9fc; }
 :root[data-theme="dark"] {
   --card: #161d2b; --text: #e6ebf3; --muted: #93a0b4; --border: #2a3547;
 }
+/* Tema Sépia (suave/creme) — terceiro tema */
+:root[data-theme="sepia"] {
+  --bg-soft: #efe4cf; --card: #fbf5e9; --text: #43392a; --muted: #8a7c64;
+  --border: #e4d8bf; --primary: #b06a2c; --primary-dark: #8f5320; --accent: #c98a1e;
+}
+:root[data-theme="sepia"] .app-body { background: #f3ead7; }
+:root[data-theme="sepia"] input,
+:root[data-theme="sepia"] select { background: #fffaf0; color: var(--text); border-color: var(--border); }
+:root[data-theme="sepia"] th { background: #f0e6d2; }
+:root[data-theme="sepia"] tbody tr:hover { background: #f5eeddc0; }
 :root[data-theme="dark"] .app-body { background: #0e1525; }
 :root[data-theme="dark"] input,
 :root[data-theme="dark"] select { background: #0f1622; color: var(--text); }
