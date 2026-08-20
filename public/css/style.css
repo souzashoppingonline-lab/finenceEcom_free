@@ -287,7 +287,24 @@ tbody tr:hover { background: #f7f9fc; }
 .side-logo { font-size: 1.1rem; color: #fff; }
 .side-logo strong { color: var(--accent); }
 .side-user { font-size: 0.85rem; color: #9aa6bd; margin-top: 8px; }
-.side-nav { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.side-nav {
+  display: flex; flex-direction: column; gap: 4px; flex: 1;
+  overflow-y: auto; overflow-x: hidden; min-height: 0; padding-right: 4px;
+  scrollbar-width: thin; scrollbar-color: var(--accent) transparent;
+}
+/* Barra de rolagem animada do menu lateral */
+.side-nav::-webkit-scrollbar { width: 8px; }
+.side-nav::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); border-radius: 999px; }
+.side-nav::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--accent), #35c486, var(--accent), #1e6fff);
+  background-size: 100% 300%;
+  animation: sideScrollFlow 4s linear infinite;
+  transition: width .2s;
+}
+.side-nav::-webkit-scrollbar-thumb:hover { background-image: linear-gradient(180deg, #35c486, var(--accent), #1e6fff, #35c486); }
+@keyframes sideScrollFlow { 0% { background-position: 0 0; } 100% { background-position: 0 300%; } }
+@media (prefers-reduced-motion: reduce) { .side-nav::-webkit-scrollbar-thumb { animation: none; } }
 .side-link {
   display: block; width: 100%; text-align: left; text-decoration: none;
   color: #cdd6e6; padding: 11px 14px; border-radius: 9px; font-size: 0.95rem;
