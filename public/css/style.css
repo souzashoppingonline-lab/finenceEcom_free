@@ -727,7 +727,7 @@ tbody tr:hover { background: #f7f9fc; }
 /* ---------- Modal de análise por IA ---------- */
 .ia-modal { position: fixed; inset: 0; background: rgba(10,20,40,.55); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; z-index: 999; overflow-y: auto; }
 .ia-modal[hidden] { display: none; }
-.ia-modal-box { background: var(--card); border: 1px solid var(--border); border-radius: 14px; max-width: 780px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+.ia-modal-box { position: relative; background: var(--card); border: 1px solid var(--border); border-radius: 14px; max-width: 780px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
 .ia-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--card); border-radius: 14px 14px 0 0; }
 .ia-modal-head h3 { margin: 0; }
 .ia-modal-body { padding: 8px 22px 22px; line-height: 1.55; }
@@ -1015,8 +1015,13 @@ tbody tr:hover { background: #f7f9fc; }
 :root[data-theme="dark"] .btn-help{border-color:#1e3a6a;color:#7db0ff}
 :root[data-theme="dark"] .btn-help:hover{background:#12203a}
 .help-box{max-width:640px;padding:18px 24px 24px;position:relative}
-.ia-modal-x{position:absolute;top:14px;right:16px;background:transparent;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted,#889);line-height:1}
-.ia-modal-x:hover{color:var(--text)}
+.ia-modal-x{position:absolute;top:12px;right:12px;width:30px;height:30px;min-width:0;margin:0;padding:0;
+  display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;
+  border-radius:8px;font-size:1rem;line-height:1;cursor:pointer;color:var(--muted,#889);z-index:2;transition:background .15s,color .15s,border-color .15s}
+.ia-modal-x:hover{background:color-mix(in srgb,var(--danger,#e5484d) 12%,transparent);color:var(--danger,#e5484d);border-color:color-mix(in srgb,var(--danger,#e5484d) 30%,transparent)}
+.ia-modal-x::after{content:"Fechar";position:absolute;top:110%;right:0;background:var(--text);color:var(--card);
+  font-size:.72rem;font-weight:600;padding:3px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transform:translateY(-3px);transition:opacity .15s,transform .15s}
+.ia-modal-x:hover::after{opacity:1;transform:translateY(0)}
 .help-goal{background:#eef4ff;border-radius:8px;padding:10px 14px;font-size:.92rem}
 :root[data-theme="dark"] .help-goal{background:#12203a}
 .help-steps{margin:6px 0 6px 4px;padding-left:20px}
