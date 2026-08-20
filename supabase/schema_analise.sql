@@ -126,3 +126,6 @@ alter table public.user_ai_settings add column if not exists monitor_hour smalli
 alter table public.analise_product_ads add column if not exists parcelamento text;
 alter table public.analise_product_ads add column if not exists estoque integer;
 alter table public.analise_product_ads add column if not exists desconto_pct numeric(5,2);
+
+-- Vendas no historico de snapshots (mini-historico de vendas no card)
+alter table public.analise_monitor_snapshots add column if not exists vendas integer;

@@ -777,6 +777,29 @@ function recentPrices(list) {
   </div>`;
 }
 
+// Mini-histórico de vendas coletadas (aparece no card)
+function recentSales(list) {
+  if (!Array.isArray(list) || !list.length) return '';
+  const pts = list.filter((p) => p.vendas != null).slice(-5);
+  if (!pts.length) return '';
+  const fmtD = (d) => { const [ , m, day] = String(d).split('-'); return day && m ? `${day}/${m}` : String(d).slice(5); };
+  const nf = (v) => Number(v).toLocaleString('pt-BR');
+  const items = pts.map((p, i) => {
+    const prev = i > 0 ? Number(pts[i - 1].vendas) : null;
+    const cur = Number(p.vendas);
+    const cls = prev == null ? 'ph-flat' : cur > prev ? 'ph-up-good' : cur < prev ? 'ph-down-bad' : 'ph-flat';
+    const arrow = prev == null ? '' : cur > prev ? '▲' : cur < prev ? '▼' : '';
+    return `<div class="ph-item ${cls}">
+      <span class="ph-date">${esc(fmtD(p.snap_date))}</span>
+      <span class="ph-price">${nf(cur)} <em>${arrow}</em></span>
+    </div>`;
+  }).join('<span class="ph-sep">›</span>');
+  return `<div class="ph-block ph-sales">
+    <div class="ph-head">📦 Histórico de vendas <span class="muted">(últimas ${pts.length} coletas)</span></div>
+    <div class="ph-track">${items}</div>
+  </div>`;
+}
+
 function adCard(a) {
   const foto = firstFoto(a.fotos);
   const kws = seoKeywords(a.titulo);
@@ -806,6 +829,7 @@ function adCard(a) {
       </div>
     </div>
     ${recentPrices(a.precos_recentes)}
+    ${recentSales(a.vendas_recentes)}
     <div class="ad-sections">
       ${kws.length ? `<div class="ad-sec"><b>SEO / palavras-chave</b><div class="ad-kws">${kws.map((k) => `<span class="kw">${esc(k)}</span>`).join('')}</div></div>` : ''}
       ${ficha.length ? `<details class="ad-sec"><summary><b>Ficha técnica</b> (${ficha.length})</summary><ul class="ad-ficha">${ficha.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></details>` : ''}

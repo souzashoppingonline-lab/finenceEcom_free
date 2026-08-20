@@ -1276,3 +1276,7 @@ tbody tr:hover { background: #f7f9fc; }
 /* Selo de desconto + parcelamento no card do concorrente */
 .ad-off{display:inline-block;background:#e5484d;color:#fff;font-size:.68rem;font-weight:800;padding:1px 7px;border-radius:6px;margin-left:6px;vertical-align:middle}
 .ad-parc{font-size:.8rem;color:var(--muted);margin-top:2px}
+/* Mini-histórico de vendas (verde = subiu) */
+.ph-sales .ph-up-good .ph-price{color:#0a7c3f}
+.ph-sales .ph-up-good .ph-price em{color:#12905a}
+.ph-sales .ph-down-bad .ph-price em{color:#e5484d}

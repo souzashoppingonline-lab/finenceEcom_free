@@ -1638,7 +1638,7 @@ app.get('/api/analise/products/:id', requireUser, async (req, res) => {
       if (mlIds.length) {
         let snaps;
         if (supabase) {
-          const { data } = await supabase.from('analise_monitor_snapshots').select('ml_id, snap_date, preco')
+          const { data } = await supabase.from('analise_monitor_snapshots').select('ml_id, snap_date, preco, vendas')
             .eq('user_id', req.userId).in('ml_id', mlIds).order('snap_date');
           snaps = data || [];
         } else {
@@ -1646,8 +1646,12 @@ app.get('/api/analise/products/:id', requireUser, async (req, res) => {
             .sort((a, b) => (a.snap_date < b.snap_date ? -1 : 1));
         }
         const byMl = {};
-        for (const s of snaps) (byMl[s.ml_id] = byMl[s.ml_id] || []).push({ snap_date: s.snap_date, preco: s.preco });
-        ads.forEach((a) => { a.precos_recentes = a.ml_id && byMl[a.ml_id] ? byMl[a.ml_id].slice(-5) : []; });
+        for (const s of snaps) (byMl[s.ml_id] = byMl[s.ml_id] || []).push({ snap_date: s.snap_date, preco: s.preco, vendas: s.vendas });
+        ads.forEach((a) => {
+          const hist = a.ml_id && byMl[a.ml_id] ? byMl[a.ml_id] : [];
+          a.precos_recentes = hist.slice(-5);
+          a.vendas_recentes = hist.filter((h) => h.vendas != null).slice(-5);
+        });
       }
     } catch (e) { console.error('precos_recentes:', e.message); }
     return res.json({ product, ads, active_id: await activeProductId(req.userId) });
@@ -2112,18 +2116,31 @@ function resolveAdPayload(rawData) {
   };
 }
 
-// Grava snapshot de preco (1 por dia por MLB) — historico
-async function recordSnapshot(userId, ml_id, preco, preco_original) {
-  if (!ml_id || preco == null) return;
+// Converte "+5 mil vendas", "1,2 mil", "500 vendidos" -> numero
+function parseVendasNum(txt) {
+  if (txt == null) return null;
+  const s = String(txt).toLowerCase();
+  const m = s.match(/([\d.,]+)\s*(mil|mi|k)?/);
+  if (!m) return null;
+  let n = Number(m[1].replace(/\.(?=\d{3})/g, '').replace(',', '.'));
+  if (isNaN(n)) return null;
+  if (m[2] === 'mil' || m[2] === 'k') n *= 1000; else if (m[2] === 'mi') n *= 1000000;
+  return Math.round(n);
+}
+
+// Grava snapshot de preco + vendas (1 por dia por MLB) — historico
+async function recordSnapshot(userId, ml_id, preco, preco_original, vendas) {
+  if (!ml_id || (preco == null && vendas == null)) return;
   const snap_date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+  const vendasNum = parseVendasNum(vendas);
   try {
     if (supabase) {
       await supabase.from('analise_monitor_snapshots').delete().eq('ml_id', ml_id).eq('snap_date', snap_date);
-      await supabase.from('analise_monitor_snapshots').insert({ user_id: userId, ml_id, snap_date, preco, preco_original });
+      await supabase.from('analise_monitor_snapshots').insert({ user_id: userId, ml_id, snap_date, preco, preco_original, vendas: vendasNum });
     } else {
       const i = memAnaliseSnaps.findIndex((s) => s.ml_id === ml_id && s.snap_date === snap_date);
       if (i >= 0) memAnaliseSnaps.splice(i, 1);
-      memAnaliseSnaps.push({ id: makeId(), user_id: userId, ml_id, snap_date, preco, preco_original });
+      memAnaliseSnaps.push({ id: makeId(), user_id: userId, ml_id, snap_date, preco, preco_original, vendas: vendasNum });
     }
   } catch (err) { console.error('snapshot:', err.message); }
 }
@@ -2190,7 +2207,7 @@ app.post('/extension/anuncio', requireExtToken, async (req, res) => {
     if (!exists && count >= ANALISE_MAX_ADS) return res.status(409).json({ error: `Limite de ${ANALISE_MAX_ADS} concorrentes por produto.` });
 
     const adId = await upsertCompetitor(req.userId, pid, payload);
-    await recordSnapshot(req.userId, payload.ml_id, payload.preco, payload.preco_original);
+    await recordSnapshot(req.userId, payload.ml_id, payload.preco, payload.preco_original, payload.vendas);
     return res.json({ ok: true, ad_id: adId, ml_id: payload.ml_id, titulo: payload.titulo });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao salvar anuncio.' }); }
 });
@@ -2243,7 +2260,7 @@ app.post('/extension/monitoramento', requireExtToken, async (req, res) => {
       prods = [...new Set(memAnaliseAds.filter((a) => a.user_id === req.userId && a.ml_id === payload.ml_id).map((a) => a.product_id))];
     }
     for (const pid of prods) await upsertCompetitor(req.userId, pid, payload);
-    await recordSnapshot(req.userId, payload.ml_id, payload.preco, payload.preco_original);
+    await recordSnapshot(req.userId, payload.ml_id, payload.preco, payload.preco_original, payload.vendas);
     return res.json({ ok: true, updated: prods.length });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao recoletar.' }); }
 });
