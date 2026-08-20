@@ -974,3 +974,9 @@ tbody tr:hover { background: #f7f9fc; }
 .help-steps li{margin:5px 0}
 .help-tip{margin-top:16px;background:#fff8e6;border-left:3px solid #f5b301;border-radius:0 8px 8px 0;padding:10px 14px;font-size:.9rem}
 :root[data-theme="dark"] .help-tip{background:#241d0e}
+/* Bloco de instalação da extensão (página Análise) */
+.ext-install{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;
+  margin-top:18px;padding:16px 18px;border:1px solid var(--border);border-radius:12px;
+  background:color-mix(in srgb,var(--primary,#12905A) 8%,transparent)}
+.ext-install-txt{display:flex;flex-direction:column;gap:3px;min-width:220px;flex:1}
+.ext-install-btn{max-width:280px;margin:0;white-space:nowrap}
