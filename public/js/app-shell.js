@@ -11,7 +11,7 @@ function applyCollapsed(collapsed) {
   if (btn) btn.textContent = collapsed ? '»' : '«';
 }
 
-const THEME_ORDER = ['light', 'dark', 'sepia', 'emerald'];
+const THEME_ORDER = ['light', 'dark', 'sepia', 'emerald', 'oled'];
 function applyTheme(theme) {
   if (!THEME_ORDER.includes(theme)) theme = 'light';
   document.documentElement.setAttribute('data-theme', theme);
@@ -56,6 +56,7 @@ function renderSidebar(active) {
             <button type="button" class="tp-dot" data-theme="dark"    title="Escuro"  style="background:linear-gradient(135deg,#0e1525 50%,#22d3ee 50%)"></button>
             <button type="button" class="tp-dot" data-theme="sepia"   title="Sépia"   style="background:linear-gradient(135deg,#f3ead7 50%,#b06a2c 50%)"></button>
             <button type="button" class="tp-dot" data-theme="emerald" title="Verde"   style="background:linear-gradient(135deg,#081712 50%,#35c486 50%)"></button>
+            <button type="button" class="tp-dot" data-theme="oled"    title="Black (OLED)" style="background:linear-gradient(135deg,#000 50%,#3b82f6 50%)"></button>
           </div>
         </div>
         <button id="side-logout" class="side-link side-btn"><span class="side-ico">🚪</span><span class="side-txt">Sair</span></button>

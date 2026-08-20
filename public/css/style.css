@@ -359,6 +359,17 @@ tbody tr:hover { background: #f7f9fc; }
 :root[data-theme="emerald"] th { background: #0e201a; }
 :root[data-theme="emerald"] tbody tr:hover { background: #0e201a; }
 :root[data-theme="emerald"] .btn-ghost { color: var(--text); }
+/* Tema Black / OLED (bem escuro, preto real) — quinto tema */
+:root[data-theme="oled"] {
+  --bg-soft: #0a0a0c; --card: #101012; --text: #f2f3f5; --muted: #8b8d94;
+  --border: #262629; --primary: #3b82f6; --primary-dark: #2f6ad6; --accent: #22d3ee;
+}
+:root[data-theme="oled"] .app-body { background: #000000; }
+:root[data-theme="oled"] input,
+:root[data-theme="oled"] select { background: #0a0a0c; color: var(--text); border-color: var(--border); }
+:root[data-theme="oled"] th { background: #141416; }
+:root[data-theme="oled"] tbody tr:hover { background: #141416; }
+:root[data-theme="oled"] .btn-ghost { color: var(--text); }
 :root[data-theme="dark"] .app-body { background: #0e1525; }
 :root[data-theme="dark"] input,
 :root[data-theme="dark"] select { background: #0f1622; color: var(--text); }
