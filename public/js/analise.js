@@ -869,6 +869,65 @@ function analyzeSeo() {
   }));
 }
 
+// converte "+5 mil vendas" / "1,2 mil" / "500 vendidos" -> número
+function parseVendasN(txt) {
+  if (txt == null) return null;
+  const s = String(txt).toLowerCase();
+  const m = s.match(/([\d.,]+)\s*(mil|mi|k)?/);
+  if (!m) return null;
+  let n = Number(m[1].replace(/\.(?=\d{3})/g, '').replace(',', '.'));
+  if (isNaN(n)) return null;
+  if (m[2] === 'mil' || m[2] === 'k') n *= 1000; else if (m[2] === 'mi') n *= 1000000;
+  return Math.round(n);
+}
+
+// Painel: tamanho do mercado (faturamento estimado do nicho)
+function marketPanel(ads) {
+  const rows = ads.map((a) => ({ t: a.titulo, preco: Number(a.preco) || 0, v: parseVendasN(a.vendas), v30: a.vendas_30d != null ? Number(a.vendas_30d) : null }))
+    .filter((r) => r.preco > 0 && r.v != null);
+  if (!rows.length) return '';
+  const gmv = rows.reduce((s, r) => s + r.v * r.preco, 0);
+  const lider = rows.reduce((a, b) => (b.v * b.preco > a.v * a.preco ? b : a), rows[0]);
+  const mensalRows = rows.filter((r) => r.v30 != null && r.v30 > 0);
+  const gmvMes = mensalRows.reduce((s, r) => s + r.v30 * r.preco, 0);
+  const kpi = (l, v, sub) => `<div class="mk-kpi"><span>${l}</span><b>${v}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
+  return `<div class="mk-panel">
+    <div class="mk-head">📊 Tamanho do mercado <span class="muted">— estimativa com ${rows.length} concorrentes</span></div>
+    <div class="mk-kpis">
+      ${kpi('Faturamento acumulado do nicho', money(gmv), 'vendas totais × preço (histórico do ML)')}
+      ${mensalRows.length ? kpi('Estimativa mensal', money(gmvMes), `com base em ${mensalRows.length} c/ vendas 30d`) : ''}
+      ${kpi('Líder do nicho', money(lider.v * lider.preco), esc((lider.t || '').slice(0, 40)))}
+    </div>
+    <p class="muted mk-note">O ML mostra vendas <b>acumuladas</b> (desde o início do anúncio), então o "acumulado" é o total histórico. Para o giro atual, use a estimativa mensal (vendas dos últimos 30 dias).</p>
+  </div>`;
+}
+
+// Painel: alertas (preço baixou / sem estoque / adicionados recentemente)
+function alertsPanel(ads) {
+  const drops = [];
+  ads.forEach((a) => {
+    const h = (a.precos_recentes || []).filter((p) => p.preco != null);
+    if (h.length >= 2) {
+      const cur = Number(h[h.length - 1].preco), prev = Number(h[h.length - 2].preco);
+      if (cur < prev) drops.push({ t: a.titulo, de: prev, para: cur, pct: Math.round((1 - cur / prev) * 100) });
+    }
+  });
+  const oos = ads.filter((a) => a.estoque === 0 || a.estoque === '0');
+  const now = Date.now();
+  const novos = ads.filter((a) => a.created_at && (now - Date.parse(a.created_at)) < 7 * 86400000);
+  if (!drops.length && !oos.length && !novos.length) return '';
+  const parts = [];
+  if (drops.length) parts.push(`<span class="al-item al-drop">▼ ${drops.length} baixaram o preço</span>`);
+  if (oos.length) parts.push(`<span class="al-item al-oos">${oos.length} sem estoque</span>`);
+  if (novos.length) parts.push(`<span class="al-item al-new">${novos.length} adicionados nos últimos 7 dias</span>`);
+  const dropList = drops.slice(0, 5).map((d) => `<li><b>${esc((d.t || '').slice(0, 50))}</b> — ${money(d.de)} → <span class="c-ok">${money(d.para)}</span> (-${d.pct}%)</li>`).join('');
+  return `<div class="al-panel">
+    <div class="al-head">⚠️ Alertas dos concorrentes</div>
+    <div class="al-chips">${parts.join('')}</div>
+    ${dropList ? `<ul class="al-list">${dropList}</ul>` : ''}
+  </div>`;
+}
+
 function adCard(a) {
   const foto = firstFoto(a.fotos);
   const kws = seoKeywords(a.titulo);
@@ -1011,6 +1070,7 @@ function renderAds(productId, ads) {
       </div>
       <p id="ad-msg" class="form-msg"></p>
     </form>
+    ${ads.length ? alertsPanel(ads) + marketPanel(ads) : ''}
     ${ads.length === 0 ? '<p class="muted" style="margin-top:12px">Nenhum concorrente salvo ainda. Clique em “+ Adicionar concorrente”.</p>'
       : shown.length === 0 ? '<p class="muted" style="margin-top:12px">Nenhum concorrente com esse filtro.</p>'
       : `<div class="ad-grid">${shown.map(adCard).join('')}</div>`}`;

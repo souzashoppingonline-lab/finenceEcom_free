@@ -1295,3 +1295,24 @@ tbody tr:hover { background: #f7f9fc; }
 .seo-title-txt{flex:1;font-weight:600;font-size:.92rem}
 .seo-title-len{font-size:.74rem;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .seo-copy{width:auto;margin:0;padding:5px 12px;font-size:.8rem}
+/* Painel de tamanho do mercado */
+.mk-panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin:14px 0;box-shadow:var(--shadow)}
+.mk-head{font-weight:750;letter-spacing:-.01em;margin-bottom:12px}
+.mk-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:760px){.mk-kpis{grid-template-columns:1fr}}
+.mk-kpi{background:var(--bg-soft,#f4f7fb);border:1px solid var(--border);border-radius:10px;padding:11px 13px;display:flex;flex-direction:column;gap:3px}
+:root[data-theme="dark"] .mk-kpi{background:#0f1622}
+.mk-kpi span{font-size:.74rem;color:var(--muted);font-weight:600}
+.mk-kpi b{font-size:1.25rem;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.mk-kpi small{font-size:.72rem;color:var(--muted)}
+.mk-note{font-size:.8rem;margin-top:10px}
+/* Painel de alertas */
+.al-panel{background:#fff8e6;border:1px solid #f0d894;border-left:4px solid #f5b301;border-radius:0 12px 12px 0;padding:14px 16px;margin:14px 0}
+:root[data-theme="dark"] .al-panel{background:#241d0e;border-color:#5a4a1e}
+.al-head{font-weight:750;margin-bottom:8px}
+.al-chips{display:flex;gap:8px;flex-wrap:wrap}
+.al-item{font-size:.82rem;font-weight:700;padding:4px 11px;border-radius:999px;background:#fff;border:1px solid var(--border)}
+:root[data-theme="dark"] .al-item{background:#0f1622}
+.al-drop{color:#c62828}.al-oos{color:#b26a00}.al-new{color:#0a7c3f}
+.al-list{margin:10px 0 0;padding-left:18px;font-size:.86rem}
+.al-list li{margin:4px 0}
