@@ -1383,8 +1383,12 @@ async function sendBoletoDigest(userId, email) {
   try {
     const ca = await competitorAlerts(userId);
     if (ca.drops > 0) {
-      const rows = ca.dropList.slice(0, 8).map((d) => `<li><b>${(d.titulo || '').slice(0, 50)}</b>: ${money(d.de)} → ${money(d.para)} (-${d.pct}%)</li>`).join('');
-      extra += `<h3 style="color:#c62828">🔻 ${ca.drops} concorrente(s) baixaram o preço</h3><ul style="margin:6px 0 14px;padding-left:18px">${rows}</ul>`;
+      const base = (process.env.PUBLIC_URL || 'https://app.financeecom.com.br');
+      const rows = (ca.byProduct || []).slice(0, 10).map((p) => {
+        const its = p.dropList.slice(0, 4).map((d) => `<li style="color:#6b7686">${(d.titulo || '').slice(0, 45)}: ${money(d.de)} → ${money(d.para)} (-${d.pct}%)</li>`).join('');
+        return `<li style="margin-bottom:6px"><a href="${base}/analise.html?produto=${encodeURIComponent(p.product_id)}" style="color:#1e6fff;font-weight:700;text-decoration:none">${(p.produto || 'Produto')}</a> — ${p.drops} concorrente(s)<ul style="margin:4px 0;padding-left:16px">${its}</ul></li>`;
+      }).join('');
+      extra += `<h3 style="color:#c62828">🔻 Concorrentes baixaram o preço</h3><ul style="margin:6px 0 14px;padding-left:18px">${rows}</ul>`;
     }
   } catch (_) {}
   try {
@@ -1398,11 +1402,21 @@ async function sendBoletoDigest(userId, email) {
   return resendSend(email, 'FinanceEcom Free — Resumo do dia', digestHtml(today, hoje, amanha, prox7, extra));
 }
 
-// Alertas de concorrentes: quantos baixaram o preço (última coleta < anterior) e sem estoque
+// Alertas de concorrentes: quem baixou o preço (última coleta < anterior) e sem estoque,
+// agrupados por PRODUCT (pra o alerta abrir direto o produto certo).
 async function competitorAlerts(userId) {
-  let ads;
-  if (supabase) { const { data } = await supabase.from('analise_product_ads').select('ml_id, titulo, estoque, monitorar').eq('user_id', userId).not('ml_id', 'is', null); ads = data || []; }
-  else ads = memAnaliseAds.filter((a) => a.user_id === userId && a.ml_id);
+  let ads, prods;
+  if (supabase) {
+    const [a, p] = await Promise.all([
+      supabase.from('analise_product_ads').select('ml_id, titulo, estoque, product_id').eq('user_id', userId).not('ml_id', 'is', null),
+      supabase.from('analise_products').select('id, produto').eq('user_id', userId),
+    ]);
+    ads = a.data || []; prods = p.data || [];
+  } else {
+    ads = memAnaliseAds.filter((a) => a.user_id === userId && a.ml_id);
+    prods = memAnaliseProducts.filter((p) => p.user_id === userId);
+  }
+  const nameOf = (id) => (prods.find((p) => String(p.id) === String(id)) || {}).produto || 'Produto';
   const mlIds = [...new Set(ads.map((a) => a.ml_id))];
   const oos = ads.filter((a) => Number(a.estoque) === 0).length;
   let snaps = [];
@@ -1411,15 +1425,24 @@ async function competitorAlerts(userId) {
     else snaps = memAnaliseSnaps.filter((s) => s.user_id === userId && mlIds.includes(s.ml_id)).sort((a, b) => (a.snap_date < b.snap_date ? -1 : 1));
   }
   const byMl = {}; snaps.forEach((s) => (byMl[s.ml_id] = byMl[s.ml_id] || []).push(s));
-  const dropList = [];
+  const byProd = {}; const dropList = []; let drops = 0;
   for (const id of Object.keys(byMl)) {
     const h = byMl[id].filter((x) => x.preco != null);
-    if (h.length >= 2) {
-      const cur = Number(h[h.length - 1].preco), prev = Number(h[h.length - 2].preco);
-      if (cur < prev) { const ad = ads.find((a) => a.ml_id === id); dropList.push({ titulo: ad && ad.titulo, de: prev, para: cur, pct: Math.round((1 - cur / prev) * 100) }); }
-    }
+    if (h.length < 2) continue;
+    const cur = Number(h[h.length - 1].preco), prev = Number(h[h.length - 2].preco);
+    if (cur >= prev) continue;
+    drops++;
+    const info = { de: prev, para: cur, pct: Math.round((1 - cur / prev) * 100) };
+    // atribui a cada produto que tem esse concorrente
+    ads.filter((a) => a.ml_id === id).forEach((ad) => {
+      const pid = ad.product_id;
+      byProd[pid] = byProd[pid] || { product_id: pid, produto: nameOf(pid), drops: 0, dropList: [] };
+      byProd[pid].drops++;
+      byProd[pid].dropList.push({ titulo: ad.titulo, ...info });
+      dropList.push({ product_id: pid, produto: nameOf(pid), titulo: ad.titulo, ...info });
+    });
   }
-  return { drops: dropList.length, oos, dropList };
+  return { drops, oos, byProduct: Object.values(byProd).sort((a, b) => b.drops - a.drops), dropList };
 }
 
 app.get('/api/analise/alerts', requireUser, async (req, res) => {

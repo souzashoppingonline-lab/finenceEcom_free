@@ -1190,4 +1190,7 @@ async function loadUsage() {
   await loadAiSettings();
   await loadUsage();
   await loadProducts();
+  // deep-link: /analise.html?produto=ID abre direto o produto (usado pelos alertas)
+  const pid = new URLSearchParams(location.search).get('produto');
+  if (pid) { try { await openDetail(pid); } catch (_) {} }
 })();
