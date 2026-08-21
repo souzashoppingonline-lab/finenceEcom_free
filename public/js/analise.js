@@ -919,7 +919,7 @@ function alertsPanel(ads) {
   const parts = [];
   if (drops.length) parts.push(`<span class="al-item al-drop">▼ ${drops.length} baixaram o preço</span>`);
   if (oos.length) parts.push(`<span class="al-item al-oos">${oos.length} sem estoque</span>`);
-  if (novos.length) parts.push(`<span class="al-item al-new">${novos.length} adicionados nos últimos 7 dias</span>`);
+  if (novos.length) parts.push(`<span class="al-item al-new" title="Concorrentes que VOCÊ adicionou nos últimos 7 dias (o sistema não descobre novos vendedores sozinho)">${novos.length} que você adicionou (7 dias)</span>`);
   const dropList = drops.slice(0, 5).map((d) => `<li><b>${esc((d.t || '').slice(0, 50))}</b> — ${money(d.de)} → <span class="c-ok">${money(d.para)}</span> (-${d.pct}%)</li>`).join('');
   return `<div class="al-panel">
     <div class="al-head">⚠️ Alertas dos concorrentes</div>
