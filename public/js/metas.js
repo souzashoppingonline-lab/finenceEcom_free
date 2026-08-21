@@ -77,8 +77,20 @@ function renderGeral() {
       ${kpi('Falta', c.restante > 0 ? money(c.restante) : 'Superado', c.isCurrent ? money(c.metaDia) + '/dia' : '')}
       ${kpi('Projeção', money(c.projecao))}
     </div>
-    <div class="goal-bar"><div class="goal-bar-fill ${c.status.bar}" style="width:${Math.min(p, 100)}%"></div></div>
-    <p class="muted">${pct(p)} da meta · projeção ${money(c.projecao)}${c.isCurrent ? ' · faltam ' + c.diasRestantes + ' dias' : ''}</p>
+    <div class="goal-bar" title="projeção em relação à meta">
+      <div class="goal-bar-fill ${c.status.bar}" style="width:${Math.min(p, 100)}%"></div>
+      ${c.isCurrent && g.amount > 0 ? `<div class="goal-proj-mark" style="left:${Math.min(c.projecao / g.amount * 100, 100)}%" title="projeção: ${money(c.projecao)}"></div>` : ''}
+    </div>
+    ${c.isCurrent ? `<div class="goal-live ${c.status.cls === 'c-danger' ? 'gl-bad' : c.status.cls === 'c-warn' ? 'gl-warn' : 'gl-ok'}">
+      <div class="gl-msg">${realizado >= g.amount
+        ? `🎉 Meta batida! Você já fez ${pct(p)} da meta.`
+        : `No ritmo atual você fecha o mês em <b>${money(c.projecao)}</b> (${pct(g.amount > 0 ? c.projecao / g.amount * 100 : 0)} da meta).`}</div>
+      <div class="gl-kpis">
+        <div class="gl-k"><span>Ritmo atual</span><b>${money(c.runRate)}/dia</b></div>
+        <div class="gl-k"><span>Precisa vender</span><b class="${c.metaDia > c.runRate * 1.2 ? 'neg' : ''}">${c.restante > 0 ? money(c.metaDia) + '/dia' : '—'}</b></div>
+        <div class="gl-k"><span>Dias restantes</span><b>${c.diasRestantes}</b></div>
+      </div>
+    </div>` : `<p class="muted">${pct(p)} da meta · projeção ${money(c.projecao)}</p>`}
   </div>`;
   window.animateCounts?.(el.querySelectorAll('.stat-value'));
 }

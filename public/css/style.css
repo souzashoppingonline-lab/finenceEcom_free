@@ -1316,3 +1316,31 @@ tbody tr:hover { background: #f7f9fc; }
 .al-drop{color:#c62828}.al-oos{color:#b26a00}.al-new{color:#0a7c3f}
 .al-list{margin:10px 0 0;padding-left:18px;font-size:.86rem}
 .al-list li{margin:4px 0}
+/* Projeção de meta ao vivo */
+.goal-bar{position:relative}
+.goal-proj-mark{position:absolute;top:-3px;bottom:-3px;width:3px;background:var(--ink,#0f1a13);border-radius:2px;box-shadow:0 0 0 2px var(--card)}
+.goal-live{margin-top:12px;border-radius:12px;padding:14px 16px;border:1px solid var(--border)}
+.gl-ok{background:color-mix(in srgb,#12905a 9%,transparent);border-color:color-mix(in srgb,#12905a 35%,var(--border))}
+.gl-warn{background:color-mix(in srgb,#f5b301 12%,transparent);border-color:color-mix(in srgb,#f5b301 40%,var(--border))}
+.gl-bad{background:color-mix(in srgb,#e5484d 10%,transparent);border-color:color-mix(in srgb,#e5484d 35%,var(--border))}
+.gl-msg{font-size:1rem;font-weight:600;margin-bottom:10px;letter-spacing:-.01em}
+.gl-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:600px){.gl-kpis{grid-template-columns:1fr}}
+.gl-k{display:flex;flex-direction:column;gap:2px}
+.gl-k span{font-size:.74rem;color:var(--muted);font-weight:600}
+.gl-k b{font-size:1.1rem;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.gl-k b.neg{color:#e5484d}
+/* Health Score do negócio (Dashboard) */
+.health-card{display:flex;gap:22px;align-items:center;margin-top:6px;flex-wrap:wrap}
+.hs-ring-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;flex:none}
+.hs-ring{width:112px;height:112px;border-radius:50%;display:grid;place-items:center;position:relative}
+.hs-ring::before{content:"";position:absolute;inset:10px;border-radius:50%;background:var(--card)}
+.hs-ring span{position:relative;font-size:2rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.hs-ring small{position:relative;font-size:.7rem;color:var(--muted);margin-top:20px;position:absolute;bottom:26px}
+.hs-label{font-weight:700;font-size:.95rem}
+.hs-body{flex:1;min-width:240px}
+.hs-breakdown{display:flex;flex-direction:column;gap:10px}
+.hs-row-top{display:flex;justify-content:space-between;font-size:.86rem;font-weight:600;margin-bottom:3px}
+.hs-bar{height:7px;background:var(--border);border-radius:999px;overflow:hidden}
+.hs-bar>div{height:100%;border-radius:999px}
+.hs-dica{display:block;font-size:.76rem;color:var(--muted);margin-top:3px}

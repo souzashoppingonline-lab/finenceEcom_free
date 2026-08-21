@@ -24,6 +24,18 @@
       <div class="stat-card"><span class="stat-label">Meta do mês</span><span class="stat-value" id="k-goal">—</span><span class="muted" id="k-goal-sub"></span></div>
     </div>
 
+    <div class="card health-card" id="hs-card" hidden>
+      <div class="hs-ring-wrap">
+        <div class="hs-ring" id="hs-ring"><span id="hs-num">—</span><small>/100</small></div>
+        <div class="hs-label" id="hs-label"></div>
+      </div>
+      <div class="hs-body">
+        <h3 style="margin:0 0 4px">Saúde do negócio</h3>
+        <p class="muted" style="margin:0 0 12px" id="hs-sub">Uma nota que junta margem, meta e contas em dia.</p>
+        <div id="hs-breakdown" class="hs-breakdown"></div>
+      </div>
+    </div>
+
     <div class="dash-cards">
       <a href="/recebimentos.html" class="dash-card-link">
         <span class="dc-ico">📥</span>
@@ -80,6 +92,7 @@
       // D-1: considera vendas do mês ATÉ ontem (dado de hoje ainda não é confiável)
       const y = new Date(); y.setDate(y.getDate() - 1);
       const ontem = y.toLocaleDateString('en-CA');
+      let hsMargin = null, hsPace = null, hsHasRev = false;
       try {
         const h = await authHeader();
         const [salesRes, goalsRes] = await Promise.all([
@@ -103,6 +116,15 @@
         document.getElementById('k-margin').textContent = margin.toFixed(1) + '%';
         document.getElementById('k-goal').textContent = metaTotal > 0 ? money(metaTotal) : '—';
         document.getElementById('k-goal-sub').textContent = metaTotal > 0 ? `${metaPct.toFixed(0)}% atingido` : 'defina em Metas';
+        // dados p/ o Health Score
+        hsHasRev = rev > 0;
+        hsMargin = margin;
+        if (metaTotal > 0) {
+          const dim = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
+          const diaOntem = Number(ontem.slice(8, 10));
+          const esperado = metaTotal * (diaOntem / dim);
+          hsPace = esperado > 0 ? rev / esperado : null;
+        }
       } catch (_) {}
 
       // Cards: recebíveis, a pagar, empresas
@@ -119,6 +141,43 @@
         document.getElementById('dc-pagar').textContent = money(sum(pag.boletos));
         document.getElementById('dc-pagar-count').textContent = `${(pag.boletos || []).length} conta(s)`;
         document.getElementById('dc-empresas').textContent = (emp.stores || []).length;
+
+        // ===== Health Score do negócio =====
+        try {
+          const pend = pag.boletos || [];
+          const vencidos = pend.filter((b) => b.due_date && b.due_date < today).length;
+          const comps = [];
+          if (hsHasRev) {
+            const p = Math.max(0, Math.min(1, (hsMargin || 0) / 20)); // 20% margem = nota cheia
+            comps.push({ nome: 'Margem', pts: p * 35, max: 35, dica: (hsMargin || 0) < 10 ? 'Margem baixa — revise custos, taxas e preço.' : '' });
+          }
+          if (hsPace != null) {
+            const p = Math.max(0, Math.min(1, hsPace));
+            comps.push({ nome: 'Ritmo da meta', pts: p * 35, max: 35, dica: hsPace < 0.9 ? 'Abaixo do ritmo da meta — acelere as vendas.' : '' });
+          }
+          {
+            const p = pend.length === 0 ? 1 : Math.max(0, 1 - vencidos / pend.length);
+            comps.push({ nome: 'Contas em dia', pts: p * 30, max: 30, dica: vencidos > 0 ? `${vencidos} conta(s) vencida(s) — pague para não sujar o caixa.` : '' });
+          }
+          const maxTotal = comps.reduce((a, c) => a + c.max, 0) || 1;
+          const gained = comps.reduce((a, c) => a + c.pts, 0);
+          const score = Math.round(gained / maxTotal * 100);
+          const cor = score >= 70 ? '#12905a' : score >= 40 ? '#c98a1e' : '#e5484d';
+          const label = score >= 70 ? 'Saudável' : score >= 40 ? 'Atenção' : 'Crítico';
+          const card = document.getElementById('hs-card'); card.hidden = false;
+          const ring = document.getElementById('hs-ring');
+          ring.style.background = `conic-gradient(${cor} ${score * 3.6}deg, var(--border) 0)`;
+          document.getElementById('hs-num').textContent = score;
+          document.getElementById('hs-num').style.color = cor;
+          const lbl = document.getElementById('hs-label'); lbl.textContent = label; lbl.style.color = cor;
+          document.getElementById('hs-breakdown').innerHTML = comps.map((c) => {
+            const pc = Math.round(c.pts / c.max * 100);
+            const cc = pc >= 70 ? '#12905a' : pc >= 40 ? '#c98a1e' : '#e5484d';
+            return `<div class="hs-row"><div class="hs-row-top"><span>${c.nome}</span><b>${Math.round(c.pts)}/${c.max}</b></div>
+              <div class="hs-bar"><div style="width:${pc}%;background:${cc}"></div></div>
+              ${c.dica ? `<span class="hs-dica">${c.dica}</span>` : ''}</div>`;
+          }).join('');
+        } catch (_) {}
       } catch (_) {}
 
       window.animateCounts?.(document.querySelectorAll('.stat-value'));
