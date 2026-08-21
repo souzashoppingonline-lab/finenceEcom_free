@@ -22,6 +22,7 @@ function applyTheme(theme) {
 const SVG = (p) => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 const ICONS = {
   user: SVG('<circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/>'),
+  bell: SVG('<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10.5 20a2 2 0 0 0 3 0"/>'),
   dash: SVG('<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'),
   empresas: SVG('<path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/><path d="M15 9h2a2 2 0 0 1 2 2v10"/><path d="M8 7h2M8 11h2M8 15h2"/>'),
   vendas: SVG('<circle cx="12" cy="12" r="9"/><path d="M12 7v10M14.5 9.3c-.6-.8-1.6-1.1-2.6-1.1-1.4 0-2.4.8-2.4 1.9 0 2.7 5.2 1.4 5.2 4 0 1.2-1.1 2-2.6 2-1.1 0-2.2-.4-2.8-1.2"/>'),
@@ -50,7 +51,10 @@ function renderSidebar(active) {
         <span class="side-logo"><img src="/img/logo-mark.svg" alt="" class="side-brand-mark" /><span class="side-txt">FinanceEcom <strong>Free</strong></span></span>
         <button id="side-collapse" class="side-collapse" title="Recolher/expandir menu" aria-label="Recolher menu">«</button>
       </div>
-      <div class="side-user"><span class="side-ico">${ICONS.user}</span><span class="side-txt">${first}</span></div>
+      <div class="side-user"><span class="side-ico">${ICONS.user}</span><span class="side-txt">${first}</span>
+        <button id="side-bell" class="side-bell" title="Alertas" aria-label="Alertas">${ICONS.bell}<span id="bell-badge" class="bell-badge" hidden>0</span></button>
+      </div>
+      <div id="bell-panel" class="bell-panel" hidden></div>
       <nav class="side-nav">
         ${link('/app.html', 'dash', '📊', 'Dashboard')}
         ${link('/empresas.html', 'empresas', '🏢', 'Empresas')}
@@ -131,7 +135,62 @@ async function initShell(active) {
   _session = data.session;
   renderSidebar(active);
   setTimeout(() => setLoad(false), 1200);
+  loadAlerts();
   return _session;
+}
+
+// ---------------------------------------------------------------------------
+// Sininho de alertas (calculado a partir dos dados que já existem)
+// ---------------------------------------------------------------------------
+async function loadAlerts() {
+  const bell = document.getElementById('side-bell');
+  const panel = document.getElementById('bell-panel');
+  const badge = document.getElementById('bell-badge');
+  if (!bell || !panel) return;
+  const moneyf = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const today = new Date().toLocaleDateString('en-CA');
+  const month = today.slice(0, 7);
+  const in3 = new Date(Date.now() + 3 * 86400000).toLocaleDateString('en-CA');
+  const alerts = [];
+  try {
+    const h = await authHeader();
+    const [pag, rec, salesRes, goalsRes] = await Promise.all([
+      fetch('/api/boletos?direction=pagar&status=pendente', { headers: h }).then((r) => r.json()).catch(() => ({})),
+      fetch('/api/boletos?direction=receber&status=pendente', { headers: h }).then((r) => r.json()).catch(() => ({})),
+      fetch(`/api/sales?month=${month}`, { headers: h }).then((r) => r.json()).catch(() => ({})),
+      fetch(`/api/goals?month=${month}`, { headers: h }).then((r) => r.json()).catch(() => ({})),
+    ]);
+    const pagB = pag.boletos || [];
+    const venc = pagB.filter((b) => b.due_date && b.due_date < today);
+    const venc3 = pagB.filter((b) => b.due_date && b.due_date >= today && b.due_date <= in3);
+    if (venc.length) alerts.push({ sev: 'bad', txt: `${venc.length} conta(s) vencida(s) — ${moneyf(venc.reduce((a, b) => a + (+b.value), 0))}`, href: '/boletos.html' });
+    if (venc3.length) alerts.push({ sev: 'warn', txt: `${venc3.length} conta(s) vencem em até 3 dias`, href: '/boletos.html' });
+    const recV = (rec.boletos || []).filter((b) => b.due_date && b.due_date < today);
+    if (recV.length) alerts.push({ sev: 'warn', txt: `${recV.length} recebível(is) atrasado(s) — cobre`, href: '/recebimentos.html' });
+    // meta em risco (projeção < 90%)
+    const goals = goalsRes.goals || [];
+    const geral = goals.find((g) => !g.store_id);
+    const metaTotal = geral ? (+geral.amount) : goals.reduce((a, g) => a + (+g.amount || 0), 0);
+    if (metaTotal > 0) {
+      const y = new Date(); y.setDate(y.getDate() - 1);
+      const ontem = y.toLocaleDateString('en-CA');
+      const dim = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
+      const upto = (salesRes.sales || []).filter((s) => s.date <= ontem);
+      const rev = upto.reduce((a, s) => a + (+s.revenue), 0);
+      const dias = new Set(upto.map((s) => s.date)).size;
+      const proj = dias > 0 ? (rev / dias) * dim : 0;
+      if (proj < metaTotal * 0.9) alerts.push({ sev: 'warn', txt: `Meta em risco — projeção ${moneyf(proj)} de ${moneyf(metaTotal)}`, href: '/metas.html' });
+    }
+  } catch (_) {}
+
+  if (alerts.length) { badge.textContent = alerts.length; badge.hidden = false; bell.classList.add('has-alerts'); }
+  else { badge.hidden = true; bell.classList.remove('has-alerts'); }
+  panel.innerHTML = alerts.length
+    ? `<div class="bell-head">Alertas (${alerts.length})</div>` + alerts.map((a) => `<a class="bell-item bell-${a.sev}" href="${a.href}"><span class="bell-dot"></span>${a.txt}</a>`).join('')
+    : '<div class="bell-head">Alertas</div><div class="bell-empty">Tudo em dia! Nenhum alerta. 🎉</div>';
+
+  bell.onclick = (e) => { e.stopPropagation(); panel.hidden = !panel.hidden; };
+  document.addEventListener('click', (e) => { if (!panel.hidden && !panel.contains(e.target) && e.target !== bell) panel.hidden = true; });
 }
 
 // Header de autorizacao com o token atual (sempre fresco).
