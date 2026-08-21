@@ -1339,7 +1339,7 @@ async function getFaturas(userId) {
   return Object.values(groups);
 }
 
-function digestHtml(nomeHoje, hoje, amanha, prox7) {
+function digestHtml(nomeHoje, hoje, amanha, prox7, extra = '') {
   const money = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const fmt = (iso) => { const [y, m, d] = iso.split('-'); return `${d}/${m}`; };
   const list = (arr) => arr.length
@@ -1358,6 +1358,7 @@ function digestHtml(nomeHoje, hoje, amanha, prox7) {
     <h3>📌 Vencem HOJE (${fmt(nomeHoje)}) — ${money(totHoje)}</h3>${list(hoje)}
     <h3>⏭️ Vencem AMANHÃ — ${money(totAmanha)}</h3>${list(amanha)}
     <h3>📅 Próximos 7 dias — total ${money(tot7)}</h3>${list(prox7)}
+    ${extra || ''}
     <hr style="border:none;border-top:1px solid #e2e6ee;margin:18px 0">
     <p style="color:#6b7686;font-size:13px">Inclui boletos, faturas de cartão e todas as categorias. Enviado automaticamente pelo FinanceEcom Free.</p>
   </div>`;
@@ -1375,8 +1376,56 @@ async function sendBoletoDigest(userId, email) {
   const hoje = all.filter((b) => b.due_date === today);
   const amanha = all.filter((b) => b.due_date === tomorrow);
   const prox7 = all.filter((b) => b.due_date >= today && b.due_date <= in7).sort((a, b) => a.due_date.localeCompare(b.due_date));
-  return resendSend(email, 'FinanceEcom Free — Contas do dia', digestHtml(today, hoje, amanha, prox7));
+
+  // seções extras: concorrentes que baixaram preço + recebíveis atrasados
+  const money = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  let extra = '';
+  try {
+    const ca = await competitorAlerts(userId);
+    if (ca.drops > 0) {
+      const rows = ca.dropList.slice(0, 8).map((d) => `<li><b>${(d.titulo || '').slice(0, 50)}</b>: ${money(d.de)} → ${money(d.para)} (-${d.pct}%)</li>`).join('');
+      extra += `<h3 style="color:#c62828">🔻 ${ca.drops} concorrente(s) baixaram o preço</h3><ul style="margin:6px 0 14px;padding-left:18px">${rows}</ul>`;
+    }
+  } catch (_) {}
+  try {
+    let recv;
+    if (supabase) { const { data } = await supabase.from('boletos').select('*').eq('user_id', userId).eq('direction', 'receber').eq('status', 'pendente'); recv = data || []; }
+    else recv = memBoletos.filter((b) => b.user_id === userId && b.direction === 'receber' && b.status === 'pendente');
+    const atras = recv.filter((b) => b.due_date && b.due_date < today);
+    if (atras.length) extra += `<h3 style="color:#b26a00">💰 ${atras.length} recebível(is) atrasado(s) — total ${money(atras.reduce((a, b) => a + (+b.value), 0))}</h3><p style="color:#6b7686;margin:6px 0 14px">Vale cobrar.</p>`;
+  } catch (_) {}
+
+  return resendSend(email, 'FinanceEcom Free — Resumo do dia', digestHtml(today, hoje, amanha, prox7, extra));
 }
+
+// Alertas de concorrentes: quantos baixaram o preço (última coleta < anterior) e sem estoque
+async function competitorAlerts(userId) {
+  let ads;
+  if (supabase) { const { data } = await supabase.from('analise_product_ads').select('ml_id, titulo, estoque, monitorar').eq('user_id', userId).not('ml_id', 'is', null); ads = data || []; }
+  else ads = memAnaliseAds.filter((a) => a.user_id === userId && a.ml_id);
+  const mlIds = [...new Set(ads.map((a) => a.ml_id))];
+  const oos = ads.filter((a) => Number(a.estoque) === 0).length;
+  let snaps = [];
+  if (mlIds.length) {
+    if (supabase) { const { data } = await supabase.from('analise_monitor_snapshots').select('*').eq('user_id', userId).in('ml_id', mlIds).order('snap_date'); snaps = data || []; }
+    else snaps = memAnaliseSnaps.filter((s) => s.user_id === userId && mlIds.includes(s.ml_id)).sort((a, b) => (a.snap_date < b.snap_date ? -1 : 1));
+  }
+  const byMl = {}; snaps.forEach((s) => (byMl[s.ml_id] = byMl[s.ml_id] || []).push(s));
+  const dropList = [];
+  for (const id of Object.keys(byMl)) {
+    const h = byMl[id].filter((x) => x.preco != null);
+    if (h.length >= 2) {
+      const cur = Number(h[h.length - 1].preco), prev = Number(h[h.length - 2].preco);
+      if (cur < prev) { const ad = ads.find((a) => a.ml_id === id); dropList.push({ titulo: ad && ad.titulo, de: prev, para: cur, pct: Math.round((1 - cur / prev) * 100) }); }
+    }
+  }
+  return { drops: dropList.length, oos, dropList };
+}
+
+app.get('/api/analise/alerts', requireUser, async (req, res) => {
+  try { return res.json(await competitorAlerts(req.userId)); }
+  catch (e) { console.error('analise/alerts:', e.message); return res.status(500).json({ error: 'Erro.' }); }
+});
 
 app.get('/api/boleto-alert', requireUser, async (req, res) => {
   try {

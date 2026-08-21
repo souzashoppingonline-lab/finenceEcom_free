@@ -154,12 +154,15 @@ async function loadAlerts() {
   const alerts = [];
   try {
     const h = await authHeader();
-    const [pag, rec, salesRes, goalsRes] = await Promise.all([
+    const [pag, rec, salesRes, goalsRes, compRes] = await Promise.all([
       fetch('/api/boletos?direction=pagar&status=pendente', { headers: h }).then((r) => r.json()).catch(() => ({})),
       fetch('/api/boletos?direction=receber&status=pendente', { headers: h }).then((r) => r.json()).catch(() => ({})),
       fetch(`/api/sales?month=${month}`, { headers: h }).then((r) => r.json()).catch(() => ({})),
       fetch(`/api/goals?month=${month}`, { headers: h }).then((r) => r.json()).catch(() => ({})),
+      fetch('/api/analise/alerts', { headers: h }).then((r) => r.json()).catch(() => ({})),
     ]);
+    if (compRes && compRes.drops > 0) alerts.push({ sev: 'bad', txt: `${compRes.drops} concorrente(s) baixaram o preço`, href: '/analise.html' });
+    if (compRes && compRes.oos > 0) alerts.push({ sev: 'warn', txt: `${compRes.oos} concorrente(s) sem estoque`, href: '/analise.html' });
     const pagB = pag.boletos || [];
     const venc = pagB.filter((b) => b.due_date && b.due_date < today);
     const venc3 = pagB.filter((b) => b.due_date && b.due_date >= today && b.due_date <= in3);
