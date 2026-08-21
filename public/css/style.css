@@ -1283,3 +1283,15 @@ tbody tr:hover { background: #f7f9fc; }
 /* Dica abaixo do toggle "Atualizar automaticamente" */
 .mon-wrap{display:flex;flex-direction:column;gap:4px}
 .mon-hint{font-size:.72rem;color:var(--muted);max-width:280px;line-height:1.35}
+/* Análise de SEO dos concorrentes */
+.seo-kws{margin-bottom:6px}
+.seo-kw{cursor:default}
+.seo-kw b{color:var(--primary)}
+.seo-kw.kw-hot{background:color-mix(in srgb,#12905a 14%,transparent);border-color:color-mix(in srgb,#12905a 35%,var(--border))}
+.seo-kw.kw-hot b{color:#0a7c3f}
+.seo-titles{display:flex;flex-direction:column;gap:8px}
+.seo-title-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:9px}
+.seo-title-n{width:22px;height:22px;flex:none;border-radius:6px;background:var(--ink,#101828);color:var(--bg,#fff);display:grid;place-items:center;font:800 12px var(--mono,monospace)}
+.seo-title-txt{flex:1;font-weight:600;font-size:.92rem}
+.seo-title-len{font-size:.74rem;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.seo-copy{width:auto;margin:0;padding:5px 12px;font-size:.8rem}

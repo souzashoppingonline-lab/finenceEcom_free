@@ -9,6 +9,7 @@ let products = [];
 let activeId = null;
 let lastAds = [];
 let lastProductId = null;
+let lastProduct = null;
 let aiState = { provider: 'anthropic', has_anthropic: false, has_openai: false };
 
 async function api(path, options = {}) {
@@ -563,6 +564,7 @@ $('prod-form').addEventListener('submit', async (e) => {
 async function openDetail(id) {
   const r = await api(`/api/analise/products/${id}`);
   const p = r.product; const ads = r.ads || []; const isActive = String(p.id) === String(r.active_id);
+  lastProduct = p;
   $('view-list').hidden = true; $('view-detail').hidden = false;
 
   $('detail-head').innerHTML = `<div class="card" style="margin-top:12px">
@@ -800,6 +802,73 @@ function recentSales(list) {
   </div>`;
 }
 
+// ---------------------------------------------------------------------------
+// Análise de SEO dos concorrentes (palavras-chave + sugestão de títulos)
+// ---------------------------------------------------------------------------
+const titleCase = (s) => String(s).toLowerCase().replace(/\b([a-zà-ú])/g, (m, c) => c.toUpperCase());
+
+function buildTitles(ranked, produto) {
+  const core = seoKeywords(produto || '').slice(0, 4);
+  const words = [];
+  core.forEach((w) => { if (!words.includes(w)) words.push(w); });
+  ranked.forEach(({ w }) => { if (!words.includes(w)) words.push(w); });
+  const head = words.slice(0, core.length);
+  const rest = words.slice(core.length);
+  const out = [];
+  for (let i = 0; i < rest.length && out.length < 5; i++) {
+    const rot = rest.slice(i).concat(rest.slice(0, i));
+    const seq = head.concat(rot);
+    let t = '';
+    for (const w of seq) { const cand = (t ? t + ' ' : '') + w; if (cand.length <= 60) t = cand; }
+    t = titleCase(t.trim());
+    if (t && t.length >= 15 && !out.includes(t)) out.push(t);
+  }
+  return out;
+}
+
+function analyzeSeo() {
+  const ads = (lastAds || []).filter((a) => a.titulo);
+  if (!ads.length) { alert('Adicione e salve os concorrentes primeiro — a análise usa os títulos deles.'); return; }
+  const docFreq = {}, rawFreq = {};
+  ads.forEach((a) => {
+    const kws = seoKeywords(a.titulo);
+    [...new Set(kws)].forEach((w) => { docFreq[w] = (docFreq[w] || 0) + 1; });
+    kws.forEach((w) => { rawFreq[w] = (rawFreq[w] || 0) + 1; });
+  });
+  const ranked = Object.entries(docFreq)
+    .sort((a, b) => (b[1] - a[1]) || ((rawFreq[b[0]] || 0) - (rawFreq[a[0]] || 0)))
+    .map(([w, n]) => ({ w, n }));
+  const top = ranked.slice(0, 24);
+  const total = ads.length;
+  const titles = buildTitles(ranked, lastProduct && lastProduct.produto);
+
+  const chips = top.map((k) => {
+    const pctv = Math.round(k.n / total * 100);
+    const hot = pctv >= 50 ? 'kw-hot' : '';
+    return `<span class="kw seo-kw ${hot}" data-kw="${esc(k.w)}">${esc(k.w)} <b>${k.n}/${total}</b></span>`;
+  }).join('');
+  const titleRows = titles.map((t, i) => `
+    <div class="seo-title-row">
+      <span class="seo-title-n">${i + 1}</span>
+      <span class="seo-title-txt">${esc(t)}</span>
+      <span class="seo-title-len">${t.length}/60</span>
+      <button class="btn-ghost seo-copy" data-copy="${esc(t)}">Copiar</button>
+    </div>`).join('');
+
+  openModal('🔤 SEO dos concorrentes', `
+    <p class="muted">Analisei os títulos de <b>${total} concorrentes</b>. Quanto mais alto o número, em mais anúncios a palavra aparece — priorize as mais usadas no seu título.</p>
+    <h3 class="ia-h">Palavras-chave mais usadas</h3>
+    <div class="ad-kws seo-kws">${chips}</div>
+    <h3 class="ia-h">5 títulos sugeridos <span class="muted" style="font-weight:400">(até 60 caracteres, prontos pra usar de referência)</span></h3>
+    <div class="seo-titles">${titleRows || '<p class="muted">Sem títulos suficientes para gerar sugestões.</p>'}</div>
+    <p class="muted" style="font-size:.82rem;margin-top:12px">💡 Dica: comece o título pelo produto + as 3-4 palavras mais usadas. Evite repetir palavra e use os 60 caracteres.</p>`);
+
+  $('ia-modal-body').querySelectorAll('.seo-copy').forEach((b) => b.addEventListener('click', () => {
+    navigator.clipboard?.writeText(b.dataset.copy);
+    const o = b.textContent; b.textContent = 'Copiado!'; setTimeout(() => (b.textContent = o), 1200);
+  }));
+}
+
 function adCard(a) {
   const foto = firstFoto(a.fotos);
   const kws = seoKeywords(a.titulo);
@@ -898,6 +967,7 @@ function renderAds(productId, ads) {
             ${Array.from({ length: 24 }, (_, h) => `<option value="${h}"${String(aiState.monitor_hour) === String(h) ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}
           </select>
         </label>
+        <button id="ad-seo" class="btn-inline">🔤 Analisar SEO</button>
         <button id="ad-recollect-all" class="btn-ghost">🔄 Recoletar todos</button>
         <button id="ad-refresh" class="btn-ghost">Atualizar</button>
         <button id="ad-new" class="btn-inline">+ Adicionar concorrente</button>
@@ -948,6 +1018,7 @@ function renderAds(productId, ads) {
   $('ad-filter').addEventListener('change', (e) => { adFilter = e.target.value; renderAds(lastProductId, lastAds); });
   $('ad-sort').addEventListener('change', (e) => { adSort = e.target.value; renderAds(lastProductId, lastAds); });
   $('ad-refresh').addEventListener('click', () => openDetail(productId));
+  $('ad-seo')?.addEventListener('click', analyzeSeo);
   // recoletar TODOS os concorrentes (sequencial, via extensão)
   $('ad-recollect-all')?.addEventListener('click', async () => {
     const alvos = (lastAds || []).filter((a) => a.link);
