@@ -98,6 +98,7 @@ const memExpenses = [];
 const memAlerts = [];
 const memManual = []; // fluxo de caixa anual manual
 const memClosing = []; // fechamento mensal
+const memChangeLog = []; // mudanças de título/foto/descrição/status dos concorrentes
 const memCards = [];
 const memParcelas = [];
 const memFaturaPagtos = [];
@@ -1390,6 +1391,15 @@ async function sendBoletoDigest(userId, email) {
       }).join('');
       extra += `<h3 style="color:#c62828">🔻 Concorrentes baixaram o preço</h3><ul style="margin:6px 0 14px;padding-left:18px">${rows}</ul>`;
     }
+    if (ca.changes > 0) {
+      const base = (process.env.PUBLIC_URL || 'https://app.financeecom.com.br');
+      const CL = { titulo: 'título', descricao: 'descrição', foto: 'foto', status: 'status' };
+      const rows = (ca.changesByProduct || []).slice(0, 10).map((p) => {
+        const campos = Object.keys(p.campos).map((k) => `${CL[k] || k} (${p.campos[k]})`).join(', ');
+        return `<li style="margin-bottom:4px"><a href="${base}/analise.html?produto=${encodeURIComponent(p.product_id)}" style="color:#1e6fff;font-weight:700;text-decoration:none">${(p.produto || 'Produto')}</a> — mudou: ${campos}</li>`;
+      }).join('');
+      extra += `<h3 style="color:#b26a00">🔔 Concorrentes mudaram o anúncio (3 dias)</h3><ul style="margin:6px 0 14px;padding-left:18px">${rows}</ul>`;
+    }
   } catch (_) {}
   try {
     let recv;
@@ -1442,7 +1452,22 @@ async function competitorAlerts(userId) {
       dropList.push({ product_id: pid, produto: nameOf(pid), titulo: ad.titulo, ...info });
     });
   }
-  return { drops, oos, byProduct: Object.values(byProd).sort((a, b) => b.drops - a.drops), dropList };
+  // mudanças recentes (últimos 3 dias) agrupadas por produto
+  const cutoff = new Date(Date.now() - 3 * 86400000).toISOString();
+  let logs = [];
+  if (supabase) { const { data } = await supabase.from('analise_change_log').select('*').eq('user_id', userId).gte('created_at', cutoff); logs = data || []; }
+  else logs = memChangeLog.filter((l) => l.user_id === userId && l.created_at >= cutoff);
+  const changesByProd = {};
+  for (const l of logs) {
+    const pid = l.product_id;
+    changesByProd[pid] = changesByProd[pid] || { product_id: pid, produto: nameOf(pid), changes: 0, campos: {} };
+    changesByProd[pid].changes++;
+    changesByProd[pid].campos[l.campo] = (changesByProd[pid].campos[l.campo] || 0) + 1;
+  }
+  return {
+    drops, oos, byProduct: Object.values(byProd).sort((a, b) => b.drops - a.drops), dropList,
+    changes: logs.length, changesByProduct: Object.values(changesByProd).sort((a, b) => b.changes - a.changes),
+  };
 }
 
 app.get('/api/analise/alerts', requireUser, async (req, res) => {
@@ -1727,6 +1752,15 @@ app.get('/api/analise/products/:id', requireUser, async (req, res) => {
         });
       }
     } catch (e) { console.error('precos_recentes:', e.message); }
+    // anexa as mudanças recentes (título/foto/descrição/status) de cada anúncio
+    try {
+      let logs = [];
+      if (supabase) { const { data } = await supabase.from('analise_change_log').select('*').eq('user_id', req.userId).eq('product_id', id).order('created_at', { ascending: false }).limit(200); logs = data || []; }
+      else logs = memChangeLog.filter((l) => l.user_id === req.userId && String(l.product_id) === String(id)).sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+      const byMl = {};
+      for (const l of logs) (byMl[l.ml_id] = byMl[l.ml_id] || []).push(l);
+      ads.forEach((a) => { a.mudancas = a.ml_id && byMl[a.ml_id] ? byMl[a.ml_id].slice(0, 6) : []; });
+    } catch (e) { console.error('mudancas:', e.message); }
     return res.json({ product, ads, active_id: await activeProductId(req.userId) });
   } catch (err) { console.error(err); return res.status(500).json({ error: 'Erro ao carregar produto.' }); }
 });
@@ -2186,6 +2220,7 @@ function resolveAdPayload(rawData) {
     fotos: Array.isArray(e.fotos) ? e.fotos.slice(0, 8) : null,
     descricao: e.descricao || null,
     highlights: Array.isArray(e.highlights) ? e.highlights.slice(0, 40) : null,
+    pausado: e.pausado != null ? !!e.pausado : null,
   };
 }
 
@@ -2220,6 +2255,24 @@ async function recordSnapshot(userId, ml_id, preco, preco_original, vendas) {
   } catch (err) { console.error('snapshot:', err.message); }
 }
 
+// Detecta e registra mudanças do concorrente (título, foto, descrição, status)
+async function logChanges(userId, productId, ml_id, oldAd, p) {
+  const norm = (s) => String(s || '').trim();
+  const firstFoto = (a) => (Array.isArray(a.fotos) ? a.fotos[0] : (typeof a.fotos === 'string' ? a.fotos : null)) || null;
+  const events = [];
+  if (p.titulo && norm(oldAd.titulo) && norm(p.titulo) !== norm(oldAd.titulo)) events.push({ campo: 'titulo', antigo: oldAd.titulo, novo: p.titulo });
+  if (p.descricao && norm(oldAd.descricao) && norm(p.descricao) !== norm(oldAd.descricao)) events.push({ campo: 'descricao', antigo: (oldAd.descricao || '').slice(0, 140), novo: (p.descricao || '').slice(0, 140) });
+  const nf = Array.isArray(p.fotos) ? p.fotos[0] : null; const oldf = firstFoto(oldAd);
+  if (nf && oldf && nf !== oldf) events.push({ campo: 'foto', antigo: oldf, novo: nf });
+  if (p.pausado === true && !oldAd.pausado) events.push({ campo: 'status', antigo: 'ativo', novo: 'pausado' });
+  if (p.pausado === false && oldAd.pausado) events.push({ campo: 'status', antigo: 'pausado', novo: 'ativo' });
+  for (const ev of events) {
+    const rec = { user_id: userId, product_id: productId, ml_id, campo: ev.campo, valor_antigo: String(ev.antigo || '').slice(0, 300), valor_novo: String(ev.novo || '').slice(0, 300), created_at: new Date().toISOString() };
+    if (supabase) { try { await supabase.from('analise_change_log').insert(rec); } catch (_) {} }
+    else memChangeLog.push({ id: makeId(), ...rec });
+  }
+}
+
 // Upsert do concorrente em UM produto (nao apaga foto/descricao quando vem vazio)
 async function upsertCompetitor(userId, productId, payload) {
   const coalesce = (nv, ov) => (nv == null || nv === '' ? ov : nv);
@@ -2227,6 +2280,7 @@ async function upsertCompetitor(userId, productId, payload) {
     const { data: existing } = await supabase.from('analise_product_ads').select('*')
       .eq('product_id', productId).eq('ml_id', payload.ml_id).eq('user_id', userId).maybeSingle();
     if (existing) {
+      await logChanges(userId, productId, payload.ml_id, existing, payload);
       const merged = {};
       for (const k of Object.keys(payload)) merged[k] = coalesce(payload[k], existing[k]);
       merged.last_checked_at = new Date().toISOString();
@@ -2241,6 +2295,7 @@ async function upsertCompetitor(userId, productId, payload) {
   }
   const existing = memAnaliseAds.find((a) => String(a.product_id) === String(productId) && a.ml_id === payload.ml_id && a.user_id === userId);
   if (existing) {
+    await logChanges(userId, productId, payload.ml_id, existing, payload);
     for (const k of Object.keys(payload)) existing[k] = coalesce(payload[k], existing[k]);
     existing.last_checked_at = new Date().toISOString();
     return existing.id;

@@ -164,6 +164,9 @@ async function loadAlerts() {
     (compRes && compRes.byProduct || []).forEach((p) => {
       alerts.push({ sev: 'bad', txt: `${p.produto}: ${p.drops} concorrente(s) baixaram o preço`, href: `/analise.html?produto=${encodeURIComponent(p.product_id)}` });
     });
+    (compRes && compRes.changesByProduct || []).forEach((p) => {
+      alerts.push({ sev: 'warn', txt: `${p.produto}: ${p.changes} mudança(s) no anúncio do concorrente`, href: `/analise.html?produto=${encodeURIComponent(p.product_id)}` });
+    });
     const pagB = pag.boletos || [];
     const venc = pagB.filter((b) => b.due_date && b.due_date < today);
     const venc3 = pagB.filter((b) => b.due_date && b.due_date >= today && b.due_date <= in3);

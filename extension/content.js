@@ -80,6 +80,11 @@
   function getPrice() {
     return getPriceDom() ?? getMetaPrice() ?? (() => { const j = getJsonLd(); return j && j.offers ? parseMoney(j.offers.price) : null; })() ?? statePrice();
   }
+  // anúncio pausado / indisponível
+  function getPausado() {
+    const t = (document.body.innerText || '').toLowerCase();
+    return /pausad|an[úu]ncio\s+n[ãa]o\s+dispon|publica[çc][ãa]o\s+pausada|este an[úu]ncio (foi )?(pausad|encerrad|finalizad)|n[ãa]o est[áa] mais dispon/.test(t);
+  }
   // nº de perguntas do anúncio (já havia o campo, estava sempre nulo)
   function getPerguntas() {
     const t = document.body.innerText || '';
@@ -250,6 +255,7 @@
       nota: getRating() ?? (jsonLd && jsonLd.aggregateRating && Number(jsonLd.aggregateRating.ratingValue)),
       vendas: getVendas(),
       perguntas: getPerguntas(),
+      pausado: getPausado(),
       comentarios: reviews.count ?? (jsonLd && jsonLd.aggregateRating && Number(jsonLd.aggregateRating.reviewCount)) ?? null,
       aval_dist: reviews.dist,
       data_criacao: getCreationDate(jsonLd),

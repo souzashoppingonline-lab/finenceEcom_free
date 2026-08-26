@@ -1363,3 +1363,13 @@ tbody tr:hover { background: #f7f9fc; }
 .bell-dot{width:8px;height:8px;border-radius:50%;flex:none}
 .bell-bad .bell-dot{background:#e5484d}.bell-warn .bell-dot{background:#f5b301}
 .bell-empty{padding:16px 14px;color:var(--muted);font-size:.85rem}
+/* Timeline de mudanças do concorrente */
+.mud-list{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.mud-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:.82rem;padding:6px 0;border-bottom:1px dashed var(--border)}
+.mud-row:last-child{border-bottom:none}
+.mud-lbl{font-weight:600;white-space:nowrap}
+.mud-det{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.mud-old{color:#e5484d;text-decoration:line-through}
+.mud-new{color:#0a7c3f;font-weight:600}
+.mud-date{font-size:.72rem;color:var(--muted);white-space:nowrap}
+@media(max-width:560px){.mud-row{grid-template-columns:1fr;gap:2px}.mud-date{order:3}}

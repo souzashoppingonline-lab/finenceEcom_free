@@ -928,6 +928,22 @@ function alertsPanel(ads) {
   </div>`;
 }
 
+// Timeline de mudanças do concorrente (título/foto/descrição/status)
+function changesSection(list) {
+  if (!Array.isArray(list) || !list.length) return '';
+  const LBL = { titulo: '📝 Mudou o título', descricao: '📄 Mudou a descrição', foto: '🖼️ Trocou a foto principal', status: '🚦 Status' };
+  const fmt = (iso) => { const d = new Date(iso); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+  const rows = list.map((c) => {
+    let detalhe = '';
+    if (c.campo === 'titulo') detalhe = `<span class="mud-old">${esc((c.valor_antigo || '').slice(0, 60))}</span> → <span class="mud-new">${esc((c.valor_novo || '').slice(0, 60))}</span>`;
+    else if (c.campo === 'status') detalhe = `<b class="${c.valor_novo === 'pausado' ? 'c-warn' : 'c-ok'}">${esc(c.valor_novo)}</b>`;
+    else if (c.campo === 'foto') detalhe = `<a href="${esc(c.valor_novo)}" target="_blank" rel="noopener">ver nova foto</a>`;
+    else detalhe = '<span class="muted">texto alterado</span>';
+    return `<div class="mud-row"><span class="mud-lbl">${LBL[c.campo] || c.campo}</span><span class="mud-det">${detalhe}</span><span class="mud-date">${fmt(c.created_at)}</span></div>`;
+  }).join('');
+  return `<details class="ad-sec" open><summary><b>🔔 Mudanças recentes</b> (${list.length})</summary><div class="mud-list">${rows}</div></details>`;
+}
+
 function adCard(a) {
   const foto = firstFoto(a.fotos);
   const kws = seoKeywords(a.titulo);
@@ -964,6 +980,7 @@ function adCard(a) {
       ${a.aval_dist ? `<div class="ad-sec"><b>Avaliações:</b> ${a.nota ? a.nota + ' · ' : ''}${a.comentarios || 0} no total<div class="ad-kws" style="margin-top:5px">${esc(a.aval_dist).split('·').map((d) => `<span class="kw">${esc(d.trim())}</span>`).join('')}</div></div>` : ''}
       ${a.comentarios_texto ? `<details class="ad-sec"><summary><b>Avaliações (texto)</b></summary><div class="ad-desc">${esc(a.comentarios_texto).replace(/\n/g, '<br>')}</div></details>` : ''}
       ${a.descricao ? `<details class="ad-sec"><summary><b>Descrição do anúncio</b></summary><div class="ad-desc">${esc(a.descricao).replace(/\n/g, '<br>')}</div></details>` : ''}
+      ${changesSection(a.mudancas)}
       ${a.observacoes ? `<div class="ad-sec"><b>Minhas anotações:</b> ${esc(a.observacoes)}</div>` : ''}
     </div>
     <div class="ad-review-edit" data-edit-wrap="${a.id}" hidden>

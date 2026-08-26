@@ -129,3 +129,17 @@ alter table public.analise_product_ads add column if not exists desconto_pct num
 
 -- Vendas no historico de snapshots (mini-historico de vendas no card)
 alter table public.analise_monitor_snapshots add column if not exists vendas integer;
+
+-- Log de mudanças do concorrente (título, foto, descrição, status)
+create table if not exists public.analise_change_log (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  product_id uuid,
+  ml_id text,
+  campo text,
+  valor_antigo text,
+  valor_novo text,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_change_user_prod on public.analise_change_log (user_id, product_id, created_at desc);
+alter table public.analise_change_log enable row level security;
