@@ -2276,19 +2276,22 @@ async function logChanges(userId, productId, ml_id, oldAd, p) {
 // Upsert do concorrente em UM produto (nao apaga foto/descricao quando vem vazio)
 async function upsertCompetitor(userId, productId, payload) {
   const coalesce = (nv, ov) => (nv == null || nv === '' ? ov : nv);
+  // 'pausado' é só para detectar mudança de status — NÃO é coluna da tabela.
+  const { pausado, ...dbPayload } = payload;
   if (supabase) {
     const { data: existing } = await supabase.from('analise_product_ads').select('*')
       .eq('product_id', productId).eq('ml_id', payload.ml_id).eq('user_id', userId).maybeSingle();
     if (existing) {
       await logChanges(userId, productId, payload.ml_id, existing, payload);
       const merged = {};
-      for (const k of Object.keys(payload)) merged[k] = coalesce(payload[k], existing[k]);
+      for (const k of Object.keys(dbPayload)) merged[k] = coalesce(dbPayload[k], existing[k]);
       merged.last_checked_at = new Date().toISOString();
-      await supabase.from('analise_product_ads').update(merged).eq('id', existing.id);
+      const { error } = await supabase.from('analise_product_ads').update(merged).eq('id', existing.id);
+      if (error) throw error;
       return existing.id;
     }
     const { data, error } = await supabase.from('analise_product_ads')
-      .insert({ ...payload, product_id: productId, user_id: userId, monitorar: true, last_checked_at: new Date().toISOString() })
+      .insert({ ...dbPayload, product_id: productId, user_id: userId, monitorar: true, last_checked_at: new Date().toISOString() })
       .select('id').single();
     if (error) throw error;
     return data.id;
@@ -2296,11 +2299,11 @@ async function upsertCompetitor(userId, productId, payload) {
   const existing = memAnaliseAds.find((a) => String(a.product_id) === String(productId) && a.ml_id === payload.ml_id && a.user_id === userId);
   if (existing) {
     await logChanges(userId, productId, payload.ml_id, existing, payload);
-    for (const k of Object.keys(payload)) existing[k] = coalesce(payload[k], existing[k]);
+    for (const k of Object.keys(dbPayload)) existing[k] = coalesce(dbPayload[k], existing[k]);
     existing.last_checked_at = new Date().toISOString();
     return existing.id;
   }
-  const ad = { id: makeId(), ...payload, product_id: productId, user_id: userId, monitorar: true, last_checked_at: new Date().toISOString(), created_at: new Date().toISOString() };
+  const ad = { id: makeId(), ...dbPayload, product_id: productId, user_id: userId, monitorar: true, last_checked_at: new Date().toISOString(), created_at: new Date().toISOString() };
   memAnaliseAds.push(ad);
   return ad.id;
 }
